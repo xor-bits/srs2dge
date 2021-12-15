@@ -1,3 +1,9 @@
+// #![feature(let_else)]
+// #![feature(drain_filter)]
+// #![feature(destructuring_assignment)]
+// #![feature(test)]
+
+use crate::report::Reporter;
 use fontdue::{Font, Metrics};
 use glam::{Mat4, Vec4};
 use glium::{
@@ -6,8 +12,9 @@ use glium::{
     uniforms::{MagnifySamplerFilter, MinifySamplerFilter},
     Blend, DrawParameters, IndexBuffer, Surface, VertexBuffer,
 };
-use image::{buffer::ConvertBuffer, imageops::flip_vertical_in_place, GrayImage};
+use image::{buffer::ConvertBuffer, imageops::flip_vertical_in_place, GrayImage, Luma};
 use image::{ImageFormat, RgbaImage};
+use rusttype::{Point, Scale};
 use static_res::static_res;
 use std::{io::Cursor, time::Duration};
 use winit::{
@@ -17,11 +24,10 @@ use winit::{
     window::WindowBuilder,
 };
 
-use crate::report::Reporter;
-
 #[macro_use]
 extern crate glium;
 
+mod packer;
 mod report;
 
 static_res! { "res/**/*.{png,ttf}" }
@@ -34,13 +40,13 @@ struct Vertex {
 }
 glium::implement_vertex!(Vertex, vi_position, vi_color, vi_uv);
 
-fn character(c: char, font: &Font) -> (Metrics, Vec<u8>) {
-    font.rasterize(c, 64.0)
+fn character(c: char, font: &Font, px: f32) -> (Metrics, Vec<u8>) {
+    font.rasterize(c, px)
 }
 
-fn text(s: &str, font: &Font) -> Option<GrayImage> {
+fn text(s: &str, font: &Font, px: f32) -> Option<GrayImage> {
     let chars: Vec<(char, (Metrics, Vec<u8>))> =
-        s.chars().map(|c| (c, character(c, font))).collect();
+        s.chars().map(|c| (c, character(c, font, px))).collect();
 
     // text bounding box
     let mut x_min = 0;
@@ -49,12 +55,12 @@ fn text(s: &str, font: &Font) -> Option<GrayImage> {
     let mut y_max = 0;
     let mut x_origin = 0;
     let mut y_origin = 0;
-    let mut last_c = '|';
+    let mut last_c = None;
     for (c, (metrics, _)) in chars.iter() {
         if *c == '\n' {
             x_origin = 0;
-            y_origin -= 64;
-            last_c = '|';
+            y_origin -= (px * 1.4) as i32;
+            last_c = None;
             continue;
         };
 
@@ -65,9 +71,11 @@ fn text(s: &str, font: &Font) -> Option<GrayImage> {
         y_max = y_max.max(y_origin + metrics.ymin + metrics.height as i32);
 
         x_origin += metrics.advance_width as i32
-            + font.horizontal_kern(last_c, *c, 64.0).unwrap_or(0.0) as i32;
+            + last_c
+                .and_then(|last_c| font.horizontal_kern(last_c, *c, px))
+                .unwrap_or(0.0) as i32;
         y_origin += metrics.advance_height as i32;
-        last_c = *c;
+        last_c = Some(*c);
     }
     let width = (x_max - x_min).max(0) as usize;
     let height = (y_max - y_min).max(0) as usize;
@@ -78,8 +86,8 @@ fn text(s: &str, font: &Font) -> Option<GrayImage> {
     for (c, (metrics, bitmap)) in chars.iter() {
         if *c == '\n' {
             x_origin = 0;
-            y_origin -= 64;
-            last_c = '|';
+            y_origin -= (px * 1.4) as i32;
+            last_c = None;
             continue;
         };
 
@@ -91,9 +99,11 @@ fn text(s: &str, font: &Font) -> Option<GrayImage> {
         }
 
         x_origin += metrics.advance_width as i32
-            + font.horizontal_kern(last_c, *c, 64.0).unwrap_or(0.0) as i32;
+            + last_c
+                .and_then(|last_c| font.horizontal_kern(last_c, *c, px))
+                .unwrap_or(0.0) as i32;
         y_origin += metrics.advance_height as i32;
-        last_c = *c;
+        last_c = Some(*c);
     }
 
     GrayImage::from_raw(width as u32, height as u32, text)
@@ -102,10 +112,71 @@ fn text(s: &str, font: &Font) -> Option<GrayImage> {
 fn main() {
     env_logger::init();
 
+    let font = rusttype::Font::try_from_bytes(res::Roboto_Regular_ttf).unwrap();
+    let mut cache = rusttype::gpu_cache::CacheBuilder::default()
+        .dimensions(2048, 2048)
+        .build();
+    let mut image = GrayImage::new(2048, 2048);
+    for c in '\u{0}'..'\u{800}' {
+        cache.queue_glyph(
+            0,
+            font.glyph(c)
+                .scaled(Scale::uniform(64.0))
+                .positioned(Point::default()),
+        );
+        cache
+            .cache_queued(|rect, data| {
+                let mut i = 0;
+                for y in rect.min.y..rect.max.y {
+                    for x in rect.min.x..rect.max.x {
+                        image.put_pixel(x as u32, y as u32, Luma { 0: [data[i]] });
+                        i += 1;
+                    }
+                }
+            })
+            .unwrap();
+    }
+    image.save("path.png").unwrap();
+    return;
+
     let font = Font::from_bytes(res::Roboto_Regular_ttf, Default::default()).unwrap();
-    let mut text_img: RgbaImage = text("∫|∫x dx + 'test text j'\u{FF1B}\\/\"\n\\VAW//", &font)
-        .unwrap()
-        .convert();
+
+    /* let mut area = 0;
+    for c in 0..font.glyph_count() {
+        let c = font.metrics_indexed(c, 32.0);
+        area += c.width * c.height;
+    }
+    let side = (area as f64 * 1.2).sqrt() as i32;
+    let mut packer = Packer::new(Config {
+        width: side,
+        height: side,
+        border_padding: 0,
+        rectangle_padding: 0,
+    });
+    let mut image = GrayImage::new(side as u32, side as u32);
+    for c in 0..font.glyph_count() {
+        let (rect, c) = font.rasterize_indexed(c, 32.0);
+        let Some(rect) = packer.pack(rect.width as i32, rect.height as i32, false) else {
+            continue;
+        };
+        let mut i = 0;
+        for y in rect.y..rect.y + rect.height {
+            for x in rect.x..rect.x + rect.width {
+                image.put_pixel(x as u32, y as u32, Luma { 0: [c[i]] });
+                i += 1;
+            }
+        }
+    }
+    image.save("path.png").unwrap();
+    panic! {"{}", font.glyph_count()}; */
+
+    let mut text_img: RgbaImage = text(
+        "∫|∫x dx + 'test text j'\u{FF1B}\\/\"\n\\VAW//\n readability\n  line height",
+        &font,
+        64.0,
+    )
+    .unwrap()
+    .convert();
 
     text_img.pixels_mut().for_each(|px| {
         px.0[3] = px.0[0];
