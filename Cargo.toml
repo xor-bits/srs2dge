@@ -18,5 +18,4 @@ glam = "0.20.1"
 
 image = "0.23.14"
 fontdue = "0.6.2"
-rusttype = { version = "0.9.2", features = ["gpu_cache"] }
 static_res = { git = "https://github.com/Overpeek/static_res" }

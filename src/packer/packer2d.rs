@@ -1,3 +1,5 @@
+//! 2D Texture packer with ability to reuse areas
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Rect {
     pub width: u32,
@@ -42,10 +44,24 @@ impl PositionedRect {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Space {
+    x: u32,
+    width: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Row {
+    y: u32,
+    height: u32,
+
+    free_spaces: Vec<Space>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Packer {
     rect: Rect,
-    rows: Vec<PositionedRect>,
+    rows: Vec<Row>,
     bottom: PositionedRect,
 }
 
@@ -59,16 +75,25 @@ impl Packer {
 
     pub fn push(&mut self, rect: Rect) -> Option<PositionedRect> {
         if rect.width == 0 || rect.height == 0 {
+            return Some(rect.positioned(0, 0));
+        } else if rect.width > self.rect.width || rect.height > self.rect.height {
             return None;
         }
 
-        // find a spot this new rectangle can fit into with minimal wasted space
-        let (index, &row, _) = match self
+        // find a spot where this new rectangle can fit (while wasting as little space as possible)
+        let (row, col, score) = match self
             .rows
             .iter()
             .enumerate()
-            .filter(|(_, row)| row.width >= rect.width && row.height >= rect.height)
-            .map(|(index, row)| (index, row, row.height - rect.height))
+            .filter(|(_, row)| row.height >= rect.height)
+            .flat_map(|(index_row, row)| {
+                row.free_spaces
+                    .iter()
+                    .enumerate()
+                    .filter(|(_, row)| row.width >= rect.width)
+                    .map(move |(index_col, _)| (index_row, index_col))
+            })
+            .map(|(row, col)| (row, col, self.rows[row].height - rect.height))
             .min_by_key(|(_, _, wasted)| *wasted)
         {
             Some(s) => s,
@@ -76,43 +101,66 @@ impl Packer {
         };
 
         // try pushing a new row if about to waste way too much
-        if 2 * row.height > 3 * rect.height && self.can_push_row(rect) {
+        if score > rect.height && self.can_push_row(rect) {
             match self.push_row(rect) {
                 None => {}
                 some => return some,
             }
         }
 
+        let (x, y, w, l) = {
+            let row = &self.rows[row];
+            let space = &row.free_spaces[col];
+            (space.x, row.y, space.width, row.free_spaces.len())
+        };
+
         // free space gets split into 1 or 2 new areas
         // 1 if the rectangle fits perfectly into the required space
         // 2 otherwise
-        match row.width == rect.width {
+        match (w == rect.width, l) {
             // width is the same
-            // +-------+
-            // | alloc |
-            // +-------+
-            true => {
+            // +--+-------+--+
+            // |//| free  |//|
+            // +--+-------+--+
+            //   \/ \/ \/
+            // +--+-------+--+
+            // |//| alloc |//|
+            // +--+-------+--+
+            (true, 1) => {
                 // pushed rectangle consumes the whole row
-                self.rows.remove(index);
-                Some(rect.positioned(row.x, row.y))
+                self.rows[row].free_spaces.remove(col);
             }
 
-            // +-----------+-----+
-            // |   alloc   |     |
-            // |-----------|  A  |
-            // | discarded |     |
-            // +-----------+-----+
-            false => {
-                let a = PositionedRect::new(
-                    row.x + rect.width,
-                    row.y,
-                    row.width - rect.width,
-                    row.height,
-                );
-                *self.rows.get_mut(index).unwrap() = a;
-                Some(rect.positioned(row.x, row.y))
+            // width is the same
+            // +------+--+-------+--+------+
+            // | free |//| free  |//| free |
+            // +------+--+-------+--+------+
+            //   \/ \/ \/
+            // +------+--+-------+--+------+
+            // | free |//| alloc |//| free |
+            // +------+--+-------+--+------+
+            (true, _) => {
+                // pushed rectangle consumes the whole free space
+                self.rows[row].free_spaces.remove(col);
+            }
+
+            // +------+--+----------------+--+
+            // | free |//|      free      |//|
+            // +------+--+----------------+--+
+            //   \/ \/ \/
+            // +------+--+---------+------+--+
+            // | free |//|  alloc  | free |//|
+            // +------+--+---------+------+--+
+            (false, _) => {
+                let a = Space {
+                    x: x + rect.width,
+                    width: w - rect.width,
+                };
+                self.rows[row].free_spaces[col] = a;
             }
         }
+
+        Some(rect.positioned(x, y))
     }
 
     #[inline]
@@ -122,14 +170,24 @@ impl Packer {
 
     #[inline]
     fn push_row(&mut self, rect: Rect) -> Option<PositionedRect> {
+        let width = self.bottom.width.checked_sub(rect.width)?;
         self.bottom.height = self.bottom.height.checked_sub(rect.height)?;
 
-        self.rows.push(PositionedRect::new(
-            self.bottom.x + rect.width,
-            self.bottom.y,
-            self.bottom.width.checked_sub(rect.width)?,
-            rect.height,
-        ));
+        let free_spaces = if width != 0 {
+            vec![Space {
+                x: self.bottom.x + rect.width,
+                width,
+            }]
+        } else {
+            vec![]
+        };
+
+        self.rows.push(Row {
+            y: self.bottom.y,
+            height: rect.height,
+
+            free_spaces,
+        });
 
         self.bottom.y += rect.height;
 
@@ -137,7 +195,56 @@ impl Packer {
     }
 
     #[inline]
-    pub fn remove() {}
+    fn aabb_1d(x1: u32, x2: u32, w1: u32, w2: u32) -> bool {
+        // 2 * (x1 + w1 / 2).abs_diff(x2 + w1 / 2) < w1 + w2
+        x2 <= x1 + w1 && x2 + w2 > x1
+    }
+
+    #[inline]
+    fn remove_at_line(row: &mut Row, rect: &PositionedRect) -> bool {
+        if !Self::aabb_1d(row.y, rect.y, row.height, rect.height) {
+            return false;
+        }
+
+        row.free_spaces
+            .drain_filter(|col| Self::aabb_1d(col.x, rect.x, col.width, rect.width));
+
+        if row.free_spaces.is_empty() {
+            true
+        } else {
+            row.free_spaces.push(Space {
+                x: rect.x,
+                width: rect.width,
+            });
+            false
+        }
+    }
+
+    pub fn remove(&mut self, rect: PositionedRect) {
+        let last_merged = self
+            .rows
+            .iter_mut()
+            .enumerate()
+            .filter_map(|(index, row)| {
+                if Self::remove_at_line(row, &rect) {
+                    None
+                } else {
+                    Some(index)
+                }
+            })
+            .last()
+            .unwrap_or(0);
+
+        self.rows.drain(last_merged..);
+
+        if let Some(last) = self.rows.last() {
+            self.bottom.y = last.y;
+            self.bottom.height = self.rect.height - last.y - last.height;
+        } else {
+            self.bottom.y = 0;
+            self.bottom.height = self.rect.height;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -155,6 +262,9 @@ mod test {
         };
         ($packer:expr, $w:expr, $h:expr) => {
             assert_eq! { $packer.push(Rect::new($w, $h)), None }
+        };
+        ($packer:expr, $w:expr, $h:expr ; $x:expr, $y:expr) => {
+            $packer.remove(Rect::new($w, $h).positioned($x, $y));
         };
     }
 
@@ -201,7 +311,7 @@ mod test {
     }
 
     #[test]
-    pub fn test_push_sort() {
+    pub fn test_push_fuzz() {
         for _ in 0..100 {
             let mut rng = rand::thread_rng();
             let mut packer = Packer::new(Rect::new(2000, 2000));
@@ -214,24 +324,27 @@ mod test {
     #[test]
     pub fn test_push_empty() {
         let mut packer = Packer::new(Rect::new(100, 100));
-        gen_test! { packer, 0, 0 };
+        gen_test! { packer, 110, 110 };
+        gen_test! { packer, 0, 0 => 0, 0 };
 
         let mut packer = Packer::new(Rect::new(0, 0));
         gen_test! { packer, 10, 10 };
 
         let mut packer = Packer::new(Rect::new(0, 0));
-        gen_test! { packer, 0, 0 };
+        gen_test! { packer, 0, 0 => 0, 0 };
     }
 
-    /* #[test]
+    #[test]
     pub fn test_remove() {
         let mut packer = Packer::new(Rect::new(200, 200));
-        assert_eq!(packer.push(Rect::new(200, 100)), Some((0, 0)));
-        assert_eq!(packer.push(Rect::new(200, 100)), Some((0, 100)));
-        assert_eq!(packer.push(Rect::new(10, 10)), None);
-        packer.remove(PositionedRect::new(0, 0, Rect::new(200, 100)));
-        assert_eq!(packer.push(Rect::new(200, 100)), Some((0, 0)));
-        assert_eq!(packer.push(Rect::new(10, 10)), None);
+        gen_test! { packer, 200, 100 => 0, 0 };
+        gen_test! { packer, 200, 100 => 0, 100 };
+        gen_test! { packer, 200, 100 };
+
+        gen_test! { packer, 200, 100 ; 0, 0 };
+
+        gen_test! { packer, 200, 100 => 0, 0 };
+        gen_test! { packer, 10, 10 };
     }
 
     #[test]
@@ -240,20 +353,35 @@ mod test {
             let mut rng = rand::thread_rng();
             let mut packer = Packer::new(Rect::new(2000, 2000));
             for _ in 0..100 {
+                let push = packer.push(Rect::new(rng.gen_range(0..3000), rng.gen_range(0..3000)));
+                let some = push.is_some();
+                if let Some(rect) = push {
+                    packer.remove(rect);
+                }
+
+                assert_eq!(
+                    packer,
+                    Packer::new(Rect::new(2000, 2000)),
+                    "was some {} ",
+                    some
+                );
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_multi_remove_all() {
+        for _ in 0..100 {
+            let mut rng = rand::thread_rng();
+            let mut packer = Packer::new(Rect::new(2000, 2000));
+            for _ in 0..100 {
                 packer.push(Rect::new(rng.gen_range(0..3000), rng.gen_range(0..3000)));
             }
-            println!("{:?}", packer.space);
-            packer.remove(PositionedRect::new(0, 0, Rect::new(2000, 2000)));
-            println!("{:?}", packer.space);
+            packer.remove(Rect::new(2000, 2000).positioned(0, 0));
 
-            assert!(packer
-                .space
-                .windows(2)
-                .all(|space| space[0].y <= space[1].y));
-
-            assert_eq!(packer.space.len(), 1);
+            assert_eq!(packer, Packer::new(Rect::new(2000, 2000)));
         }
-    } */
+    }
 
     #[test]
     pub fn test_image() {
