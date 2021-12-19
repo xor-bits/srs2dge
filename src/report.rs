@@ -5,7 +5,9 @@ pub struct Reporter {
     elapsed: Duration,
     report_timer: Instant,
     report_interval: Duration,
+
     last_frametime: Duration,
+    last_fps: f64,
 }
 
 pub struct Timer {
@@ -23,7 +25,9 @@ impl Reporter {
             elapsed: Duration::default(),
             report_timer: Instant::now(),
             report_interval,
+
             last_frametime: Duration::default(),
+            last_fps: 0.0,
         }
     }
 
@@ -40,12 +44,13 @@ impl Reporter {
         if self.report_timer.elapsed() >= self.report_interval {
             let avg = self.elapsed / self.count;
             self.last_frametime = avg;
+            self.last_fps = self.count as f64 / self.report_interval.as_secs_f64();
             log::debug!(
 				"Report ({}s) \nAVG frametime: {:.2?}\nAVG FPS: {:.2} (based on avg frametime)\nREAL FPS: {:.2}",
 				self.report_interval.as_secs_f64(),
-				avg,
-				1.0 / avg.as_secs_f64(),
-				self.count as f64 / self.report_interval.as_secs_f64()
+				self.last_frametime,
+				1.0 / self.last_frametime.as_secs_f64(),
+				self.last_fps
 			);
             self.count = 0;
             self.elapsed = Duration::default();
@@ -81,7 +86,7 @@ impl Reporter {
         }
     }
 
-    pub fn last(&self) -> Duration {
-        self.last_frametime
+    pub fn last(&self) -> (Duration, f64) {
+        (self.last_frametime, self.last_fps)
     }
 }

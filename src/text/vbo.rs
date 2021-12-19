@@ -12,13 +12,13 @@ pub struct Vertex {
 }
 glium::implement_vertex!(Vertex, vi_position, vi_color, vi_uv);
 
-pub fn text<'s, F>(string: F, glyphs: &mut Glyphs, px: f32) -> Vec<Vertex>
+pub fn text<'s, F>(string: F, glyphs: &mut Glyphs, px: f32, x: f32, y: f32) -> Vec<Vertex>
 where
     F: Into<&'s FString>,
 {
     let string: &FString = string.into();
 
-    for (c, _) in string.chars() {
+    for c in string.as_str().chars() {
         glyphs.queue(c, px as u16);
     }
     glyphs.flush();
@@ -28,22 +28,25 @@ where
             let glyph = glyphs.get_indexed(c.index, px as u16).unwrap();
             [
                 Vertex {
-                    vi_position: [c.x as f32, c.y as f32],
+                    vi_position: [c.x as f32 + x, c.y as f32 + y],
                     vi_color: c.format.color.to_array(),
                     vi_uv: [glyph.top_left.x, glyph.top_left.y],
                 },
                 Vertex {
-                    vi_position: [c.x as f32, c.y as f32 + c.height as f32],
+                    vi_position: [c.x as f32 + x, c.y as f32 + c.height as f32 + y],
                     vi_color: c.format.color.to_array(),
                     vi_uv: [glyph.top_left.x, glyph.bottom_right.y],
                 },
                 Vertex {
-                    vi_position: [c.x as f32 + c.width as f32, c.y as f32 + c.height as f32],
+                    vi_position: [
+                        c.x as f32 + c.width as f32 + x,
+                        c.y as f32 + c.height as f32 + y,
+                    ],
                     vi_color: c.format.color.to_array(),
                     vi_uv: [glyph.bottom_right.x, glyph.bottom_right.y],
                 },
                 Vertex {
-                    vi_position: [c.x as f32 + c.width as f32, c.y as f32],
+                    vi_position: [c.x as f32 + c.width as f32 + x, c.y as f32 + y],
                     vi_color: c.format.color.to_array(),
                     vi_uv: [glyph.bottom_right.x, glyph.top_left.y],
                 },

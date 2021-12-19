@@ -149,6 +149,10 @@ impl FString {
             (c, format)
         })
     }
+
+    pub fn as_str(&self) -> &'_ str {
+        self.string.as_str()
+    }
 }
 
 impl<S> From<S> for FString

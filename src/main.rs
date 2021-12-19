@@ -55,7 +55,7 @@ fn main() {
         .with_inner_size(LogicalSize::new(600_i32, 600_i32))
         .with_title("Title");
     let context = ContextBuilder::new()
-        .with_vsync(true)
+        // .with_vsync(true)
         .build_windowed(window_builder, &event_loop)
         .unwrap();
     let scale_factor = context.window().scale_factor();
@@ -203,21 +203,17 @@ fn main() {
     let font = Font::from_bytes(res::fira::font_ttf, FontSettings::default()).unwrap();
 
     let mut glyphs = Glyphs::new(&display, font, Rect::new(512, 512)).unwrap();
-    for (c, _) in text.chars() {
+    for c in text.as_str().chars() {
         glyphs.queue(c, 18);
     }
     glyphs.flush();
 
-    let vertices = text::vbo::text(&text, &mut glyphs, 18.0);
-
+    let vertices = text::vbo::text(&text, &mut glyphs, 18.0, 0.0, 0.0);
     let text2_vbo = VertexBuffer::new(&display, &vertices[..]).unwrap();
-
     let indices = (0..(text2_vbo.len() / 4) as u32)
         .flat_map(|i| [i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3])
         .collect::<Vec<u32>>();
-
     let text2_ibo = IndexBuffer::new(&display, PrimitiveType::TrianglesList, &indices[..]).unwrap();
-
     let text2_program = text::vbo::text_program(&display);
 
     // MAIN LOOP
@@ -226,6 +222,8 @@ fn main() {
     let mut aspect = 0.0;
     let mut size = (0.0, 0.0);
     let mut reporter = Reporter::new_with_interval(Duration::from_millis(500));
+
+    let (mut gpu_toggle, mut cpu_toggle, mut quad_toggle) = (true, true, true);
 
     event_loop.run(move |event, _, control| {
         *control = ControlFlow::Poll;
@@ -242,41 +240,49 @@ fn main() {
             Event::RedrawEventsCleared => {
                 let timer = reporter.begin();
                 {
-                    // DRAW CUBE
-
-                    a += reporter.last().as_secs_f32() * std::f32::consts::PI * 2.0 / 5.0;
-
-                    let ubo = uniform! {
-                        mat: (Mat4::from_diagonal(Vec4::new(1.0, aspect, 1.0, 1.0)) * Mat4::from_rotation_z(a)).to_cols_array_2d(),
-                        sprite: texture
-                            .sampled()
-                            .minify_filter(MinifySamplerFilter::Nearest)
-                            .magnify_filter(MagnifySamplerFilter::Nearest),
-                    };
-
+                    let mut frame = display.draw();
+                    let cc = Vec4::new(0.2, 0.22, 0.24, 1.0);
+                    frame.clear_color_srgb(cc.x, cc.y, cc.z, cc.w);
+    
                     let params = DrawParameters {
                         blend: Blend::alpha_blending(),
                         ..Default::default()
                     };
 
-                    let mut frame = display.draw();
-                    let cc = Vec4::new(0.2, 0.22, 0.24, 1.0);
-                    frame.clear_color_srgb(cc.x, cc.y, cc.z, cc.w);
-                    frame.draw(&vbo, &ibo, &shader, &ubo, &params).unwrap();
+                    // DRAW CUBE
+
+                    a += reporter.last().0.as_secs_f32() * std::f32::consts::PI * 2.0 / 5.0;
+                    if quad_toggle {
+                        let ubo = uniform! {
+                            mat: (Mat4::from_diagonal(Vec4::new(1.0, aspect, 1.0, 1.0)) * Mat4::from_rotation_z(a)).to_cols_array_2d(),
+                            sprite: texture
+                                .sampled()
+                                .minify_filter(MinifySamplerFilter::Nearest)
+                                .magnify_filter(MagnifySamplerFilter::Nearest),
+                        };
+    
+                        frame.draw(&vbo, &ibo, &shader, &ubo, &params).unwrap();
+                    }
 
                     // DRAW CPU TEXT
 
-                    let ubo = uniform! {
-                        mat: Mat4::orthographic_rh_gl(0.0, size.0, 0.0, size.1, -1.0, 1.0).to_cols_array_2d(),
-                        sprite: text1_texture
-                            .sampled()
-                            .minify_filter(MinifySamplerFilter::Nearest)
-                            .magnify_filter(MagnifySamplerFilter::Nearest)
-                    };
-                    frame.draw(&text1_vbo, &ibo, &shader, &ubo, &params).unwrap();
+                    if cpu_toggle {
+                        let ubo = uniform! {
+                            mat: Mat4::orthographic_rh_gl(0.0, size.0, 0.0, size.1, -1.0, 1.0).to_cols_array_2d(),
+                            sprite: text1_texture
+                                .sampled()
+                                .minify_filter(MinifySamplerFilter::Nearest)
+                                .magnify_filter(MagnifySamplerFilter::Nearest)
+                        };
+                        frame.draw(&text1_vbo, &ibo, &shader, &ubo, &params).unwrap();
+                    }
 
-                    // DRAW GPU TEXT
+                    // DRAW DYNAMIC TEXT
 
+                    let mut text = FString::new();
+                    text += format!("AVG frametime: {:?}\nAVG FPS: {:?}", reporter.last().0, reporter.last().1).formatted();
+                    let vertices = text::vbo::text(&text, &mut glyphs, 18.0, 500.0, 0.0);
+                    
                     let ubo = uniform! {
                         mat: Mat4::orthographic_rh_gl(0.0, size.0, 0.0, size.1, -1.0, 1.0).to_cols_array_2d(),
                         sprite: glyphs
@@ -284,7 +290,19 @@ fn main() {
                             .minify_filter(MinifySamplerFilter::Nearest)
                             .magnify_filter(MagnifySamplerFilter::Nearest)
                     };
-                    frame.draw(&text2_vbo, &text2_ibo, &text2_program, &ubo, &params).unwrap();
+
+                    let vbo = VertexBuffer::new(&display, &vertices[..]).unwrap();
+                    let indices = (0..(text2_vbo.len() / 4) as u32)
+                        .flat_map(|i| [i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3])
+                        .collect::<Vec<u32>>();
+                    let ibo = IndexBuffer::new(&display, PrimitiveType::TrianglesList, &indices[..]).unwrap();
+                    frame.draw(&vbo, &ibo, &text2_program, &ubo, &params).unwrap();
+
+                    // DRAW GPU TEXT
+
+                    if gpu_toggle {
+                        frame.draw(&text2_vbo, &text2_ibo, &text2_program, &ubo, &params).unwrap();
+                    }
 
                     frame.finish().unwrap();
                 };
@@ -294,14 +312,20 @@ fn main() {
             Event::WindowEvent {
                 event: WindowEvent::KeyboardInput{
                     input: KeyboardInput {
-                        virtual_keycode: Some(VirtualKeyCode::Escape),
-                        state:ElementState::Pressed,
+                        virtual_keycode: Some(keycode),
+                        state: ElementState::Pressed,
                         ..
                     },
                     ..
                 },
                 ..
-            } => *control = ControlFlow::Exit,
+            } => match keycode {
+                VirtualKeyCode::Escape => *control = ControlFlow::Exit,
+                VirtualKeyCode::F1 => gpu_toggle = !gpu_toggle,
+                VirtualKeyCode::F2 => cpu_toggle = !cpu_toggle,
+                VirtualKeyCode::F3 => quad_toggle = !quad_toggle,
+                _ => {}
+            },
             Event::WindowEvent {
                 event: WindowEvent::CloseRequested,
                 ..
