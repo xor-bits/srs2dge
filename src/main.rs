@@ -3,10 +3,12 @@
 // #![feature(test)]
 #![feature(drain_filter)]
 #![feature(int_abs_diff)]
+#![feature(type_alias_impl_trait)]
 
 use crate::{
     packer::{glyph::Glyphs, packer2d::Rect},
     report::Reporter,
+    text::format::{FString, Formatted},
 };
 use fontdue::{Font, FontSettings};
 use glam::{Mat4, Vec4};
@@ -16,8 +18,7 @@ use glium::{
     uniforms::{MagnifySamplerFilter, MinifySamplerFilter},
     Blend, DrawParameters, IndexBuffer, Surface, VertexBuffer,
 };
-use image::buffer::ConvertBuffer;
-use image::{ImageFormat, RgbaImage};
+use image::{buffer::ConvertBuffer, ImageFormat, RgbaImage};
 use static_res::static_res;
 use std::{io::Cursor, time::Duration};
 use winit::{
@@ -143,22 +144,28 @@ fn main() {
 
     // TEXT SETUP
 
-    // let font = Font::from_bytes(res::roboto::font_ttf, FontSettings::default()).unwrap();
-    let font = Font::from_bytes(res::fira::font_ttf, FontSettings::default()).unwrap();
-    const STR: &str =
-        "∫|∫x dx + 'test text j'\u{FF1B}\\/\"\n\\VAW//\n\treadability\n\t\tline height\n\t\t\tnewline\n54is9\taligned";
+    let text = FString::from_iter([
+        "∫|∫x dx + 'test text j'\u{FF1B}\\/\"\n\\VAW//\n\treadability\n\t\tline height\n\t\t\tnewline\n54is9\taligned\n\n".formatted(),
+        "yy̆y\n".formatted(),
+        "\u{FF1B}\n".formatted(),
+        "fn ".colored(1.0, 0.5, 0.0),
+        "main".colored(0.1, 0.1, 1.0),
+        "() {\n\t".formatted(),
+        "println!".colored(0.1, 0.1, 1.0),
+        "(".formatted(),
+        "\"Hello World!\"".colored(0.1, 1.0, 0.1),
+        ");\n}\n\n".formatted(),
+        "\tTAB\n".formatted(),
+        "\t\tWIDTH\n".formatted(),
+        "----IS\n".formatted(),
+        "--------4\n".formatted()
+    ]);
 
     // CPU RENDERED TEXT
 
-    let mut text1_img: RgbaImage = text::baked_text(STR, &font, 18.0).unwrap().convert();
+    let font = Font::from_bytes(res::roboto::font_ttf, FontSettings::default()).unwrap();
 
-    text1_img.pixels_mut().for_each(|px| {
-        px.0[3] = px.0[0];
-        px.0[0] = !0;
-        px.0[1] = !0;
-        px.0[2] = !0;
-    });
-
+    let text1_img: RgbaImage = text::vbo::baked_text(&text, &font, 18.0).unwrap().convert();
     let text1_dim = text1_img.dimensions();
     let text1_texture = glium::texture::RawImage2d::from_raw_rgba_reversed(&text1_img, text1_dim);
     let text1_texture =
@@ -193,13 +200,15 @@ fn main() {
 
     // GPU RENDERED TEXT
 
+    let font = Font::from_bytes(res::fira::font_ttf, FontSettings::default()).unwrap();
+
     let mut glyphs = Glyphs::new(&display, font, Rect::new(512, 512)).unwrap();
-    for c in STR.chars() {
+    for (c, _) in text.chars() {
         glyphs.queue(c, 18);
     }
     glyphs.flush();
 
-    let vertices = text::text(STR, &mut glyphs, 18.0);
+    let vertices = text::vbo::text(&text, &mut glyphs, 18.0);
 
     let text2_vbo = VertexBuffer::new(&display, &vertices[..]).unwrap();
 
@@ -209,7 +218,7 @@ fn main() {
 
     let text2_ibo = IndexBuffer::new(&display, PrimitiveType::TrianglesList, &indices[..]).unwrap();
 
-    let text2_program = text::text_program(&display);
+    let text2_program = text::vbo::text_program(&display);
 
     // MAIN LOOP
 

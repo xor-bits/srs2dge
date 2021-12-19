@@ -18,4 +18,5 @@ glam = "0.20.1"
 
 image = "0.23.14"
 fontdue = "0.6.2"
+allsorts = "0.6.0"
 static_res = { git = "https://github.com/Overpeek/static_res" }
