@@ -1,6 +1,5 @@
 use super::{format::FString, pos_iter::CharPositionIter};
 use crate::packer::glyph::Glyphs;
-use fontdue::Font;
 use glium::{backend::Facade, Program};
 use image::RgbaImage;
 
@@ -18,14 +17,18 @@ where
 {
     let string: &FString = string.into();
 
-    for c in string.as_str().chars() {
-        glyphs.queue(c, px as u16);
+    // setup glyphs
+    for (c, format) in string.chars() {
+        glyphs.queue(c, px as u16, format.font);
     }
     glyphs.flush();
 
-    CharPositionIter::new(string, glyphs.font(), px)
+    // gen vbo
+    CharPositionIter::new(string, glyphs, px)
         .flat_map(|c| {
-            let glyph = glyphs.get_indexed(c.index, px as u16).unwrap();
+            let glyph = glyphs
+                .get_indexed(c.index, px as u16, c.format.font)
+                .unwrap();
             [
                 Vertex {
                     vi_position: [c.x as f32 + x, c.y as f32 + y],
@@ -55,7 +58,7 @@ where
         .collect()
 }
 
-pub fn baked_text<'s, F>(string: F, font: &Font, px: f32) -> Option<RgbaImage>
+pub fn baked_text<'s, F>(string: F, glyphs: &Glyphs, px: f32) -> Option<RgbaImage>
 where
     F: Into<&'s FString> + Clone,
 {
@@ -67,7 +70,7 @@ where
     let mut y_min = 0;
     let mut y_max = 0;
 
-    for c in CharPositionIter::new(string, font, px) {
+    for c in CharPositionIter::new(string, glyphs, px) {
         x_min = x_min.min(c.x);
         y_min = y_min.min(c.y);
 
@@ -78,8 +81,11 @@ where
     let height = (y_max - y_min).max(0) as usize;
 
     let mut text = vec![0; width * height * 4];
-    for c in CharPositionIter::new(string, font, px) {
-        let (metrics, bitmap) = font.rasterize_indexed(c.index, px);
+    for c in CharPositionIter::new(string, glyphs, px) {
+        let (metrics, bitmap) = glyphs
+            .font(c.format.font)
+            .unwrap()
+            .rasterize_indexed(c.index, px);
 
         for (index, pixel) in bitmap.iter().enumerate() {
             let x = (c.x - x_min) as usize + index % metrics.width;

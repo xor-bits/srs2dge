@@ -1,13 +1,15 @@
 use fontdue::Font;
 
+use crate::packer::glyph::Glyphs;
+
 use super::format::{FString, Format};
 
 pub struct CharPositionIter<'s> {
     chars: Box<dyn Iterator<Item = (char, Format)> + 's>,
+    glyphs: &'s Glyphs,
     font: &'s Font,
 
     px: f32,
-    tab: f32,
 
     x_origin: i32,
     y_origin: i32,
@@ -25,13 +27,13 @@ pub struct CharPosition {
 }
 
 impl<'s> CharPositionIter<'s> {
-    pub fn new(string: &'s FString, font: &'s Font, px: f32) -> Self {
+    pub fn new(string: &'s FString, glyphs: &'s Glyphs, px: f32) -> Self {
         Self {
             chars: Box::new(string.chars()),
-            font,
+            glyphs,
+            font: glyphs.font(0).unwrap(),
 
             px,
-            tab: font.metrics(' ', px).advance_width.floor() * 4.0,
 
             x_origin: 0,
             y_origin: px as i32,
@@ -47,6 +49,7 @@ impl<'s> Iterator for CharPositionIter<'s> {
         let (mut c, mut format);
         loop {
             (c, format) = self.chars.next()?;
+            self.font = self.glyphs.font(format.font).unwrap();
 
             match c {
                 '\n' => {
@@ -56,7 +59,7 @@ impl<'s> Iterator for CharPositionIter<'s> {
                 }
                 '\t' => {
                     //panic!("px{} tab{}", self.px, self.tab);
-                    let w = self.tab;
+                    let w = self.font.metrics(' ', self.px).advance_width.floor() * 4.0;
                     self.x_origin = ((self.x_origin as f32 / w).floor() * w + w) as i32;
                     self.last_c = None;
                 }

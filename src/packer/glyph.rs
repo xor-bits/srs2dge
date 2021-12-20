@@ -18,24 +18,23 @@ use std::{borrow::Cow, collections::HashMap};
 struct Glyph {
     index: u16,
     scale: u16,
+    font: usize,
 }
+
+type GlyphHash = usize;
 
 pub struct Glyphs {
     texture: Texture2d,
     packer: Packer,
-    font: Font,
 
-    contained: HashMap<Glyph, (u8, TexturePosition)>,
+    fonts: HashMap<usize, Font>,
+    glyphs: HashMap<Glyph, (GlyphHash, TexturePosition)>,
 
     queue: Vec<Glyph>,
 }
 
 impl Glyphs {
-    pub fn new<F: Facade>(
-        facade: &F,
-        font: Font,
-        rect: Rect,
-    ) -> Result<Self, TextureCreationError> {
+    pub fn new<F: Facade>(facade: &F, rect: Rect) -> Result<Self, TextureCreationError> {
         let texture = Texture2d::empty_with_format(
             facade,
             UncompressedFloatFormat::F32,
@@ -45,25 +44,33 @@ impl Glyphs {
         )?;
         let packer = Packer::new(rect);
 
-        let contained = HashMap::new();
+        let fonts = HashMap::new();
+        let glyphs = HashMap::new();
 
         let queue = Vec::new();
 
         Ok(Self {
             texture,
             packer,
-            font,
 
-            contained,
+            fonts,
+            glyphs,
 
             queue,
         })
     }
 
-    pub fn queue(&mut self, c: char, scale: u16) {
+    pub fn add_font(&mut self, font: Font) -> usize {
+        let id = font.file_hash();
+        self.fonts.insert(id, font);
+        id
+    }
+
+    pub fn queue(&mut self, c: char, scale: u16, font: usize) {
         self.queue.push(Glyph {
-            index: self.font.lookup_glyph_index(c),
+            index: self.fonts[&font].lookup_glyph_index(c),
             scale,
+            font,
         });
     }
 
@@ -76,9 +83,8 @@ impl Glyphs {
                 continue;
             }
 
-            let (metrics, data) = self
-                .font
-                .rasterize_indexed(queued.index, queued.scale as f32);
+            let (metrics, data) =
+                self.fonts[&queued.font].rasterize_indexed(queued.index, queued.scale as f32);
 
             let rect = self
                 .packer
@@ -97,7 +103,7 @@ impl Glyphs {
                 data,
             );
 
-            self.contained.insert(
+            self.glyphs.insert(
                 queued,
                 (
                     0,
@@ -119,25 +125,28 @@ impl Glyphs {
     }
 
     fn get_glyph(&self, glyph: &Glyph) -> Option<TexturePosition> {
-        Some(self.contained.get(glyph)?.1)
+        Some(self.glyphs.get(glyph)?.1)
     }
 
-    pub fn get(&self, c: char, scale: u16) -> Option<TexturePosition> {
+    pub fn get(&self, c: char, scale: u16, font: usize) -> Option<TexturePosition> {
         self.get_glyph(&Glyph {
-            index: self.font.lookup_glyph_index(c),
+            index: self.fonts[&font].lookup_glyph_index(c),
             scale,
+            font,
         })
     }
 
-    pub fn get_indexed(&self, index: u16, scale: u16) -> Option<TexturePosition> {
-        self.get_glyph(&Glyph { index, scale })
+    pub fn get_indexed(&self, index: u16, scale: u16, font: usize) -> Option<TexturePosition> {
+        self.get_glyph(&Glyph { index, scale, font })
     }
 
     pub fn sampled(&self) -> Sampler<'_, Texture2d> {
         self.texture.sampled()
     }
 
-    pub fn font(&self) -> &'_ Font {
-        &self.font
+    pub fn font(&self, font: usize) -> Option<&'_ Font> {
+        self.fonts
+            .get(&font)
+            .or_else(|| self.fonts.iter().next().map(|(_, font)| font))
     }
 }

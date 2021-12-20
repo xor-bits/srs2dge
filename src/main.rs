@@ -8,10 +8,11 @@
 use crate::{
     packer::{glyph::Glyphs, packer2d::Rect},
     report::Reporter,
-    text::format::{FString, Formatted},
+    text::format::{FString, Formatted, Format},
 };
+use font_loader::system_fonts::{self, FontPropertyBuilder};
 use fontdue::{Font, FontSettings};
-use glam::{Mat4, Vec4};
+use glam::{Mat4, Vec4, Vec3};
 use glium::{
     glutin::ContextBuilder,
     index::PrimitiveType,
@@ -144,28 +145,32 @@ fn main() {
 
     // TEXT SETUP
 
-    let text = FString::from_iter([
-        "∫|∫x dx + 'test text j'\u{FF1B}\\/\"\n\\VAW//\n\treadability\n\t\tline height\n\t\t\tnewline\n54is9\taligned\n\n".formatted(),
-        "yy̆y\n".formatted(),
-        "\u{FF1B}\n".formatted(),
-        "fn ".colored(1.0, 0.5, 0.0),
-        "main".colored(0.1, 0.1, 1.0),
-        "() {\n\t".formatted(),
-        "println!".colored(0.1, 0.1, 1.0),
-        "(".formatted(),
-        "\"Hello World!\"".colored(0.1, 1.0, 0.1),
-        ");\n}\n\n".formatted(),
-        "\tTAB\n".formatted(),
-        "\t\tWIDTH\n".formatted(),
-        "----IS\n".formatted(),
-        "--------4\n".formatted()
+    let mut glyphs = Glyphs::new(&display, Rect::new(512, 512)).unwrap();
+    let fira_font = glyphs.add_font(Font::from_bytes(res::fira::font_ttf, FontSettings::default()).unwrap());
+    let roboto_font = glyphs.add_font(Font::from_bytes(res::roboto::font_ttf, FontSettings::default()).unwrap());
+    let system_font = glyphs.add_font(Font::from_bytes(system_fonts::get(&FontPropertyBuilder::new().italic().build()).unwrap().0, FontSettings::default()).unwrap());
+
+    let mut text = FString::from_iter([
+        "∫|∫x dx + 'test text j'\u{FF1B}\\/\"\n\\VAW//\n\treadability\n\t\tline height\n\t\t\tnewline\n54is9\taligned\n\n".default(),
+        "yy̆y\n".default(),
+        "\u{FF1B}\n".default(),
+        "fn ".default().color(1.0, 0.5, 0.0).font(fira_font),
+        "main".leave().color(0.1, 0.1, 1.0),
+        "() {\n\t".leave().color(1.0, 1.0, 1.0),
+        "println!".leave().color(0.1, 0.1, 1.0),
+        "(".leave().color(1.0, 1.0, 1.0),
+        "\"Hello World!\"".leave().color(0.1, 1.0, 0.1),
+        ");\n}\n\n".leave().color(1.0, 1.0, 1.0),
+        "\tTAB\n".default(),
+        "\t\tWIDTH\n".default(),
+        "----IS\n".default(),
+        "--------4\n".default()
     ]);
+    text.set_default_format(Format{ color: Vec3::new(1.0, 1.0, 1.0), font: roboto_font });
 
     // CPU RENDERED TEXT
 
-    let font = Font::from_bytes(res::roboto::font_ttf, FontSettings::default()).unwrap();
-
-    let text1_img: RgbaImage = text::vbo::baked_text(&text, &font, 18.0).unwrap().convert();
+    let text1_img: RgbaImage = text::vbo::baked_text(&text, &glyphs, 18.0).unwrap().convert();
     let text1_dim = text1_img.dimensions();
     let text1_texture = glium::texture::RawImage2d::from_raw_rgba_reversed(&text1_img, text1_dim);
     let text1_texture =
@@ -199,14 +204,6 @@ fn main() {
     .unwrap();
 
     // GPU RENDERED TEXT
-
-    let font = Font::from_bytes(res::fira::font_ttf, FontSettings::default()).unwrap();
-
-    let mut glyphs = Glyphs::new(&display, font, Rect::new(512, 512)).unwrap();
-    for c in text.as_str().chars() {
-        glyphs.queue(c, 18);
-    }
-    glyphs.flush();
 
     let vertices = text::vbo::text(&text, &mut glyphs, 18.0, 0.0, 0.0);
     let text2_vbo = VertexBuffer::new(&display, &vertices[..]).unwrap();
@@ -280,9 +277,9 @@ fn main() {
                     // DRAW DYNAMIC TEXT
 
                     let mut text = FString::new();
-                    text += format!("AVG frametime: {:?}\nAVG FPS: {:?}", reporter.last().0, reporter.last().1).formatted();
+                    text += format!("AVG frametime: {:?}\nAVG FPS: {:?}", reporter.last().0, reporter.last().1).default().font(system_font).color(0.0, 0.0, 0.0);
                     let vertices = text::vbo::text(&text, &mut glyphs, 18.0, 500.0, 0.0);
-                    
+
                     let ubo = uniform! {
                         mat: Mat4::orthographic_rh_gl(0.0, size.0, 0.0, size.1, -1.0, 1.0).to_cols_array_2d(),
                         sprite: glyphs
