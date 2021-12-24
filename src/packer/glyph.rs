@@ -2,7 +2,8 @@ use super::{
     packer2d::{Packer, Rect},
     TexturePosition,
 };
-use fontdue::Font;
+use font_loader::system_fonts::{self, FontProperty};
+use fontdue::{Font, FontSettings};
 use glam::Vec2;
 use glium::{
     backend::Facade,
@@ -64,6 +65,14 @@ impl Glyphs {
         let id = font.file_hash();
         self.fonts.insert(id, font);
         id
+    }
+
+    pub fn add_font_bytes(&mut self, font: &[u8]) -> Result<usize, &'static str> {
+        Ok(self.add_font(Font::from_bytes(font, FontSettings::default())?))
+    }
+
+    pub fn add_font_property(&mut self, font: FontProperty) -> Result<usize, &'static str> {
+        self.add_font_bytes(&system_fonts::get(&font).ok_or("Font not found")?.0[..])
     }
 
     pub fn queue(&mut self, c: char, scale: u16, font: usize) {

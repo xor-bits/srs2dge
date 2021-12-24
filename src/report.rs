@@ -1,4 +1,7 @@
-use std::time::{Duration, Instant};
+use std::{
+    ops::Deref,
+    time::{Duration, Instant},
+};
 
 pub struct Reporter {
     count: u32,
@@ -6,17 +9,23 @@ pub struct Reporter {
     report_timer: Instant,
     report_interval: Duration,
 
-    last_frametime: Duration,
-    last_fps: f64,
+    last_frametime: Option<Duration>,
+    last_fps: Option<f64>,
 }
 
 pub struct Timer {
     begin: Instant,
 }
 
+impl Default for Reporter {
+    fn default() -> Self {
+        Self::new_with_interval(Duration::from_secs(3))
+    }
+}
+
 impl Reporter {
     pub fn new() -> Self {
-        Self::new_with_interval(Duration::from_secs(3))
+        Self::default()
     }
 
     pub fn new_with_interval(report_interval: Duration) -> Self {
@@ -26,8 +35,8 @@ impl Reporter {
             report_timer: Instant::now(),
             report_interval,
 
-            last_frametime: Duration::default(),
-            last_fps: 0.0,
+            last_frametime: None,
+            last_fps: None,
         }
     }
 
@@ -43,18 +52,21 @@ impl Reporter {
 
         if self.report_timer.elapsed() >= self.report_interval {
             let avg = self.elapsed / self.count;
-            self.last_frametime = avg;
-            self.last_fps = self.count as f64 / self.report_interval.as_secs_f64();
+            let fps = self.count as f64 / self.report_interval.as_secs_f64();
+
             log::debug!(
 				"Report ({}s) \nAVG frametime: {:.2?}\nAVG FPS: {:.2} (based on avg frametime)\nREAL FPS: {:.2}",
 				self.report_interval.as_secs_f64(),
-				self.last_frametime,
-				1.0 / self.last_frametime.as_secs_f64(),
-				self.last_fps
+				avg,
+				1.0 / avg.as_secs_f64(),
+				fps
 			);
+
             self.count = 0;
             self.elapsed = Duration::default();
             self.report_timer = Instant::now();
+            self.last_frametime = Some(avg);
+            self.last_fps = Some(fps);
         }
     }
 
@@ -86,7 +98,26 @@ impl Reporter {
         }
     }
 
-    pub fn last(&self) -> (Duration, f64) {
-        (self.last_frametime, self.last_fps)
+    pub fn last(&self) -> Option<(Duration, f64)> {
+        Some((self.last_frametime?, self.last_fps?))
+    }
+
+    pub fn last_string(&self) -> (String, String) {
+        (
+            self.last_frametime
+                .map(|ft| format!("{:?}", ft))
+                .unwrap_or_else(|| "...".into()),
+            self.last_fps
+                .map(|fps| format!("{}", fps))
+                .unwrap_or_else(|| "...".into()),
+        )
+    }
+}
+
+impl Deref for Timer {
+    type Target = Instant;
+
+    fn deref(&self) -> &Self::Target {
+        &self.begin
     }
 }

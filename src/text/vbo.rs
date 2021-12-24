@@ -1,17 +1,9 @@
 use super::{format::FString, pos_iter::CharPositionIter};
-use crate::packer::glyph::Glyphs;
-use glium::{backend::Facade, Program};
+use crate::{packer::glyph::Glyphs, program::DefaultVertex};
+use glam::Vec2;
 use image::RgbaImage;
 
-#[derive(Debug, Clone, Copy)]
-pub struct Vertex {
-    vi_position: [f32; 2],
-    vi_color: [f32; 3],
-    vi_uv: [f32; 2],
-}
-glium::implement_vertex!(Vertex, vi_position, vi_color, vi_uv);
-
-pub fn text<'s, F>(string: F, glyphs: &mut Glyphs, px: f32, x: f32, y: f32) -> Vec<Vertex>
+pub fn text<'s, F>(string: F, glyphs: &mut Glyphs, px: f32, x: f32, y: f32) -> Vec<DefaultVertex>
 where
     F: Into<&'s FString>,
 {
@@ -30,29 +22,29 @@ where
                 .get_indexed(c.index, px as u16, c.format.font)
                 .unwrap();
             [
-                Vertex {
-                    vi_position: [c.x as f32 + x, c.y as f32 + y],
-                    vi_color: c.format.color.to_array(),
-                    vi_uv: [glyph.top_left.x, glyph.top_left.y],
-                },
-                Vertex {
-                    vi_position: [c.x as f32 + x, c.y as f32 + c.height as f32 + y],
-                    vi_color: c.format.color.to_array(),
-                    vi_uv: [glyph.top_left.x, glyph.bottom_right.y],
-                },
-                Vertex {
-                    vi_position: [
+                DefaultVertex::from_vecs(
+                    Vec2::new(c.x as f32 + x, c.y as f32 + y),
+                    c.format.color,
+                    Vec2::new(glyph.top_left.x, glyph.top_left.y),
+                ),
+                DefaultVertex::from_vecs(
+                    Vec2::new(c.x as f32 + x, c.y as f32 + c.height as f32 + y),
+                    c.format.color,
+                    Vec2::new(glyph.top_left.x, glyph.bottom_right.y),
+                ),
+                DefaultVertex::from_vecs(
+                    Vec2::new(
                         c.x as f32 + c.width as f32 + x,
                         c.y as f32 + c.height as f32 + y,
-                    ],
-                    vi_color: c.format.color.to_array(),
-                    vi_uv: [glyph.bottom_right.x, glyph.bottom_right.y],
-                },
-                Vertex {
-                    vi_position: [c.x as f32 + c.width as f32 + x, c.y as f32 + y],
-                    vi_color: c.format.color.to_array(),
-                    vi_uv: [glyph.bottom_right.x, glyph.top_left.y],
-                },
+                    ),
+                    c.format.color,
+                    Vec2::new(glyph.bottom_right.x, glyph.bottom_right.y),
+                ),
+                DefaultVertex::from_vecs(
+                    Vec2::new(c.x as f32 + c.width as f32 + x, c.y as f32 + y),
+                    c.format.color,
+                    Vec2::new(glyph.bottom_right.x, glyph.top_left.y),
+                ),
             ]
         })
         .collect()
@@ -108,39 +100,4 @@ where
     }
 
     RgbaImage::from_raw(width as u32, height as u32, text)
-}
-
-pub fn text_program<F: Facade>(facade: &F) -> Program {
-    glium::program!(facade,
-        140 => {
-            vertex: "#version 140
-                in vec2 vi_position;
-                in vec3 vi_color;
-                in vec2 vi_uv;
-
-                uniform mat4 mat;
-
-                out vec3 fi_color;
-                out vec2 fi_uv;
-
-                void main() {
-                    gl_Position = mat * vec4(vi_position, 0.0, 1.0) * vec4(1.0, -1.0, 1.0, 1.0);
-                    fi_color = vi_color;
-                    fi_uv = vi_uv;
-                }",
-            fragment: "#version 140
-                in vec3 fi_color;
-                in vec2 fi_uv;
-
-                uniform sampler2D sprite;
-
-                out vec4 o_color;
-
-                void main() {
-                    o_color.rgb = fi_color;
-					o_color.a = texture(sprite, fi_uv).r;
-                }"
-        }
-    )
-    .unwrap()
 }

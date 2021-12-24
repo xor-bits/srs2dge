@@ -15,6 +15,7 @@ rand = "0.8.4"
 glium = "0.31.0"
 winit = "0.26.0"
 glam = "0.20.1"
+game-loop = { version = "0.8.0", features = ["window"] }
 
 image = "0.23.14"
 fontdue = "0.6.2"

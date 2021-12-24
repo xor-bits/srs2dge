@@ -16,10 +16,20 @@ where
     New(T),
 }
 
+impl<T> Default for NewSetting<T>
+where
+    T: Copy,
+{
+    fn default() -> Self {
+        Self::Default
+    }
+}
+
 impl<T> NewSetting<T>
 where
     T: Copy,
 {
+    #[must_use]
     pub fn merge(lhs: Self, rhs: Self) -> Self {
         match &rhs {
             Self::Leave => lhs,
@@ -51,13 +61,14 @@ impl Default for Format {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct NewFormat {
     pub color: NewSetting<Vec3>,
     pub font: NewSetting<usize>,
 }
 
 impl NewFormat {
+    #[must_use]
     pub fn leave() -> Self {
         Self {
             color: NewSetting::Leave,
@@ -65,13 +76,7 @@ impl NewFormat {
         }
     }
 
-    pub fn default() -> Self {
-        Self {
-            color: NewSetting::Default,
-            font: NewSetting::Default,
-        }
-    }
-
+    #[must_use]
     pub fn new(r: f32, g: f32, b: f32, font: usize) -> Self {
         Self {
             color: NewSetting::New(Vec3::new(r, g, b)),
@@ -101,11 +106,13 @@ pub struct FormatPair<T> {
 }
 
 impl<T> FormatPair<T> {
+    #[must_use]
     pub fn color(mut self, r: f32, g: f32, b: f32) -> Self {
         self.format.color = NewSetting::New(Vec3::new(r, g, b));
         self
     }
 
+    #[must_use]
     pub fn font(mut self, font: usize) -> Self {
         self.format.font = NewSetting::New(font);
         self
@@ -157,6 +164,7 @@ impl Formatted for String {
 
 // FORMAT STRING
 
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct FString {
     string: String,
     format: BTreeMap<usize, NewFormat>,
@@ -164,16 +172,33 @@ pub struct FString {
     default_format: Format,
 }
 
-impl FString {
-    pub fn new() -> Self {
+impl<'s, S> FromIterator<FormatPair<S>> for FString
+where
+    S: Into<&'s str> + 's,
+{
+    fn from_iter<T: IntoIterator<Item = FormatPair<S>>>(iter: T) -> Self {
+        let mut string = String::new();
+        let format = BTreeMap::from_iter(iter.into_iter().map(|s| {
+            let _str = s.other.into();
+            let len = string.len();
+            string.push_str(_str);
+            (len, s.format)
+        }));
+
         Self {
-            string: String::new(),
-            format: BTreeMap::new(),
+            string,
+            format,
             default_format: Format::default(),
         }
     }
+}
 
-    pub fn from_str<S>(string: S) -> Self
+impl FString {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn from_string<S>(string: S) -> Self
     where
         S: Into<String>,
     {
@@ -203,26 +228,6 @@ impl FString {
             format: s.format,
             other: (&s.other).into(),
         }))
-    }
-
-    pub fn from_iter<'s, S, I>(formatted: I) -> Self
-    where
-        I: IntoIterator<Item = FormatPair<S>>,
-        S: Into<&'s str> + 's,
-    {
-        let mut string = String::new();
-        let format = BTreeMap::from_iter(formatted.into_iter().map(|s| {
-            let _str = s.other.into();
-            let len = string.len();
-            string.push_str(_str);
-            (len, s.format)
-        }));
-
-        Self {
-            string,
-            format,
-            default_format: Format::default(),
-        }
     }
 
     pub fn insert_format(&mut self, index: usize, format: NewFormat) {
@@ -257,7 +262,7 @@ where
     S: Into<String>,
 {
     fn from(string: S) -> Self {
-        Self::from_str(string)
+        Self::from_string(string)
     }
 }
 

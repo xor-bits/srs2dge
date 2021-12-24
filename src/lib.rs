@@ -1,0 +1,172 @@
+// #![feature(let_else)]
+// #![feature(destructuring_assignment)]
+// #![feature(test)]
+#![feature(drain_filter)]
+#![feature(int_abs_diff)]
+#![feature(type_alias_impl_trait)]
+
+use glium::{backend::Facade, glutin::ContextBuilder, Display};
+use report::Reporter;
+use runnable::Runnable;
+use std::{
+    sync::atomic::{AtomicBool, Ordering},
+    time::{Duration, Instant},
+};
+use winit::{
+    dpi::LogicalSize,
+    event::{Event, WindowEvent},
+    event_loop::{ControlFlow, EventLoop},
+    window::WindowBuilder,
+};
+
+#[macro_use]
+extern crate glium;
+
+pub mod packer;
+pub mod program;
+pub mod report;
+pub mod runnable;
+pub mod text;
+
+pub struct Engine {
+    facade: Display,
+    event_loop: Option<EventLoop<()>>,
+    stop: AtomicBool,
+    init_timer: Instant,
+
+    //
+    pub reporter: Reporter,
+
+    // window size
+    pub size: (f32, f32),
+
+    // window aspect ratio
+    pub aspect: f32,
+
+    // window scaling factor
+    pub scale_factor: f64,
+
+    // update interval
+    pub interval: Duration,
+}
+
+impl Engine {
+    pub fn init() -> Self {
+        let init_timer = Instant::now();
+
+        let event_loop = EventLoop::new();
+        let window_builder = WindowBuilder::new()
+            .with_inner_size(LogicalSize::new(600_i32, 600_i32))
+            .with_visible(false)
+            .with_title("Title");
+        let context = ContextBuilder::new()
+            // .with_vsync(true)
+            .build_windowed(window_builder, &event_loop)
+            .unwrap();
+        let scale_factor = context.window().scale_factor();
+        let facade = Display::from_gl_window(context).unwrap();
+
+        log::debug!("OpenGL Vendor: {}", facade.get_opengl_vendor_string());
+        log::debug!("OpenGL Renderer: {}", facade.get_opengl_renderer_string());
+        log::debug!("OpenGL Version: {}", facade.get_opengl_version_string());
+
+        let reporter = Reporter::new_with_interval(Duration::from_secs_f32(5.0));
+
+        let size = facade
+            .gl_window()
+            .window()
+            .inner_size()
+            .to_logical(scale_factor);
+        let size = (size.width, size.height);
+        let aspect = size.0 / size.1;
+        let interval = Duration::from_secs_f64(1.0 / 60.0);
+        let stop = AtomicBool::new(false);
+
+        let event_loop = Some(event_loop);
+        Self {
+            facade,
+            event_loop,
+            reporter,
+            stop,
+            init_timer,
+
+            size,
+            aspect,
+            scale_factor,
+            interval,
+        }
+    }
+
+    pub fn stop(&self) {
+        self.stop.store(true, Ordering::Relaxed)
+    }
+
+    pub fn run(mut self, mut app: impl Runnable + 'static) -> ! {
+        log::debug!("Initialization took: {:?}", self.init_timer.elapsed());
+
+        let mut previous = Instant::now();
+        let mut lag = Duration::from_secs_f64(0.0);
+
+        self.facade.gl_window().window().set_visible(true);
+
+        self.event_loop
+            .take()
+            .unwrap()
+            .run(move |event, _, control| {
+                *control = if self.stop.load(Ordering::Relaxed) {
+                    ControlFlow::Exit
+                } else {
+                    ControlFlow::Poll
+                };
+
+                match &event {
+                    Event::WindowEvent {
+                        event: WindowEvent::Resized(s),
+                        ..
+                    } => {
+                        self.size = (s.width as f32, s.height as f32);
+                        let s = s.to_logical::<f32>(self.scale_factor);
+                        self.aspect = s.width / s.height;
+                    }
+                    Event::RedrawRequested(_) => {
+                        // main game loop source:
+                        //  - https://gameprogrammingpatterns.com/game-loop.html
+                        let elapsed = previous.elapsed();
+                        previous = Instant::now();
+                        lag += elapsed;
+
+                        while lag >= self.interval {
+                            app.update(&self);
+                            lag -= self.interval;
+                        }
+
+                        let timer = self.reporter.begin();
+                        {
+                            let mut frame = self.facade.draw();
+                            app.draw(
+                                &self,
+                                &mut frame,
+                                lag.as_secs_f32() / self.interval.as_secs_f32(),
+                            );
+                            frame.finish().unwrap();
+                        }
+                        self.reporter.end(timer);
+                        self.reporter.report_maybe();
+                        return;
+                    }
+                    Event::MainEventsCleared => {
+                        self.facade.gl_window().window().request_redraw();
+                    }
+                    _ => {}
+                }
+
+                app.event(&self, &event);
+            })
+    }
+}
+
+impl Facade for Engine {
+    fn get_context(&self) -> &std::rc::Rc<glium::backend::Context> {
+        self.facade.get_context()
+    }
+}
