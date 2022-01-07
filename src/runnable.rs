@@ -11,5 +11,5 @@ pub trait Runnable {
     fn event(&mut self, engine: &Engine, event: &Event<()>) {}
 
     #[allow(unused_variables)]
-    fn draw(&self, engine: &Engine, frame: &mut Frame, delta: f32) {}
+    fn draw(&mut self, engine: &Engine, frame: &mut Frame, delta: f32) {}
 }

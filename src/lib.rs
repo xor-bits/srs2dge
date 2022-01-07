@@ -13,7 +13,7 @@ use std::{
     time::{Duration, Instant},
 };
 use winit::{
-    dpi::LogicalSize,
+    dpi::{LogicalSize, PhysicalPosition},
     event::{Event, WindowEvent},
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
@@ -29,7 +29,8 @@ pub mod runnable;
 pub mod text;
 
 pub struct Engine {
-    facade: Display,
+    pub facade: Display,
+
     event_loop: Option<EventLoop<()>>,
     stop: AtomicBool,
     init_timer: Instant,
@@ -42,6 +43,12 @@ pub struct Engine {
 
     // window aspect ratio
     pub aspect: f32,
+
+    // is cursor inside the window?
+    pub cursor_in: bool,
+
+    // cursor position
+    pub cursor_pos: PhysicalPosition<f64>,
 
     // window scaling factor
     pub scale_factor: f64,
@@ -81,8 +88,10 @@ impl Engine {
         let aspect = size.0 / size.1;
         let interval = Duration::from_secs_f64(1.0 / 60.0);
         let stop = AtomicBool::new(false);
-
         let event_loop = Some(event_loop);
+        let cursor_in = false;
+        let cursor_pos = Default::default();
+
         Self {
             facade,
             event_loop,
@@ -92,6 +101,8 @@ impl Engine {
 
             size,
             aspect,
+            cursor_in,
+            cursor_pos,
             scale_factor,
             interval,
         }
@@ -120,6 +131,20 @@ impl Engine {
                 };
 
                 match &event {
+                    Event::WindowEvent {
+                        event: WindowEvent::CursorEntered { .. },
+                        ..
+                    } => self.cursor_in = true,
+                    Event::WindowEvent {
+                        event: WindowEvent::CursorLeft { .. },
+                        ..
+                    } => self.cursor_in = false,
+                    Event::WindowEvent {
+                        event: WindowEvent::CursorMoved { position, .. },
+                        ..
+                    } => {
+                        self.cursor_pos = *position;
+                    }
                     Event::WindowEvent {
                         event: WindowEvent::Resized(s),
                         ..

@@ -123,7 +123,7 @@ impl Runnable for Quad {
         }
     }
 
-    fn draw(&self, engine: &Engine, frame: &mut Frame, delta: f32) {
+    fn draw(&mut self, engine: &Engine, frame: &mut Frame, delta: f32) {
         if !self.toggle {
             return;
         }
@@ -214,7 +214,7 @@ impl Runnable for CpuText {
         }
     }
 
-    fn draw(&self, engine: &Engine, frame: &mut Frame, _: f32) {
+    fn draw(&mut self, engine: &Engine, frame: &mut Frame, _: f32) {
         if !self.toggle {
             return;
         }
@@ -285,7 +285,7 @@ impl Runnable for DynText {
         }
     }
 
-    fn draw(&self, engine: &Engine, frame: &mut Frame, _: f32) {
+    fn draw(&mut self, engine: &Engine, frame: &mut Frame, _: f32) {
         if !self.toggle {
             return;
         }
@@ -373,7 +373,7 @@ impl Runnable for GpuText {
         }
     }
 
-    fn draw(&self, engine: &Engine, frame: &mut Frame, _: f32) {
+    fn draw(&mut self, engine: &Engine, frame: &mut Frame, _: f32) {
         if !self.toggle {
             return;
         }
@@ -441,7 +441,7 @@ impl Runnable for App {
         self.dyn_text.event(engine, event);
     }
 
-    fn draw(&self, engine: &Engine, frame: &mut Frame, delta: f32) {
+    fn draw(&mut self, engine: &Engine, frame: &mut Frame, delta: f32) {
         let cc = Vec4::new(0.2, 0.22, 0.24, 1.0);
         frame.clear_color_srgb(cc.x, cc.y, cc.z, cc.w);
 

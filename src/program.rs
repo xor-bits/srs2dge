@@ -75,7 +75,8 @@ where
 
                 void main() {
                     o_color = vec4(fi_color, 1.0) * texture(sprite, fi_uv);
-                }"
+                }",
+            outputs_srgb: true
         }
     )
     .unwrap_or_else(|err| panic!("Default program failed to compile: {}", err))
