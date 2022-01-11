@@ -295,7 +295,7 @@ impl Runnable for DynText {
             ..Default::default()
         };
 
-        let (frametime, fps) = engine.reporter.last_string();
+        let (frametime, fps) = engine.frame_reporter.last_string();
 
         let text = format!("AVG frametime: {}\nAVG FPS: {}", frametime, fps)
             .default()

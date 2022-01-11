@@ -9,8 +9,8 @@ pub struct Reporter {
     report_timer: Instant,
     report_interval: Duration,
 
-    last_frametime: Option<Duration>,
-    last_fps: Option<f64>,
+    last_interval: Option<Duration>,
+    last_per_second: Option<f64>,
 }
 
 pub struct Timer {
@@ -35,8 +35,8 @@ impl Reporter {
             report_timer: Instant::now(),
             report_interval,
 
-            last_frametime: None,
-            last_fps: None,
+            last_interval: None,
+            last_per_second: None,
         }
     }
 
@@ -46,68 +46,70 @@ impl Reporter {
         }
     }
 
-    pub fn end(&mut self, timer: Timer) {
+    pub fn end(&mut self, timer: Timer) -> bool {
         self.elapsed += timer.begin.elapsed();
         self.count += 1;
 
-        if self.report_timer.elapsed() >= self.report_interval {
-            let avg = self.elapsed / self.count;
-            let fps = self.count as f64 / self.report_interval.as_secs_f64();
-
-            log::debug!(
-				"Report ({}s) \nAVG frametime: {:.2?}\nAVG FPS: {:.2} (based on avg frametime)\nREAL FPS: {:.2}",
-				self.report_interval.as_secs_f64(),
-				avg,
-				1.0 / avg.as_secs_f64(),
-				fps
-			);
-
-            self.count = 0;
-            self.elapsed = Duration::default();
-            self.report_timer = Instant::now();
-            self.last_frametime = Some(avg);
-            self.last_fps = Some(fps);
+        let should_report = self.should_report();
+        if should_report {
+            self.reset();
         }
+        should_report
     }
 
     pub fn should_report(&self) -> bool {
         self.report_timer.elapsed() >= self.report_interval
     }
 
-    pub fn report(&mut self) {
-        let avg = self.elapsed / self.count;
-        log::debug!(
-			"Report ({}s) \nAVG frametime: {:.2?}\nAVG FPS: {:.2} (based on avg frametime)\nREAL FPS: {:.2}",
-			self.report_interval.as_secs_f64(),
-			avg,
-			self.report_interval.as_secs_f64() / avg.as_secs_f64(),
-			self.count as f64 / self.report_interval.as_secs_f64()
-		);
+    pub fn report_interval(&self) -> Duration {
+        self.report_interval
     }
 
+    /* pub fn report(&mut self, interval_name: &str, per_second_name: &str) {
+        let avg = self.elapsed / self.count;
+        let fps = self.count as f64 / self.report_interval.as_secs_f64();
+
+        log::debug!(
+            "Report ({interval}s)\nAVG {interval_name}: {per_second:.2?}\nRESP {per_second_name}: {resp_fps:.2}\nREAL {per_second_name}: {real_fps:.2}",
+            interval = self.report_interval.as_secs_f64(),
+            per_second = avg,
+
+            resp_fps = 1.0 / avg.as_secs_f64(),
+            real_fps = fps,
+
+            interval_name = interval_name,
+            per_second_name = per_second_name,
+        );
+    } */
+
     pub fn reset(&mut self) {
+        let avg = self.elapsed / self.count;
+        let fps = self.count as f64 / self.report_interval.as_secs_f64();
+
         self.count = 0;
         self.elapsed = Duration::default();
         self.report_timer = Instant::now();
+        self.last_interval = Some(avg);
+        self.last_per_second = Some(fps);
     }
 
-    pub fn report_maybe(&mut self) {
+    /* pub fn report_maybe(&mut self, interval_name: &str, per_second_name: &str) {
         if self.should_report() {
-            self.report();
+            self.report(interval_name, per_second_name);
             self.reset();
         }
-    }
+    } */
 
     pub fn last(&self) -> Option<(Duration, f64)> {
-        Some((self.last_frametime?, self.last_fps?))
+        Some((self.last_interval?, self.last_per_second?))
     }
 
     pub fn last_string(&self) -> (String, String) {
         (
-            self.last_frametime
+            self.last_interval
                 .map(|ft| format!("{:?}", ft))
                 .unwrap_or_else(|| "...".into()),
-            self.last_fps
+            self.last_per_second
                 .map(|fps| format!("{}", fps))
                 .unwrap_or_else(|| "...".into()),
         )

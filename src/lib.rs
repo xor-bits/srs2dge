@@ -36,7 +36,8 @@ pub struct Engine {
     init_timer: Instant,
 
     //
-    pub reporter: Reporter,
+    pub frame_reporter: Reporter,
+    pub update_reporter: Reporter,
 
     // window size
     pub size: (f32, f32),
@@ -77,7 +78,8 @@ impl Engine {
         log::debug!("OpenGL Renderer: {}", facade.get_opengl_renderer_string());
         log::debug!("OpenGL Version: {}", facade.get_opengl_version_string());
 
-        let reporter = Reporter::new_with_interval(Duration::from_secs_f32(5.0));
+        let frame_reporter = Reporter::new_with_interval(Duration::from_secs_f32(5.0));
+        let update_reporter = Reporter::new_with_interval(Duration::from_secs_f32(5.0));
 
         let size = facade
             .gl_window()
@@ -95,7 +97,8 @@ impl Engine {
         Self {
             facade,
             event_loop,
-            reporter,
+            frame_reporter,
+            update_reporter,
             stop,
             init_timer,
 
@@ -160,12 +163,16 @@ impl Engine {
                         previous = Instant::now();
                         lag += elapsed;
 
+                        // updates
                         while lag >= self.interval {
+                            let timer = self.update_reporter.begin();
                             app.update(&self);
+                            self.update_reporter.end(timer);
                             lag -= self.interval;
                         }
 
-                        let timer = self.reporter.begin();
+                        // frames
+                        let timer = self.frame_reporter.begin();
                         {
                             let mut frame = self.facade.draw();
                             app.draw(
@@ -175,8 +182,30 @@ impl Engine {
                             );
                             frame.finish().unwrap();
                         }
-                        self.reporter.end(timer);
-                        self.reporter.report_maybe();
+                        let should_report = self.frame_reporter.end(timer);
+
+                        // reports
+                        if should_report {
+                            let int = self.frame_reporter.report_interval();
+                            let (u_int, u_per_sec) = self.update_reporter.last_string();
+                            let (f_int, f_per_sec) = self.frame_reporter.last_string();
+
+                            #[cfg(debug_assertions)]
+                            const DEBUG: &str = "debug build";
+                            #[cfg(not(debug_assertions))]
+                            const DEBUG: &str = "release build";
+
+                            log::debug!(
+                                "Report ({:?})({})\n        per second @ time per\nUPDATES: {:>9} @ {}\nFRAMES: {:>10} @ {}",
+                                int,
+                                DEBUG,
+                                u_per_sec,
+                                u_int,
+                                f_per_sec,
+                                f_int
+                            );
+                        }
+
                         return;
                     }
                     Event::MainEventsCleared => {
