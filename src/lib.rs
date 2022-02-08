@@ -20,7 +20,9 @@ use winit::{
 };
 
 #[macro_use]
-extern crate glium;
+pub extern crate glium;
+pub extern crate glam;
+pub extern crate winit;
 
 pub mod packer;
 pub mod program;
