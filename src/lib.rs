@@ -1,8 +1,4 @@
-// #![feature(let_else)]
-// #![feature(destructuring_assignment)]
-// #![feature(test)]
 #![feature(drain_filter)]
-#![feature(int_abs_diff)]
 #![feature(type_alias_impl_trait)]
 
 use glium::{backend::Facade, glutin::ContextBuilder, Display};
@@ -24,6 +20,7 @@ pub extern crate glium;
 pub extern crate glam;
 pub extern crate winit;
 
+pub mod batch;
 pub mod packer;
 pub mod program;
 pub mod report;

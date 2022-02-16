@@ -1,5 +1,5 @@
 use glam::Vec3;
-use std::{collections::BTreeMap, iter::FromIterator, ops::AddAssign};
+use std::{borrow::Borrow, collections::BTreeMap, iter::FromIterator, ops::AddAssign};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NewSetting<T>
@@ -226,7 +226,7 @@ impl FString {
     {
         Self::from_iter(formatted.iter().map(|s| FormatPair::<&'s str> {
             format: s.format,
-            other: (&s.other).into(),
+            other: s.other.borrow().into(),
         }))
     }
 

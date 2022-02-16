@@ -57,6 +57,17 @@ impl Reporter {
         should_report
     }
 
+    pub fn manual(&mut self, elapsed: Duration) -> bool {
+        self.elapsed += elapsed;
+        self.count += 1;
+
+        let should_report = self.should_report();
+        if should_report {
+            self.reset();
+        }
+        should_report
+    }
+
     pub fn should_report(&self) -> bool {
         self.report_timer.elapsed() >= self.report_interval
     }
