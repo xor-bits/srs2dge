@@ -15,7 +15,7 @@ pub mod quad;
 pub struct BatchRenderer<V, M>
 where
     V: Vertex + Copy,
-    M: Mesh<V> + Default,
+    M: Mesh<V>,
 {
     vbo: VertexBuffer<V>,
     ibo: IndexBuffer<u32>,
@@ -24,7 +24,7 @@ where
     max: usize,
     modified: HashSet<usize>,
     free: BinaryHeap<usize>,
-    used: Vec<Option<M>>,
+    used: Vec<M>,
 
     _p: PhantomData<M>,
 }
@@ -50,7 +50,7 @@ pub struct Idx(usize);
 impl<V, M> BatchRenderer<V, M>
 where
     V: Vertex + Copy,
-    M: Mesh<V> + Default,
+    M: Mesh<V>,
 {
     pub fn new(engine: &Engine) -> Self {
         Self {
@@ -70,11 +70,11 @@ where
     pub fn push_with(&mut self, mesh: M) -> Idx {
         self.ibo_regen = true;
         let spot = if let Some(spot) = self.free.pop() {
-            self.used[spot] = Some(mesh);
+            self.used[spot] = mesh;
             spot
         } else {
             let spot = self.used.len();
-            self.used.push(Some(mesh));
+            self.used.push(mesh);
             spot
         };
         self.max = self.max.max(spot);
@@ -82,7 +82,10 @@ where
         Idx(spot)
     }
 
-    pub fn push(&mut self) -> Idx {
+    pub fn push(&mut self) -> Idx
+    where
+        M: Default,
+    {
         self.push_with(Default::default())
     }
 
@@ -90,18 +93,17 @@ where
 
     pub fn drop(&mut self, idx: Idx) {
         self.ibo_regen = true;
-        self.modified.insert(idx.0);
-        self.used[idx.0] = None;
+        self.modified.remove(&idx.0);
         self.free.push(idx.0);
     }
 
     pub fn get(&self, idx: Idx) -> &'_ M {
-        self.used[idx.0].as_ref().unwrap()
+        &self.used[idx.0]
     }
 
     pub fn get_mut(&mut self, idx: Idx) -> &'_ mut M {
         self.modified.insert(idx.0);
-        self.used[idx.0].as_mut().unwrap()
+        &mut self.used[idx.0]
     }
 
     pub fn draw(&mut self, engine: &Engine) -> (&'_ VertexBuffer<V>, &'_ IndexBuffer<u32>) {
@@ -109,7 +111,6 @@ where
             let ibo: Vec<u32> = self
                 .used
                 .iter()
-                .filter_map(|mesh| mesh.as_ref())
                 .enumerate()
                 .flat_map(|(i, m)| m.indices(i as u32))
                 .collect();
@@ -130,7 +131,7 @@ where
 
             let mut map = self.vbo.map_write();
             for modified in self.modified.drain() {
-                for (i, vert) in self.used[modified].as_ref().unwrap().vertices().enumerate() {
+                for (i, vert) in self.used[modified].vertices().enumerate() {
                     map.set(modified * M::VERTICES + i, vert);
                 }
             }
