@@ -108,16 +108,15 @@ where
             let ibo: Vec<u32> = self
                 .used
                 .iter()
-                .filter_map(|quad| quad.as_ref())
+                .filter_map(|mesh| mesh.as_ref())
                 .enumerate()
-                .flat_map(|(i, m)| m.indices(i as u32 * 4))
+                .flat_map(|(i, m)| m.indices(i as u32 * M::INDICES as u32))
                 .collect();
 
             if let Some(map) = self.ibo.slice_mut(..ibo.len()) {
                 map.write(&ibo);
             } else {
-                self.ibo =
-                    IndexBuffer::dynamic(engine, PrimitiveType::TriangleStrip, &ibo).unwrap();
+                self.ibo = IndexBuffer::dynamic(engine, M::PRIM, &ibo).unwrap();
             }
         }
 
