@@ -39,6 +39,7 @@ pub trait Mesh<V> {
     type IndexIter: Iterator<Item = u32>;
 
     fn vertices(&self) -> Self::VertexIter;
+    // offset in Mesh elements not Vert elements
     fn indices(&self, offset: u32) -> Self::IndexIter;
 }
 
@@ -110,7 +111,7 @@ where
                 .iter()
                 .filter_map(|mesh| mesh.as_ref())
                 .enumerate()
-                .flat_map(|(i, m)| m.indices(i as u32 * M::INDICES as u32))
+                .flat_map(|(i, m)| m.indices(i as u32))
                 .collect();
 
             if let Some(map) = self.ibo.slice_mut(..ibo.len()) {

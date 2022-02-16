@@ -72,7 +72,13 @@ impl Mesh<Vert> for QuadMesh {
     }
 
     fn indices(&self, offset: u32) -> Self::IndexIter {
-        IntoIterator::into_iter([offset, offset + 1, offset + 2, offset + 3, !0])
+        IntoIterator::into_iter([
+            offset * 4,
+            offset * 4 + 1,
+            offset * 4 + 2,
+            offset * 4 + 3,
+            !0,
+        ])
     }
 }
 
