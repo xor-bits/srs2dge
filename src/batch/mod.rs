@@ -1,5 +1,5 @@
 use crate::Engine;
-use glium::{index::PrimitiveType, IndexBuffer, Vertex, VertexBuffer};
+use glium::{backend::Facade, index::PrimitiveType, IndexBuffer, Vertex, VertexBuffer};
 use std::{
     collections::{BinaryHeap, HashSet},
     marker::PhantomData,
@@ -43,6 +43,7 @@ pub trait Mesh<V> {
     fn indices(&self, offset: u32) -> Self::IndexIter;
 }
 
+#[derive(Debug, Clone, Copy, Default)]
 pub struct Idx(usize);
 
 //
@@ -106,7 +107,7 @@ where
         &mut self.used[idx.0]
     }
 
-    pub fn draw(&mut self, engine: &Engine) -> (&'_ VertexBuffer<V>, &'_ IndexBuffer<u32>) {
+    pub fn draw<F: Facade>(&mut self, facade: &F) -> (&'_ VertexBuffer<V>, &'_ IndexBuffer<u32>) {
         if self.ibo_regen {
             let ibo: Vec<u32> = self
                 .used
@@ -118,13 +119,13 @@ where
             if let Some(map) = self.ibo.slice_mut(..ibo.len()) {
                 map.write(&ibo);
             } else {
-                self.ibo = IndexBuffer::dynamic(engine, M::PRIM, &ibo).unwrap();
+                self.ibo = IndexBuffer::dynamic(facade, M::PRIM, &ibo).unwrap();
             }
         }
 
         if !self.modified.is_empty() {
             if self.max * M::VERTICES >= self.vbo.len() {
-                let new = VertexBuffer::empty_dynamic(engine, self.vbo.len() * 2).unwrap();
+                let new = VertexBuffer::empty_dynamic(facade, self.vbo.len() * 2).unwrap();
                 self.vbo.copy_to(&new).unwrap();
                 self.vbo = new;
             }

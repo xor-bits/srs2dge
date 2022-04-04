@@ -1,5 +1,7 @@
+use crate::program::DefaultVertex;
+
 use super::Mesh;
-use glam::{Vec2, Vec4, Vec4Swizzles};
+use glam::{Vec2, Vec2Swizzles, Vec3, Vec3Swizzles, Vec4, Vec4Swizzles};
 use glium::index::PrimitiveType;
 use std::array::IntoIter;
 
@@ -9,34 +11,25 @@ use std::array::IntoIter;
 pub struct QuadMesh {
     pub pos: Vec2,
     pub size: Vec2,
-    pub id: u32,
+    pub col: Vec4,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct IsoQuadMesh {
     pub pos: Vec2,
     pub size: Vec2,
-    pub id: u32,
+    pub col: Vec4,
 }
-
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct Vert {
-    pos: [f32; 2],
-    uv: [f32; 2],
-    id: u32,
-}
-
-implement_vertex!(Vert, pos, uv, id);
 
 //
 
-impl Mesh<Vert> for QuadMesh {
+impl Mesh<DefaultVertex> for QuadMesh {
     const PRIM: PrimitiveType = PrimitiveType::TriangleStrip;
 
     const VERTICES: usize = 4;
     const INDICES: usize = 5;
 
-    type VertexIter = IntoIter<Vert, 4>;
+    type VertexIter = IntoIter<DefaultVertex, 4>;
     type IndexIter = IntoIter<u32, 5>;
 
     fn vertices(&self) -> Self::VertexIter {
@@ -46,28 +39,12 @@ impl Mesh<Vert> for QuadMesh {
             self.pos.x + self.size.x,
             self.pos.y + self.size.y,
         );
-        let id = self.id;
+        let c = Vec2::new(0.0, 1.0);
         IntoIterator::into_iter([
-            Vert {
-                pos: p.xy().to_array(),
-                uv: [0.0, 0.0],
-                id,
-            },
-            Vert {
-                pos: p.xw().to_array(),
-                uv: [0.0, 1.0],
-                id,
-            },
-            Vert {
-                pos: p.zy().to_array(),
-                uv: [1.0, 0.0],
-                id,
-            },
-            Vert {
-                pos: p.zw().to_array(),
-                uv: [1.0, 1.0],
-                id,
-            },
+            DefaultVertex::from_vecs(p.xy(), self.col, c.xx()),
+            DefaultVertex::from_vecs(p.xw(), self.col, c.xy()),
+            DefaultVertex::from_vecs(p.zy(), self.col, c.yx()),
+            DefaultVertex::from_vecs(p.zw(), self.col, c.yy()),
         ])
     }
 
@@ -82,38 +59,22 @@ impl Mesh<Vert> for QuadMesh {
     }
 }
 
-impl Mesh<Vert> for IsoQuadMesh {
+impl Mesh<DefaultVertex> for IsoQuadMesh {
     const PRIM: PrimitiveType = PrimitiveType::TriangleStrip;
 
     const VERTICES: usize = 4;
     const INDICES: usize = 5;
 
-    type VertexIter = IntoIter<Vert, 4>;
+    type VertexIter = IntoIter<DefaultVertex, 4>;
     type IndexIter = IntoIter<u32, 5>;
 
     fn vertices(&self) -> Self::VertexIter {
-        let id = self.id;
+        let c = Vec3::new(0.0, 0.5, 1.0);
         IntoIterator::into_iter([
-            Vert {
-                pos: (self.pos + self.size * Vec2::new(0.0, 0.5)).to_array(),
-                uv: [0.0, 0.0],
-                id,
-            },
-            Vert {
-                pos: (self.pos + self.size * Vec2::new(0.5, 1.0)).to_array(),
-                uv: [0.0, 1.0],
-                id,
-            },
-            Vert {
-                pos: (self.pos + self.size * Vec2::new(0.5, 0.0)).to_array(),
-                uv: [1.0, 0.0],
-                id,
-            },
-            Vert {
-                pos: (self.pos + self.size * Vec2::new(1.0, 0.5)).to_array(),
-                uv: [1.0, 1.0],
-                id,
-            },
+            DefaultVertex::from_vecs(self.pos + self.size * c.xy(), self.col, c.xx()),
+            DefaultVertex::from_vecs(self.pos + self.size * c.yz(), self.col, c.xz()),
+            DefaultVertex::from_vecs(self.pos + self.size * c.yx(), self.col, c.zx()),
+            DefaultVertex::from_vecs(self.pos + self.size * c.zy(), self.col, c.zz()),
         ])
     }
 

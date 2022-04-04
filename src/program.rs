@@ -1,23 +1,23 @@
-use glam::{Vec2, Vec3};
+use glam::{Vec2, Vec4};
 use glium::{backend::Facade, Program};
 
 #[derive(Debug, Clone, Copy)]
 pub struct DefaultVertex {
     vi_position: [f32; 2],
-    vi_color: [f32; 3],
+    vi_color: [f32; 4],
     vi_uv: [f32; 2],
 }
 
 impl DefaultVertex {
-    pub fn new(x: f32, y: f32, r: f32, g: f32, b: f32, u: f32, v: f32) -> Self {
+    pub fn new(x: f32, y: f32, r: f32, g: f32, b: f32, a: f32, u: f32, v: f32) -> Self {
         Self {
             vi_position: [x, y],
-            vi_color: [r, g, b],
+            vi_color: [r, g, b, a],
             vi_uv: [u, v],
         }
     }
 
-    pub fn from_arrays(pos: [f32; 2], col: [f32; 3], uv: [f32; 2]) -> Self {
+    pub fn from_arrays(pos: [f32; 2], col: [f32; 4], uv: [f32; 2]) -> Self {
         Self {
             vi_position: pos,
             vi_color: col,
@@ -25,7 +25,7 @@ impl DefaultVertex {
         }
     }
 
-    pub fn from_vecs(pos: Vec2, col: Vec3, uv: Vec2) -> Self {
+    pub fn from_vecs(pos: Vec2, col: Vec4, uv: Vec2) -> Self {
         Self::from_arrays(pos.to_array(), col.to_array(), uv.to_array())
     }
 
@@ -33,8 +33,8 @@ impl DefaultVertex {
         Vec2::from_slice(&self.vi_position)
     }
 
-    pub fn col(&self) -> Vec3 {
-        Vec3::from_slice(&self.vi_color)
+    pub fn col(&self) -> Vec4 {
+        Vec4::from_slice(&self.vi_color)
     }
 
     pub fn uv(&self) -> Vec2 {
@@ -52,12 +52,12 @@ where
         140 => {
             vertex: "#version 140
                 in vec2 vi_position;
-                in vec3 vi_color;
+                in vec4 vi_color;
                 in vec2 vi_uv;
 
                 uniform mat4 mat;
 
-                out vec3 fi_color;
+                out vec4 fi_color;
                 out vec2 fi_uv;
 
                 void main() {
@@ -66,7 +66,7 @@ where
                     fi_uv = vi_uv;
                 }",
             fragment: "#version 140
-                in vec3 fi_color;
+                in vec4 fi_color;
                 in vec2 fi_uv;
 
                 uniform sampler2D sprite;
@@ -74,7 +74,7 @@ where
                 out vec4 o_color;
 
                 void main() {
-                    o_color = vec4(fi_color, 1.0) * texture(sprite, fi_uv);
+                    o_color = fi_color * texture(sprite, fi_uv);
                 }",
             outputs_srgb: true
         }

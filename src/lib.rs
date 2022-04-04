@@ -1,120 +1,63 @@
 #![feature(drain_filter)]
 #![feature(type_alias_impl_trait)]
 
-use glium::{backend::Facade, glutin::ContextBuilder, Display};
-use report::Reporter;
-use runnable::Runnable;
-use std::{
-    sync::atomic::{AtomicBool, Ordering},
-    time::{Duration, Instant},
+//
+
+use game_loop::AnyEngine;
+use glium::{
+    backend::{Context, Facade},
+    glutin::ContextBuilder,
+    Display, Frame,
 };
+use std::{cell::Ref, rc::Rc};
 use winit::{
-    dpi::{LogicalSize, PhysicalPosition},
-    event::{Event, WindowEvent},
-    event_loop::{ControlFlow, EventLoop},
-    window::WindowBuilder,
+    event_loop::EventLoop,
+    window::{Window, WindowBuilder},
 };
+
+//
 
 #[macro_use]
 pub extern crate glium;
 pub extern crate glam;
 pub extern crate winit;
 
+//
+
 pub mod batch;
 pub mod packer;
 pub mod program;
-pub mod report;
-pub mod runnable;
 pub mod text;
+
+//
 
 pub struct Engine {
     pub facade: Display,
-
     event_loop: Option<EventLoop<()>>,
-    stop: AtomicBool,
-    init_timer: Instant,
-
-    //
-    pub frame_reporter: Reporter,
-    pub update_reporter: Reporter,
-
-    // window size
-    pub size: (f32, f32),
-
-    // window aspect ratio
-    pub aspect: f32,
-
-    // is cursor inside the window?
-    pub cursor_in: bool,
-
-    // cursor position
-    pub cursor_pos: PhysicalPosition<f64>,
-
-    // window scaling factor
-    pub scale_factor: f64,
-
-    // update interval
-    pub interval: Duration,
 }
 
-impl Engine {
-    pub fn init() -> Self {
-        let init_timer = Instant::now();
+//
 
+impl Engine {
+    pub fn new(wb: WindowBuilder) -> Self {
         let event_loop = EventLoop::new();
-        let window_builder = WindowBuilder::new()
-            .with_inner_size(LogicalSize::new(600_i32, 600_i32))
-            .with_visible(false)
-            .with_title("Title");
+        let window_builder = wb.with_visible(false);
         let context = ContextBuilder::new()
             // .with_vsync(true)
             .build_windowed(window_builder, &event_loop)
             .unwrap();
-        let scale_factor = context.window().scale_factor();
         let facade = Display::from_gl_window(context).unwrap();
 
         log::debug!("OpenGL Vendor: {}", facade.get_opengl_vendor_string());
         log::debug!("OpenGL Renderer: {}", facade.get_opengl_renderer_string());
         log::debug!("OpenGL Version: {}", facade.get_opengl_version_string());
 
-        let frame_reporter = Reporter::new_with_interval(Duration::from_secs_f32(5.0));
-        let update_reporter = Reporter::new_with_interval(Duration::from_secs_f32(5.0));
-
-        let size = facade
-            .gl_window()
-            .window()
-            .inner_size()
-            .to_logical(scale_factor);
-        let size = (size.width, size.height);
-        let aspect = size.0 / size.1;
-        let interval = Duration::from_secs_f64(1.0 / 60.0);
-        let stop = AtomicBool::new(false);
         let event_loop = Some(event_loop);
-        let cursor_in = false;
-        let cursor_pos = Default::default();
 
-        Self {
-            facade,
-            event_loop,
-            frame_reporter,
-            update_reporter,
-            stop,
-            init_timer,
-
-            size,
-            aspect,
-            cursor_in,
-            cursor_pos,
-            scale_factor,
-            interval,
-        }
+        Self { facade, event_loop }
     }
 
-    pub fn stop(&self) {
-        self.stop.store(true, Ordering::Relaxed)
-    }
-
-    pub fn run(mut self, mut app: impl Runnable + 'static) -> ! {
+    /* pub fn run(mut self, mut app: impl Runnable<Self> + 'static) -> ! {
         log::debug!("Initialization took: {:?}", self.init_timer.elapsed());
 
         let mut previous = Instant::now();
@@ -215,11 +158,45 @@ impl Engine {
 
                 app.event(&self, &event);
             })
+    } */
+}
+
+//
+
+impl AnyEngine for Engine {
+    type Frame = Frame;
+
+    fn get_frame(&mut self) -> Self::Frame {
+        self.facade.draw()
+    }
+
+    fn finish_frame(&mut self, frame: Self::Frame) {
+        frame.finish().unwrap();
+    }
+
+    fn get_window(&self) -> Ref<'_, Window> {
+        Ref::map(self.facade.gl_window(), |d| d.window())
+    }
+
+    fn take_event_loop(&mut self) -> EventLoop<()> {
+        self.event_loop.take().unwrap()
     }
 }
 
 impl Facade for Engine {
-    fn get_context(&self) -> &std::rc::Rc<glium::backend::Context> {
+    fn get_context(&self) -> &Rc<Context> {
         self.facade.get_context()
+    }
+}
+
+//
+
+pub trait BuildEngine {
+    fn build_engine(self) -> Engine;
+}
+
+impl BuildEngine for WindowBuilder {
+    fn build_engine(self) -> Engine {
+        Engine::new(self)
     }
 }
