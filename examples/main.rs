@@ -5,6 +5,7 @@
 extern crate glium;
 
 use font_loader::system_fonts::FontPropertyBuilder;
+use game_loop::{AnyEngine, Event, GameLoop, Runnable};
 use glam::{Mat4, Vec3, Vec4};
 use glium::{
     index::PrimitiveType,
@@ -16,16 +17,20 @@ use image::{buffer::ConvertBuffer, ImageFormat, RgbaImage};
 use srs2dge::{
     packer::{glyph::Glyphs, packer2d::Rect},
     program::{default_program, DefaultVertex},
-    runnable::Runnable,
     text::{
         self,
         format::{FString, Format, Formatted},
     },
+    BuildEngine,
 };
 use srs2dge::{text::program::text_program, Engine};
 use static_res::static_res;
 use std::{cell::RefCell, io::Cursor, iter::FromIterator, rc::Rc};
-use winit::event::{ElementState, Event, KeyboardInput, VirtualKeyCode, WindowEvent};
+use winit::{
+    dpi::LogicalSize,
+    event::{ElementState, Event as WinitEvent, KeyboardInput, VirtualKeyCode, WindowEvent},
+    window::WindowBuilder,
+};
 
 //
 
@@ -39,10 +44,10 @@ struct FontIds {
 
 //
 
-fn if_pressed(event: &Event<()>, keycode: VirtualKeyCode) -> bool {
+fn if_pressed(event: &Event, keycode: VirtualKeyCode) -> bool {
     matches!(
         event,
-        Event::WindowEvent {
+        Event::WinitEvent(WinitEvent::WindowEvent {
             event: WindowEvent::KeyboardInput {
                 input: KeyboardInput {
                     virtual_keycode: Some(k),
@@ -52,7 +57,7 @@ fn if_pressed(event: &Event<()>, keycode: VirtualKeyCode) -> bool {
                 ..
             },
             ..
-        } if *k == keycode
+        }) if *k == keycode
     )
 }
 
@@ -71,9 +76,9 @@ struct Quad {
 }
 
 impl Quad {
-    fn new(engine: &Engine, program: Rc<Program>) -> Self {
+    fn new(gl: &mut GameLoop<Engine>, program: Rc<Program>) -> Self {
         let vbo = VertexBuffer::new(
-            engine,
+            gl,
             &[
                 DefaultVertex::new(-0.5, -0.5, 1.0, 1.0, 1.0, 0.0, 1.0),
                 DefaultVertex::new(-0.5, 0.5, 1.0, 0.0, 0.0, 0.0, 0.0),
@@ -84,14 +89,14 @@ impl Quad {
         .unwrap();
 
         let ibo =
-            IndexBuffer::new(engine, PrimitiveType::TrianglesList, &[0_u8, 1, 2, 0, 2, 3]).unwrap();
+            IndexBuffer::new(gl, PrimitiveType::TrianglesList, &[0_u8, 1, 2, 0, 2, 3]).unwrap();
 
         let img = image::load(Cursor::new(res::sprite_png), ImageFormat::Png)
             .unwrap()
             .to_rgba8();
         let dim = img.dimensions();
         let texture = glium::texture::RawImage2d::from_raw_rgba_reversed(&img, dim);
-        let texture = glium::texture::CompressedSrgbTexture2d::new(engine, texture).unwrap();
+        let texture = glium::texture::CompressedSrgbTexture2d::new(gl, texture).unwrap();
 
         Self {
             toggle: true,
@@ -107,23 +112,23 @@ impl Quad {
     }
 
     #[inline]
-    const fn speed(&self, engine: &Engine) -> f32 {
-        engine.interval.as_secs_f32() * std::f32::consts::PI * 2.0 / 5.0
+    const fn speed(&self, gl: &GameLoop<Engine>) -> f32 {
+        gl.interval.as_secs_f32() * std::f32::consts::PI * 2.0 / 5.0
     }
 }
 
-impl Runnable for Quad {
-    fn update(&mut self, engine: &Engine) {
-        self.a += self.speed(engine);
+impl Runnable<Engine> for Quad {
+    fn update(&mut self, gl: &mut GameLoop<Engine>) {
+        self.a += self.speed(gl);
     }
 
-    fn event(&mut self, _: &Engine, event: &Event<()>) {
+    fn event(&mut self, _: &mut GameLoop<Engine>, event: &Event) {
         if if_pressed(event, VirtualKeyCode::F1) {
             self.toggle = !self.toggle
         }
     }
 
-    fn draw(&mut self, engine: &Engine, frame: &mut Frame, delta: f32) {
+    fn draw(&mut self, gl: &mut GameLoop<Engine>, frame: &mut Frame, delta: f32) {
         if !self.toggle {
             return;
         }
@@ -134,7 +139,7 @@ impl Runnable for Quad {
         };
 
         let ubo = uniform! {
-            mat: (Mat4::from_diagonal(Vec4::new(1.0, engine.aspect, 1.0, 1.0)) * Mat4::from_rotation_z(self.a + self.speed(engine) * delta)).to_cols_array_2d(),
+            mat: (Mat4::from_diagonal(Vec4::new(1.0, gl.aspect, 1.0, 1.0)) * Mat4::from_rotation_z(self.a + self.speed(gl) * delta)).to_cols_array_2d(),
             sprite: self.texture
                 .sampled()
                 .minify_filter(MinifySamplerFilter::Nearest)
@@ -160,7 +165,7 @@ struct CpuText {
 
 impl CpuText {
     fn new(
-        engine: &Engine,
+        gl: &mut GameLoop<Engine>,
         text: &FString,
         glyphs: Rc<RefCell<Glyphs>>,
         program: Rc<Program>,
@@ -170,10 +175,10 @@ impl CpuText {
             .convert();
         let dim = img.dimensions();
         let texture = glium::texture::RawImage2d::from_raw_rgba_reversed(&img, dim);
-        let texture = glium::texture::CompressedSrgbTexture2d::new(engine, texture).unwrap();
+        let texture = glium::texture::CompressedSrgbTexture2d::new(gl, texture).unwrap();
 
         let vbo = VertexBuffer::new(
-            engine,
+            gl,
             &[
                 DefaultVertex::from_arrays([300.0, 0.0], [1.0, 1.0, 1.0], [0.0, 1.0]),
                 DefaultVertex::from_arrays([300.0, dim.1 as f32], [1.0, 1.0, 1.0], [0.0, 0.0]),
@@ -192,7 +197,7 @@ impl CpuText {
         .unwrap();
 
         let ibo =
-            IndexBuffer::new(engine, PrimitiveType::TrianglesList, &[0_u8, 1, 2, 0, 2, 3]).unwrap();
+            IndexBuffer::new(gl, PrimitiveType::TrianglesList, &[0_u8, 1, 2, 0, 2, 3]).unwrap();
 
         Self {
             toggle: true,
@@ -207,14 +212,14 @@ impl CpuText {
     }
 }
 
-impl Runnable for CpuText {
-    fn event(&mut self, _: &Engine, event: &Event<()>) {
+impl Runnable<Engine> for CpuText {
+    fn event(&mut self, _: &mut GameLoop<Engine>, event: &Event) {
         if if_pressed(event, VirtualKeyCode::F2) {
             self.toggle = !self.toggle
         }
     }
 
-    fn draw(&mut self, engine: &Engine, frame: &mut Frame, _: f32) {
+    fn draw(&mut self, gl: &mut GameLoop<Engine>, frame: &mut Frame, _: f32) {
         if !self.toggle {
             return;
         }
@@ -225,7 +230,7 @@ impl Runnable for CpuText {
         };
 
         let ubo = uniform! {
-            mat: Mat4::orthographic_rh_gl(0.0, engine.size.0, 0.0, engine.size.1, -1.0, 1.0).to_cols_array_2d(),
+            mat: Mat4::orthographic_rh_gl(0.0, gl.size.0, 0.0, gl.size.1, -1.0, 1.0).to_cols_array_2d(),
             sprite: self.texture
                 .sampled()
                 .minify_filter(MinifySamplerFilter::Nearest)
@@ -253,17 +258,17 @@ impl DynText {
     const MAX_CHARS: usize = 500;
 
     fn new(
-        engine: &Engine,
+        gl: &mut GameLoop<Engine>,
         fonts: Rc<FontIds>,
         glyphs: Rc<RefCell<Glyphs>>,
         program: Rc<Program>,
     ) -> Self {
-        let vbo = VertexBuffer::empty_dynamic(engine, Self::MAX_CHARS * 4).unwrap();
+        let vbo = VertexBuffer::empty_dynamic(gl, Self::MAX_CHARS * 4).unwrap();
 
         let indices = (0..Self::MAX_CHARS as u16)
             .flat_map(|i| [i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3])
             .collect::<Vec<u16>>();
-        let ibo = IndexBuffer::new(engine, PrimitiveType::TrianglesList, &indices[..]).unwrap();
+        let ibo = IndexBuffer::new(gl, PrimitiveType::TrianglesList, &indices[..]).unwrap();
 
         Self {
             toggle: true,
@@ -278,14 +283,14 @@ impl DynText {
     }
 }
 
-impl Runnable for DynText {
-    fn event(&mut self, _: &Engine, event: &Event<()>) {
+impl Runnable<Engine> for DynText {
+    fn event(&mut self, _: &mut GameLoop<Engine>, event: &Event) {
         if if_pressed(event, VirtualKeyCode::F4) {
             self.toggle = !self.toggle
         }
     }
 
-    fn draw(&mut self, engine: &Engine, frame: &mut Frame, _: f32) {
+    fn draw(&mut self, gl: &mut GameLoop<Engine>, frame: &mut Frame, _: f32) {
         if !self.toggle {
             return;
         }
@@ -295,7 +300,7 @@ impl Runnable for DynText {
             ..Default::default()
         };
 
-        let (frametime, fps) = engine.frame_reporter.last_string();
+        let (frametime, fps) = gl.frame_reporter.last_string();
 
         let text = format!("AVG frametime: {}\nAVG FPS: {}", frametime, fps)
             .default()
@@ -311,7 +316,7 @@ impl Runnable for DynText {
         self.vbo.slice(0..charc * 4).unwrap().write(&vertices);
 
         let ubo = uniform! {
-            mat: Mat4::orthographic_rh_gl(0.0, engine.size.0, 0.0, engine.size.1, -1.0, 1.0).to_cols_array_2d(),
+            mat: Mat4::orthographic_rh_gl(0.0, gl.size.0, 0.0, gl.size.1, -1.0, 1.0).to_cols_array_2d(),
             sprite: glyphs
                 .sampled()
                 .minify_filter(MinifySamplerFilter::Nearest)
@@ -342,17 +347,17 @@ struct GpuText {
 
 impl GpuText {
     fn new(
-        engine: &Engine,
+        gl: &mut GameLoop<Engine>,
         text: &FString,
         glyphs: Rc<RefCell<Glyphs>>,
         program: Rc<Program>,
     ) -> Self {
         let vertices = text::vbo::text(text, &mut glyphs.borrow_mut(), 18.0, 0.0, 0.0);
-        let vbo = VertexBuffer::new(engine, &vertices[..]).unwrap();
+        let vbo = VertexBuffer::new(gl, &vertices[..]).unwrap();
         let indices = (0..(vbo.len() / 4) as u32)
             .flat_map(|i| [i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3])
             .collect::<Vec<u32>>();
-        let ibo = IndexBuffer::new(engine, PrimitiveType::TrianglesList, &indices[..]).unwrap();
+        let ibo = IndexBuffer::new(gl, PrimitiveType::TrianglesList, &indices[..]).unwrap();
 
         Self {
             toggle: true,
@@ -366,14 +371,14 @@ impl GpuText {
     }
 }
 
-impl Runnable for GpuText {
-    fn event(&mut self, _: &Engine, event: &Event<()>) {
+impl Runnable<Engine> for GpuText {
+    fn event(&mut self, _: &mut GameLoop<Engine>, event: &Event) {
         if if_pressed(event, VirtualKeyCode::F3) {
             self.toggle = !self.toggle
         }
     }
 
-    fn draw(&mut self, engine: &Engine, frame: &mut Frame, _: f32) {
+    fn draw(&mut self, gl: &mut GameLoop<Engine>, frame: &mut Frame, _: f32) {
         if !self.toggle {
             return;
         }
@@ -385,7 +390,7 @@ impl Runnable for GpuText {
 
         let glyphs = self.glyphs.borrow();
         let ubo = uniform! {
-            mat: Mat4::orthographic_rh_gl(0.0, engine.size.0, 0.0, engine.size.1, -1.0, 1.0).to_cols_array_2d(),
+            mat: Mat4::orthographic_rh_gl(0.0, gl.size.0, 0.0, gl.size.1, -1.0, 1.0).to_cols_array_2d(),
             sprite: glyphs
                 .sampled()
                 .minify_filter(MinifySamplerFilter::Nearest)
@@ -405,17 +410,17 @@ struct App {
     dyn_text: DynText,
 }
 
-impl Runnable for App {
-    fn update(&mut self, engine: &Engine) {
-        self.quad.update(engine);
-        self.cpu_text.update(engine);
-        self.gpu_text.update(engine);
-        self.dyn_text.update(engine);
+impl Runnable<Engine> for App {
+    fn update(&mut self, gl: &mut GameLoop<Engine>) {
+        self.quad.update(gl);
+        self.cpu_text.update(gl);
+        self.gpu_text.update(gl);
+        self.dyn_text.update(gl);
     }
 
-    fn event(&mut self, engine: &Engine, event: &Event<()>) {
-        match event {
-            Event::WindowEvent {
+    fn event(&mut self, gl: &mut GameLoop<Engine>, event: &Event) {
+        if let Event::WinitEvent(
+            WinitEvent::WindowEvent {
                 event:
                     WindowEvent::KeyboardInput {
                         input:
@@ -428,54 +433,60 @@ impl Runnable for App {
                     },
                 ..
             }
-            | Event::WindowEvent {
+            | WinitEvent::WindowEvent {
                 event: WindowEvent::CloseRequested,
                 ..
-            } => engine.stop(),
-            _ => {}
+            },
+        ) = event
+        {
+            gl.stop()
         }
 
-        self.quad.event(engine, event);
-        self.cpu_text.event(engine, event);
-        self.gpu_text.event(engine, event);
-        self.dyn_text.event(engine, event);
+        self.quad.event(gl, event);
+        self.cpu_text.event(gl, event);
+        self.gpu_text.event(gl, event);
+        self.dyn_text.event(gl, event);
     }
 
-    fn draw(&mut self, engine: &Engine, frame: &mut Frame, delta: f32) {
+    fn draw(&mut self, gl: &mut GameLoop<Engine>, frame: &mut Frame, delta: f32) {
         let cc = Vec4::new(0.2, 0.22, 0.24, 1.0);
         frame.clear_color_srgb(cc.x, cc.y, cc.z, cc.w);
 
         // DRAW CUBE
 
-        self.quad.draw(engine, frame, delta);
+        self.quad.draw(gl, frame, delta);
 
         // DRAW CPU TEXT
 
-        self.cpu_text.draw(engine, frame, delta);
+        self.cpu_text.draw(gl, frame, delta);
 
         // DRAW GPU TEXT
 
-        self.gpu_text.draw(engine, frame, delta);
+        self.gpu_text.draw(gl, frame, delta);
 
         // DRAW DYNAMIC TEXT
 
-        self.dyn_text.draw(engine, frame, delta);
+        self.dyn_text.draw(gl, frame, delta);
     }
 }
 
 pub fn main() {
     env_logger::init();
 
-    let engine = Engine::init();
+    let mut gl = WindowBuilder::new()
+        .with_title("Main")
+        .with_inner_size(LogicalSize::new(400_u16, 400_u16))
+        .build_engine()
+        .build_game_loop();
 
     // DEFAULT SHADER
 
-    let default_program = Rc::new(default_program(&engine));
-    let text_program = Rc::new(text_program(&engine));
+    let default_program = Rc::new(default_program(&gl.engine));
+    let text_program = Rc::new(text_program(&gl.engine));
 
     // TEXT SETUP
 
-    let mut glyphs = Glyphs::new(&engine, Rect::new(512, 512)).unwrap();
+    let mut glyphs = Glyphs::new(&gl.engine, Rect::new(512, 512)).unwrap();
 
     let fonts = Rc::new(FontIds {
         system: glyphs
@@ -510,10 +521,10 @@ pub fn main() {
 
     // APP
 
-    let quad = Quad::new(&engine, default_program.clone());
-    let cpu_text = CpuText::new(&engine, &text, glyphs.clone(), default_program);
-    let gpu_text = GpuText::new(&engine, &text, glyphs.clone(), text_program.clone());
-    let dyn_text = DynText::new(&engine, fonts, glyphs, text_program);
+    let quad = Quad::new(&mut gl, default_program.clone());
+    let cpu_text = CpuText::new(&mut gl, &text, glyphs.clone(), default_program);
+    let gpu_text = GpuText::new(&mut gl, &text, glyphs.clone(), text_program.clone());
+    let dyn_text = DynText::new(&mut gl, fonts, glyphs, text_program);
 
     let app = App {
         quad,
@@ -522,9 +533,5 @@ pub fn main() {
         dyn_text,
     };
 
-    // all initialization is done before the window is shown
-    // this delay makes it more obvious
-    std::thread::sleep(std::time::Duration::from_secs_f32(3.0));
-
-    engine.run(app);
+    gl.run(app)
 }

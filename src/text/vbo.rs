@@ -1,6 +1,6 @@
 use super::{format::FString, pos_iter::CharPositionIter};
 use crate::{packer::glyph::Glyphs, program::DefaultVertex};
-use glam::Vec2;
+use glam::{Vec2, Vec4};
 use image::RgbaImage;
 
 pub fn text<'s, F>(string: F, glyphs: &mut Glyphs, px: f32, x: f32, y: f32) -> Vec<DefaultVertex>
@@ -21,15 +21,17 @@ where
             let glyph = glyphs
                 .get_indexed(c.index, px as u16, c.format.font)
                 .unwrap();
+            let color = Vec4::new(c.format.color.x, c.format.color.y, c.format.color.z, 1.0);
+
             [
                 DefaultVertex::from_vecs(
                     Vec2::new(c.x as f32 + x, c.y as f32 + y),
-                    c.format.color,
+                    color,
                     Vec2::new(glyph.top_left.x, glyph.top_left.y),
                 ),
                 DefaultVertex::from_vecs(
                     Vec2::new(c.x as f32 + x, c.y as f32 + c.height as f32 + y),
-                    c.format.color,
+                    color,
                     Vec2::new(glyph.top_left.x, glyph.bottom_right.y),
                 ),
                 DefaultVertex::from_vecs(
@@ -37,12 +39,12 @@ where
                         c.x as f32 + c.width as f32 + x,
                         c.y as f32 + c.height as f32 + y,
                     ),
-                    c.format.color,
+                    color,
                     Vec2::new(glyph.bottom_right.x, glyph.bottom_right.y),
                 ),
                 DefaultVertex::from_vecs(
                     Vec2::new(c.x as f32 + c.width as f32 + x, c.y as f32 + y),
-                    c.format.color,
+                    color,
                     Vec2::new(glyph.bottom_right.x, glyph.top_left.y),
                 ),
             ]
