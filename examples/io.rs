@@ -1,19 +1,15 @@
 use game_loop::{
-    io::input_state::{InputAxis, InputState},
+    io::input_state::{Input, InputAxis, InputState, Triggered},
     AnyEngine, Event, GameLoop, Runnable,
 };
-use game_loop::{GilrsEvent, WinitEvent};
 use glam::{Mat4, Vec2, Vec4};
-use glium::{
-    texture::RawImage2d, uniform, uniforms::EmptyUniforms, DrawParameters, Frame, Program, Surface,
-    Texture2d,
-};
+use glium::{texture::RawImage2d, uniform, DrawParameters, Frame, Program, Surface, Texture2d};
 use srs2dge::{
     batch::{quad::QuadMesh, BatchRenderer, Idx},
     program::{default_program, DefaultVertex},
     BuildEngine, Engine,
 };
-use winit::{event::WindowEvent, window::WindowBuilder};
+use winit::window::WindowBuilder;
 
 //
 
@@ -40,7 +36,7 @@ struct App {
 //
 
 impl Runnable<Engine> for App {
-    fn update(&mut self, gl: &mut GameLoop<Engine>) {}
+    fn update(&mut self, _: &mut GameLoop<Engine>) {}
 
     fn event(&mut self, gl: &mut GameLoop<Engine>, event: &Event) {
         self.input.event(event);
@@ -49,22 +45,41 @@ impl Runnable<Engine> for App {
             gl.stop();
         }
 
-        self.batcher.get_mut(self.left).pos =
-            self.input.get_axis(InputAxis::Move, 0) / 4.0 + Vec2::new(-0.5, -0.5);
-        self.batcher.get_mut(self.left).col =
-            if self.input.get_axis(InputAxis::Move, 0).length_squared() <= 0.1_f32.powi(2) {
+        let color = |active: bool| -> Vec4 {
+            if active {
                 Vec4::new(1.0, 0.0, 0.0, 1.0)
             } else {
                 Vec4::new(0.0, 0.0, 1.0, 1.0)
-            };
-        self.batcher.get_mut(self.right).pos =
-            self.input.get_axis(InputAxis::Look, 0) / 4.0 + Vec2::new(0.5, -0.5);
-        self.batcher.get_mut(self.right).col =
-            if self.input.get_axis(InputAxis::Look, 0).length_squared() <= 0.1_f32.powi(2) {
-                Vec4::new(1.0, 0.0, 0.0, 1.0)
-            } else {
-                Vec4::new(0.0, 0.0, 1.0, 1.0)
-            };
+            }
+        };
+
+        let move_axis = self.input.get_axis(InputAxis::Move, 0);
+        let left = self.batcher.get_mut(self.left);
+        left.pos = move_axis / 4.0 + Vec2::new(-0.5, -0.5);
+        left.col = color(move_axis.length_squared() <= 0.1_f32.powi(2));
+
+        let look_axis = self.input.get_axis(InputAxis::Look, 0);
+        let right = self.batcher.get_mut(self.right);
+        right.pos = look_axis / 4.0 + Vec2::new(0.5, -0.5);
+        right.col = color(look_axis.length_squared() <= 0.1_f32.powi(2));
+
+        self.batcher.get_mut(self.left_a).col =
+            color(self.input.get_input(Input::RollDown, 0).triggered());
+        self.batcher.get_mut(self.left_b).col =
+            color(self.input.get_input(Input::RollUp, 0).triggered());
+        self.batcher.get_mut(self.left_c).col =
+            color(self.input.get_input(Input::RollRight, 0).triggered());
+        self.batcher.get_mut(self.left_d).col =
+            color(self.input.get_input(Input::RollLeft, 0).triggered());
+
+        self.batcher.get_mut(self.right_a).col =
+            color(self.input.get_input(Input::Jump, 0).triggered());
+        self.batcher.get_mut(self.right_b).col =
+            color(self.input.get_input(Input::Inventory, 0).triggered());
+        self.batcher.get_mut(self.right_c).col =
+            color(self.input.get_input(Input::Reload, 0).triggered());
+        self.batcher.get_mut(self.right_d).col =
+            color(self.input.get_input(Input::Crouch, 0).triggered());
     }
 
     fn draw(&mut self, gl: &mut GameLoop<Engine>, frame: &mut Frame, _: f32) {
@@ -95,6 +110,8 @@ impl Runnable<Engine> for App {
 //
 
 fn main() {
+    env_logger::init();
+
     let engine = WindowBuilder::new().with_title("GamePad").build_engine();
 
     let mut batcher = BatchRenderer::<DefaultVertex, QuadMesh>::new(&engine);

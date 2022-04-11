@@ -15,7 +15,7 @@ rand = "0.8.4"
 glium = "0.31.0"
 winit = "0.26.1"
 glam = "0.20.1"
-game_loop = { path = "../game_loop", features = ["gl"] }
+game_loop = { git = "https://github.com/Overpeek/game_loop", features = ["gl"] }
 
 image = "0.24.1"
 fontdue = "0.7.2"

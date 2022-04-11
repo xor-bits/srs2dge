@@ -125,7 +125,7 @@ where
 
         if !self.modified.is_empty() {
             if self.max * M::VERTICES >= self.vbo.len() {
-                let new = VertexBuffer::empty_dynamic(facade, self.vbo.len() * 2).unwrap();
+                let new = VertexBuffer::empty_dynamic(facade, self.max * M::VERTICES * 2).unwrap();
                 self.vbo.copy_to(&new).unwrap();
                 self.vbo = new;
             }

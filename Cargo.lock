@@ -606,6 +606,7 @@ checksum = "21163e139fa306126e6eedaf49ecdb4588f939600f0b1e770f4205ee4b7fa868"
 [[package]]
 name = "game_loop"
 version = "0.1.0"
+source = "git+https://github.com/Overpeek/game_loop#30a8f55037c76c603a424be2bd784291fd79663f"
 dependencies = [
  "gilrs",
  "glam",
