@@ -14,10 +14,14 @@ rand = "0.8.4"
 
 glium = "0.31.0"
 winit = "0.26.1"
-glam = "0.20.1"
+glam = { version = "0.20.1", features = ["serde"] }
 game_loop = { git = "https://github.com/Overpeek/game_loop", features = ["gl"] }
 
 image = "0.24.1"
 fontdue = "0.7.2"
 font-loader = "0.11.0"
 static_res = { git = "https://github.com/Overpeek/static_res" }
+
+serde = { version = "1.0.136", features = ["derive"] }
+rapid-qoi = "0.6.1"
+integer-sqrt = "0.1.5"

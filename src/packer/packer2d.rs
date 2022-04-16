@@ -1,5 +1,7 @@
 //! 2D Texture packer with ability to reuse areas
 
+use integer_sqrt::IntegerSquareRoot;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Rect {
     pub width: u32,
@@ -65,14 +67,125 @@ pub struct Packer {
     bottom: PositionedRect,
 }
 
+impl Default for Packer {
+    fn default() -> Self {
+        Self::from_side(0)
+    }
+}
+
 impl Packer {
-    #[inline]
+    /// Creates a Packer with where the area is a rectangle.
     pub const fn new(rect: Rect) -> Self {
         let rows = vec![];
         let bottom = rect.positioned(0, 0);
         Self { rect, rows, bottom }
     }
 
+    /// Creates a Packer with where the area is a square.
+    ///
+    /// Side length will be `<side>`.
+    pub const fn from_side(side: u32) -> Self {
+        Self::new(Rect {
+            height: side,
+            width: side,
+        })
+    }
+
+    /// Creates a Packer with where the area is a square.
+    ///
+    /// Side length will be `ceil(sqrt(<area>))`.
+    pub fn from_area(area: u32) -> Self {
+        Self::from_side(area.integer_sqrt())
+    }
+
+    pub fn area(&self) -> Rect {
+        self.rect
+    }
+
+    /// The resulting rect will be the sums the rectangles (**sides**, not area)
+    ///
+    /// ```no_run
+    /// +----------+-------+
+    /// | original | new   |
+    /// +----------+-------+
+    /// | new      | alloc |
+    /// +----------+-------+
+    /// ```
+    pub fn alloc_more(&mut self, rect: Rect) {
+        // expand the area
+        self.rect.width += rect.width;
+        self.rect.height += rect.height;
+        self.bottom.width += rect.width;
+        self.bottom.height += rect.height;
+
+        // add width to all rows
+        if rect.width != 0 {
+            for row in self.rows.iter_mut() {
+                if let Some(last) = row.free_spaces.last_mut() {
+                    // last free space
+                    last.width += rect.width;
+                } else {
+                    // add one free space, because there weren't any
+                    let x = self.rect.width - rect.width;
+                    let width = rect.width;
+                    row.free_spaces.push(Space { x, width });
+                }
+            }
+        }
+    }
+
+    /// Expands each side length to be the next power of two.
+    ///
+    /// ex:
+    ///  - 30x35 -> 32x64
+    ///  - 32x35 -> 64x64
+    pub fn next_pow2(&mut self) {
+        let width = Self::u32_next_pow2(self.rect.width) - self.rect.width;
+        let height = Self::u32_next_pow2(self.rect.height) - self.rect.height;
+        self.alloc_more(Rect { width, height })
+    }
+
+    /// Expands each side length to be the next power of two of the biggest side.
+    ///
+    /// Optimal for GPU textures.
+    ///
+    /// ex:
+    ///  - 30x35 -> 35x35 -> 64x64
+    ///  - 32x32 -> 64x64
+    pub fn next_pow2_square(&mut self) {
+        let side = self.rect.width.max(self.rect.height);
+        let width = Self::u32_next_pow2(side) - side;
+        let height = width;
+        self.alloc_more(Rect { width, height })
+    }
+
+    fn u32_next_pow2(mut i: u32) -> u32 {
+        // if > 1
+        //   no effects
+        // if = 1
+        //   result will be 1 anyways
+        // if = 0
+        //   wraps to u32::MAX and wraps back to 0 when adding 1
+        // i = i.wrapping_sub(1);
+
+        // set all bits to one to the LEFT from most significant **1** bit
+        i |= i >> 1;
+        i |= i >> 2;
+        i |= i >> 4;
+        i |= i >> 8;
+        i |= i >> 16;
+
+        // add 1 to convert from ex: 0x00011111 to 0x00100000
+        // because after setting bits to 1 from LEFT, the result
+        // is `the_next_power_of_two - 1`
+        i = i.wrapping_add(1);
+
+        i
+    }
+
+    /// Push a rectangle into this packer.
+    ///
+    /// The optimal way is to push the tallest rectangles first.
     pub fn push(&mut self, rect: Rect) -> Option<PositionedRect> {
         if rect.width == 0 || rect.height == 0 {
             return Some(rect.positioned(0, 0));
@@ -163,6 +276,26 @@ impl Packer {
         Some(rect.positioned(x, y))
     }
 
+    /// Repeatedly pushes a rect until it succeeds.
+    /// With each fail, it expands the area.
+    ///
+    /// It will stop if any side length reaches this limit.
+    pub fn push_until(&mut self, rect: Rect, limit: u16) -> Option<PositionedRect> {
+        loop {
+            match self.push(rect) {
+                Some(pos) => return Some(pos),
+                None => {
+                    let lim = limit as u32;
+                    if self.rect.width >= lim || self.rect.height >= lim {
+                        return None;
+                    }
+                    log::debug!("{:?}", self.rect);
+                    self.next_pow2_square();
+                }
+            }
+        }
+    }
+
     #[inline]
     const fn can_push_row(&self, rect: Rect) -> bool {
         self.bottom.height >= rect.height && self.bottom.width >= rect.width
@@ -220,6 +353,7 @@ impl Packer {
         }
     }
 
+    /// Remove all quads that collide with `rect`.
     pub fn remove(&mut self, rect: PositionedRect) {
         let last_merged = self
             .rows
@@ -249,11 +383,10 @@ impl Packer {
 
 #[cfg(test)]
 mod test {
-    use std::fs;
-
     use super::{Packer, Rect};
-    use image::{Pixel, Rgba, RgbaImage};
+    use image::{Rgba, RgbaImage};
     use rand::Rng;
+    use std::fs;
 
     macro_rules! gen_test {
         ($packer:expr, $w:expr, $h:expr => $x:expr, $y:expr) => {
@@ -266,6 +399,19 @@ mod test {
         ($packer:expr, $w:expr, $h:expr ; $x:expr, $y:expr) => {
             $packer.remove(Rect::new($w, $h).positioned($x, $y));
         };
+    }
+
+    #[test]
+    fn next_pow2_square_test() {
+        assert_eq!(Packer::u32_next_pow2(8), 16);
+        assert_eq!(Packer::u32_next_pow2(7), 8);
+        assert_eq!(Packer::u32_next_pow2(6), 8);
+        assert_eq!(Packer::u32_next_pow2(5), 8);
+        assert_eq!(Packer::u32_next_pow2(4), 8);
+        assert_eq!(Packer::u32_next_pow2(3), 4);
+        assert_eq!(Packer::u32_next_pow2(2), 4);
+        assert_eq!(Packer::u32_next_pow2(1), 2);
+        assert_eq!(Packer::u32_next_pow2(0), 1);
     }
 
     #[test]
@@ -397,12 +543,14 @@ mod test {
         let rects: Vec<_> = (0..100)
             .map(|_| {
                 (
-                    Rgba::from_channels(
-                        rng.gen_range(100..255),
-                        rng.gen_range(100..255),
-                        rng.gen_range(100..255),
-                        rng.gen_range(100..255),
-                    ),
+                    Rgba {
+                        0: [
+                            rng.gen_range(100..255),
+                            rng.gen_range(100..255),
+                            rng.gen_range(100..255),
+                            rng.gen_range(100..255_u8),
+                        ],
+                    },
                     Rect::new(rng.gen_range(5..100), rng.gen_range(5..100)),
                 )
             })
@@ -444,12 +592,14 @@ mod test {
         let mut rects: Vec<_> = (0..100)
             .map(|_| {
                 (
-                    Rgba::from_channels(
-                        rng.gen_range(100..255),
-                        rng.gen_range(100..255),
-                        rng.gen_range(100..255),
-                        rng.gen_range(100..255),
-                    ),
+                    Rgba {
+                        0: [
+                            rng.gen_range(100..255),
+                            rng.gen_range(100..255),
+                            rng.gen_range(100..255),
+                            rng.gen_range(100..255_u8),
+                        ],
+                    },
                     Rect::new(rng.gen_range(5..100), rng.gen_range(5..100)),
                 )
             })
@@ -482,6 +632,20 @@ mod test {
             }
         }
         img.save("packer/sorted.png").unwrap();
+    }
+
+    #[test]
+    pub fn test_push_alloc_more() {
+        let mut packer = Packer::new(Rect::new(20, 20));
+        gen_test! { packer, 10, 10 => 0, 0 };
+        gen_test! { packer, 10, 10 => 10, 0 };
+        gen_test! { packer, 10, 10 => 0, 10 };
+        gen_test! { packer, 10, 10 => 10, 10 };
+        gen_test! { packer, 10, 10 };
+        packer.alloc_more(Rect::new(10, 0));
+        gen_test! { packer, 10, 10 => 20, 0 };
+        gen_test! { packer, 10, 10 => 20, 10 };
+        gen_test! { packer, 10, 10 };
     }
 
     /* #[bench]

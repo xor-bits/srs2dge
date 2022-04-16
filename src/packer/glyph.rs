@@ -4,7 +4,6 @@ use super::{
 };
 use font_loader::system_fonts::{self, FontProperty};
 use fontdue::{Font, FontSettings};
-use glam::Vec2;
 use glium::{
     backend::Facade,
     texture::{
@@ -15,14 +14,18 @@ use glium::{
 };
 use std::{borrow::Cow, collections::HashMap};
 
+//
+
+type GlyphHash = usize;
+
+//
+
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 struct Glyph {
     index: u16,
     scale: u16,
     font: usize,
 }
-
-type GlyphHash = usize;
 
 pub struct Glyphs {
     texture: Texture2d,
@@ -33,6 +36,8 @@ pub struct Glyphs {
 
     queue: Vec<Glyph>,
 }
+
+//
 
 impl Glyphs {
     pub fn new<F: Facade>(facade: &F, rect: Rect) -> Result<Self, TextureCreationError> {
@@ -112,24 +117,13 @@ impl Glyphs {
                 data,
             );
 
-            self.glyphs.insert(
-                queued,
-                (
-                    0,
-                    TexturePosition {
-                        top_left: Vec2::new(
-                            (rect.x as f64 / self.texture.dimensions().0 as f64) as f32,
-                            (rect.y as f64 / self.texture.dimensions().1 as f64) as f32,
-                        ),
-                        bottom_right: Vec2::new(
-                            ((rect.x + rect.width) as f64 / self.texture.dimensions().0 as f64)
-                                as f32,
-                            ((rect.y + rect.height) as f64 / self.texture.dimensions().1 as f64)
-                                as f32,
-                        ),
-                    },
-                ),
-            );
+            let dim = Rect {
+                width: self.texture.dimensions().0,
+                height: self.texture.dimensions().1,
+            };
+
+            self.glyphs
+                .insert(queued, (0, TexturePosition::new(dim, rect)));
         }
     }
 

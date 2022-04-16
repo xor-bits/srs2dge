@@ -8,12 +8,12 @@ where
         140 => {
             vertex: "#version 140
                 in vec2 vi_position;
-                in vec3 vi_color;
+                in vec4 vi_color;
                 in vec2 vi_uv;
 
                 uniform mat4 mat;
 
-                out vec3 fi_color;
+                out vec4 fi_color;
                 out vec2 fi_uv;
 
                 void main() {
@@ -22,7 +22,7 @@ where
                     fi_uv = vi_uv;
                 }",
             fragment: "#version 140
-                in vec3 fi_color;
+                in vec4 fi_color;
                 in vec2 fi_uv;
 
                 uniform sampler2D sprite;
@@ -30,7 +30,7 @@ where
                 out vec4 o_color;
 
                 void main() {
-                    o_color.rgb = fi_color;
+                    o_color = fi_color;
 					o_color.a = texture(sprite, fi_uv).r;
                 }"
         }

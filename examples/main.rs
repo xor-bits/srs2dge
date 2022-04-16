@@ -13,9 +13,13 @@ use glium::{
     uniforms::{MagnifySamplerFilter, MinifySamplerFilter},
     Blend, DrawParameters, Frame, IndexBuffer, Program, Surface, VertexBuffer,
 };
-use image::{buffer::ConvertBuffer, ImageFormat, RgbaImage};
+use image::{buffer::ConvertBuffer, RgbaImage};
 use srs2dge::{
-    packer::{glyph::Glyphs, packer2d::Rect},
+    packer::{
+        glyph::Glyphs,
+        packer2d::Rect,
+        texture::{TextureAtlasMap, TextureAtlasMapBuilder},
+    },
     program::{default_program, DefaultVertex},
     text::{
         self,
@@ -25,7 +29,7 @@ use srs2dge::{
 };
 use srs2dge::{text::program::text_program, Engine};
 use static_res::static_res;
-use std::{cell::RefCell, io::Cursor, iter::FromIterator, rc::Rc};
+use std::{cell::RefCell, iter::FromIterator, rc::Rc};
 use winit::{
     dpi::LogicalSize,
     event::{ElementState, Event as WinitEvent, KeyboardInput, VirtualKeyCode, WindowEvent},
@@ -67,7 +71,7 @@ struct Quad {
     toggle: bool,
     a: f32,
 
-    texture: CompressedSrgbTexture2d,
+    texture: TextureAtlasMap<u8>,
 
     vbo: VertexBuffer<DefaultVertex>,
     ibo: IndexBuffer<u8>,
@@ -80,10 +84,10 @@ impl Quad {
         let vbo = VertexBuffer::new(
             gl,
             &[
-                DefaultVertex::new(-0.5, -0.5, 1.0, 1.0, 1.0, 0.0, 1.0),
-                DefaultVertex::new(-0.5, 0.5, 1.0, 0.0, 0.0, 0.0, 0.0),
-                DefaultVertex::new(0.5, 0.5, 0.0, 1.0, 0.0, 1.0, 0.0),
-                DefaultVertex::new(0.5, -0.5, 0.0, 0.0, 1.0, 1.0, 1.0),
+                DefaultVertex::new(-0.5, -0.5, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0),
+                DefaultVertex::new(-0.5, 0.5, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0),
+                DefaultVertex::new(0.5, 0.5, 0.0, 1.0, 0.0, 1.0, 1.0, 0.0),
+                DefaultVertex::new(0.5, -0.5, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0),
             ],
         )
         .unwrap();
@@ -91,12 +95,12 @@ impl Quad {
         let ibo =
             IndexBuffer::new(gl, PrimitiveType::TrianglesList, &[0_u8, 1, 2, 0, 2, 3]).unwrap();
 
-        let img = image::load(Cursor::new(res::sprite_png), ImageFormat::Png)
-            .unwrap()
-            .to_rgba8();
-        let dim = img.dimensions();
-        let texture = glium::texture::RawImage2d::from_raw_rgba_reversed(&img, dim);
-        let texture = glium::texture::CompressedSrgbTexture2d::new(gl, texture).unwrap();
+        let texture = TextureAtlasMapBuilder::new()
+            .with(
+                0_u8,
+                image::load_from_memory(res::sprite_png).unwrap().to_rgba8(),
+            )
+            .build(gl);
 
         Self {
             toggle: true,
@@ -180,16 +184,16 @@ impl CpuText {
         let vbo = VertexBuffer::new(
             gl,
             &[
-                DefaultVertex::from_arrays([300.0, 0.0], [1.0, 1.0, 1.0], [0.0, 1.0]),
-                DefaultVertex::from_arrays([300.0, dim.1 as f32], [1.0, 1.0, 1.0], [0.0, 0.0]),
+                DefaultVertex::from_arrays([300.0, 0.0], [1.0, 1.0, 1.0, 1.0], [0.0, 1.0]),
+                DefaultVertex::from_arrays([300.0, dim.1 as f32], [1.0, 1.0, 1.0, 1.0], [0.0, 0.0]),
                 DefaultVertex::from_arrays(
                     [300.0 + dim.0 as f32, dim.1 as f32],
-                    [1.0, 1.0, 1.0],
+                    [1.0, 1.0, 1.0, 1.0],
                     [1.0, 0.0],
                 ),
                 DefaultVertex::from_arrays(
                     [300.0 + dim.0 as f32, 0.0],
-                    [1.0, 1.0, 1.0],
+                    [1.0, 1.0, 1.0, 1.0],
                     [1.0, 1.0],
                 ),
             ],
