@@ -17,7 +17,7 @@ rand = "0.8.4"
 glium = "0.31.0"
 winit = "0.26.1"
 glam = { version = "0.20.1", features = ["serde"] }
-main_game_loop = "0.1.0"
+main_game_loop = "0.1.1"
 
 image = "0.24.1"
 fontdue = "0.7.2"

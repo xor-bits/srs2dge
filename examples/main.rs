@@ -5,7 +5,6 @@
 extern crate glium;
 
 use font_loader::system_fonts::FontPropertyBuilder;
-use game_loop::{AnyEngine, Event, GameLoop, Runnable};
 use glam::{Mat4, Vec3, Vec4};
 use glium::{
     index::PrimitiveType,
@@ -14,6 +13,7 @@ use glium::{
     Blend, DrawParameters, Frame, IndexBuffer, Program, Surface, VertexBuffer,
 };
 use image::{buffer::ConvertBuffer, RgbaImage};
+use main_game_loop::{AnyEngine, Event, GameLoop, Runnable};
 use srs2dge::{
     packer::{
         glyph::Glyphs,
@@ -82,7 +82,7 @@ struct Quad {
 impl Quad {
     fn new(gl: &mut GameLoop<Engine>, program: Rc<Program>) -> Self {
         let vbo = VertexBuffer::new(
-            gl,
+            &gl.engine,
             &[
                 DefaultVertex::new(-0.5, -0.5, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0),
                 DefaultVertex::new(-0.5, 0.5, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0),
@@ -92,15 +92,19 @@ impl Quad {
         )
         .unwrap();
 
-        let ibo =
-            IndexBuffer::new(gl, PrimitiveType::TrianglesList, &[0_u8, 1, 2, 0, 2, 3]).unwrap();
+        let ibo = IndexBuffer::new(
+            &gl.engine,
+            PrimitiveType::TrianglesList,
+            &[0_u8, 1, 2, 0, 2, 3],
+        )
+        .unwrap();
 
         let texture = TextureAtlasMapBuilder::new()
             .with(
                 0_u8,
                 image::load_from_memory(res::sprite_png).unwrap().to_rgba8(),
             )
-            .build(gl);
+            .build(&gl.engine);
 
         Self {
             toggle: true,
@@ -115,13 +119,6 @@ impl Quad {
         }
     }
 
-    #[inline]
-    const fn speed(&self, gl: &GameLoop<Engine>) -> f32 {
-        gl.interval.as_secs_f32() * std::f32::consts::PI * 2.0 / 5.0
-    }
-}
-
-impl Runnable<Engine> for Quad {
     fn update(&mut self, gl: &mut GameLoop<Engine>) {
         self.a += self.speed(gl);
     }
@@ -154,6 +151,10 @@ impl Runnable<Engine> for Quad {
             .draw(&self.vbo, &self.ibo, &self.program, &ubo, &params)
             .unwrap();
     }
+
+    fn speed(&self, gl: &GameLoop<Engine>) -> f32 {
+        gl.interval.as_secs_f32() * std::f32::consts::PI * 2.0 / 5.0
+    }
 }
 
 struct CpuText {
@@ -179,10 +180,10 @@ impl CpuText {
             .convert();
         let dim = img.dimensions();
         let texture = glium::texture::RawImage2d::from_raw_rgba_reversed(&img, dim);
-        let texture = glium::texture::CompressedSrgbTexture2d::new(gl, texture).unwrap();
+        let texture = glium::texture::CompressedSrgbTexture2d::new(&gl.engine, texture).unwrap();
 
         let vbo = VertexBuffer::new(
-            gl,
+            &gl.engine,
             &[
                 DefaultVertex::from_arrays([300.0, 0.0], [1.0, 1.0, 1.0, 1.0], [0.0, 1.0]),
                 DefaultVertex::from_arrays([300.0, dim.1 as f32], [1.0, 1.0, 1.0, 1.0], [0.0, 0.0]),
@@ -200,8 +201,12 @@ impl CpuText {
         )
         .unwrap();
 
-        let ibo =
-            IndexBuffer::new(gl, PrimitiveType::TrianglesList, &[0_u8, 1, 2, 0, 2, 3]).unwrap();
+        let ibo = IndexBuffer::new(
+            &gl.engine,
+            PrimitiveType::TrianglesList,
+            &[0_u8, 1, 2, 0, 2, 3],
+        )
+        .unwrap();
 
         Self {
             toggle: true,
@@ -214,9 +219,7 @@ impl CpuText {
             program,
         }
     }
-}
 
-impl Runnable<Engine> for CpuText {
     fn event(&mut self, _: &mut GameLoop<Engine>, event: &Event) {
         if if_pressed(event, VirtualKeyCode::F2) {
             self.toggle = !self.toggle
@@ -267,12 +270,12 @@ impl DynText {
         glyphs: Rc<RefCell<Glyphs>>,
         program: Rc<Program>,
     ) -> Self {
-        let vbo = VertexBuffer::empty_dynamic(gl, Self::MAX_CHARS * 4).unwrap();
+        let vbo = VertexBuffer::empty_dynamic(&gl.engine, Self::MAX_CHARS * 4).unwrap();
 
         let indices = (0..Self::MAX_CHARS as u16)
             .flat_map(|i| [i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3])
             .collect::<Vec<u16>>();
-        let ibo = IndexBuffer::new(gl, PrimitiveType::TrianglesList, &indices[..]).unwrap();
+        let ibo = IndexBuffer::new(&gl.engine, PrimitiveType::TrianglesList, &indices[..]).unwrap();
 
         Self {
             toggle: true,
@@ -285,9 +288,7 @@ impl DynText {
             program,
         }
     }
-}
 
-impl Runnable<Engine> for DynText {
     fn event(&mut self, _: &mut GameLoop<Engine>, event: &Event) {
         if if_pressed(event, VirtualKeyCode::F4) {
             self.toggle = !self.toggle
@@ -357,11 +358,11 @@ impl GpuText {
         program: Rc<Program>,
     ) -> Self {
         let vertices = text::vbo::text(text, &mut glyphs.borrow_mut(), 18.0, 0.0, 0.0);
-        let vbo = VertexBuffer::new(gl, &vertices[..]).unwrap();
+        let vbo = VertexBuffer::new(&gl.engine, &vertices[..]).unwrap();
         let indices = (0..(vbo.len() / 4) as u32)
             .flat_map(|i| [i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3])
             .collect::<Vec<u32>>();
-        let ibo = IndexBuffer::new(gl, PrimitiveType::TrianglesList, &indices[..]).unwrap();
+        let ibo = IndexBuffer::new(&gl.engine, PrimitiveType::TrianglesList, &indices[..]).unwrap();
 
         Self {
             toggle: true,
@@ -373,9 +374,7 @@ impl GpuText {
             program,
         }
     }
-}
 
-impl Runnable<Engine> for GpuText {
     fn event(&mut self, _: &mut GameLoop<Engine>, event: &Event) {
         if if_pressed(event, VirtualKeyCode::F3) {
             self.toggle = !self.toggle
@@ -415,11 +414,64 @@ struct App {
 }
 
 impl Runnable<Engine> for App {
+    fn init(gl: &mut GameLoop<Engine>) -> Self {
+        // DEFAULT SHADER
+
+        let default_program = Rc::new(default_program(&gl.engine));
+        let text_program = Rc::new(text_program(&gl.engine));
+
+        // TEXT SETUP
+
+        let mut glyphs = Glyphs::new(&gl.engine, Rect::new(512, 512)).unwrap();
+
+        let fonts = Rc::new(FontIds {
+            system: glyphs
+                .add_font_property(FontPropertyBuilder::new().italic().build())
+                .unwrap(),
+            roboto: glyphs.add_font_bytes(res::roboto::font_ttf).unwrap(),
+            fira: glyphs.add_font_bytes(res::fira::font_ttf).unwrap(),
+        });
+
+        let glyphs = Rc::new(RefCell::new(glyphs));
+
+        let mut text = FString::from_iter([
+        "∫|∫x dx + 'test text j'\u{FF1B}\\/\"\n\\VAW//\n\treadability\n\t\tline height\n\t\t\tnewline\n54is9\taligned\n\n".default(),
+        "yy̆y\n".default(),
+        "\u{FF1B}\n".default(),
+        "fn ".default().color(1.0, 0.5, 0.0).font(fonts.fira),
+        "main".leave().color(0.1, 0.1, 1.0),
+        "() {\n\t".leave().color(1.0, 1.0, 1.0),
+        "println!".leave().color(0.1, 0.1, 1.0),
+        "(".leave().color(1.0, 1.0, 1.0),
+        "\"Hello World!\"".leave().color(0.1, 1.0, 0.1),
+        ");\n}\n\n".leave().color(1.0, 1.0, 1.0),
+        "\tTAB\n".default(),
+        "\t\tWIDTH\n".default(),
+        "----IS\n".default(),
+        "--------4\n".default()
+    ]);
+        text.set_default_format(Format {
+            color: Vec3::new(1.0, 1.0, 1.0),
+            font: fonts.roboto,
+        });
+
+        // APP
+
+        let quad = Quad::new(gl, default_program.clone());
+        let cpu_text = CpuText::new(gl, &text, glyphs.clone(), default_program);
+        let gpu_text = GpuText::new(gl, &text, glyphs.clone(), text_program.clone());
+        let dyn_text = DynText::new(gl, fonts, glyphs, text_program);
+
+        Self {
+            quad,
+            cpu_text,
+            gpu_text,
+            dyn_text,
+        }
+    }
+
     fn update(&mut self, gl: &mut GameLoop<Engine>) {
         self.quad.update(gl);
-        self.cpu_text.update(gl);
-        self.gpu_text.update(gl);
-        self.dyn_text.update(gl);
     }
 
     fn event(&mut self, gl: &mut GameLoop<Engine>, event: &Event) {
@@ -477,65 +529,10 @@ impl Runnable<Engine> for App {
 pub fn main() {
     env_logger::init();
 
-    let mut gl = WindowBuilder::new()
+    WindowBuilder::new()
         .with_title("Main")
         .with_inner_size(LogicalSize::new(400_u16, 400_u16))
         .build_engine()
-        .build_game_loop();
-
-    // DEFAULT SHADER
-
-    let default_program = Rc::new(default_program(&gl.engine));
-    let text_program = Rc::new(text_program(&gl.engine));
-
-    // TEXT SETUP
-
-    let mut glyphs = Glyphs::new(&gl.engine, Rect::new(512, 512)).unwrap();
-
-    let fonts = Rc::new(FontIds {
-        system: glyphs
-            .add_font_property(FontPropertyBuilder::new().italic().build())
-            .unwrap(),
-        roboto: glyphs.add_font_bytes(res::roboto::font_ttf).unwrap(),
-        fira: glyphs.add_font_bytes(res::fira::font_ttf).unwrap(),
-    });
-
-    let glyphs = Rc::new(RefCell::new(glyphs));
-
-    let mut text = FString::from_iter([
-        "∫|∫x dx + 'test text j'\u{FF1B}\\/\"\n\\VAW//\n\treadability\n\t\tline height\n\t\t\tnewline\n54is9\taligned\n\n".default(),
-        "yy̆y\n".default(),
-        "\u{FF1B}\n".default(),
-        "fn ".default().color(1.0, 0.5, 0.0).font(fonts.fira),
-        "main".leave().color(0.1, 0.1, 1.0),
-        "() {\n\t".leave().color(1.0, 1.0, 1.0),
-        "println!".leave().color(0.1, 0.1, 1.0),
-        "(".leave().color(1.0, 1.0, 1.0),
-        "\"Hello World!\"".leave().color(0.1, 1.0, 0.1),
-        ");\n}\n\n".leave().color(1.0, 1.0, 1.0),
-        "\tTAB\n".default(),
-        "\t\tWIDTH\n".default(),
-        "----IS\n".default(),
-        "--------4\n".default()
-    ]);
-    text.set_default_format(Format {
-        color: Vec3::new(1.0, 1.0, 1.0),
-        font: fonts.roboto,
-    });
-
-    // APP
-
-    let quad = Quad::new(&mut gl, default_program.clone());
-    let cpu_text = CpuText::new(&mut gl, &text, glyphs.clone(), default_program);
-    let gpu_text = GpuText::new(&mut gl, &text, glyphs.clone(), text_program.clone());
-    let dyn_text = DynText::new(&mut gl, fonts, glyphs, text_program);
-
-    let app = App {
-        quad,
-        cpu_text,
-        gpu_text,
-        dyn_text,
-    };
-
-    gl.run(app)
+        .build_game_loop()
+        .run::<App>()
 }

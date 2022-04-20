@@ -604,18 +604,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "21163e139fa306126e6eedaf49ecdb4588f939600f0b1e770f4205ee4b7fa868"
 
 [[package]]
-name = "game_loop"
-version = "0.1.0"
-source = "git+https://github.com/Overpeek/game_loop#30a8f55037c76c603a424be2bd784291fd79663f"
-dependencies = [
- "gilrs",
- "glam",
- "glium",
- "log",
- "winit",
-]
-
-[[package]]
 name = "getrandom"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1028,6 +1016,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "86dd2487cdfea56def77b88438a2c915fb45113c5319bfe7e14306ca4cd0b0e1"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "main_game_loop"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c371266ca2060e3ab62716bed44caf83a43404e04afe8b0e356d115bed24d681"
+dependencies = [
+ "gilrs",
+ "glam",
+ "log",
+ "winit",
 ]
 
 [[package]]
@@ -1752,12 +1752,12 @@ dependencies = [
  "env_logger",
  "font-loader",
  "fontdue",
- "game_loop",
  "glam",
  "glium",
  "image",
  "integer-sqrt",
  "log",
+ "main_game_loop",
  "parking_lot 0.12.0",
  "rand",
  "rapid-qoi",
@@ -1769,7 +1769,8 @@ dependencies = [
 [[package]]
 name = "static_res"
 version = "0.1.0"
-source = "git+https://github.com/Overpeek/static_res#458224738cfbbd023c8245c7efef86592528489a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78b2d0abb687acc87b86326327528b1b61b13b8047720b26a5086fcd10f090e0"
 dependencies = [
  "globwalk",
  "proc-macro2",
