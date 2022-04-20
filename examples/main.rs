@@ -1,4 +1,4 @@
-#![feature(duration_consts_float)]
+/* #![feature(duration_consts_float)]
 #![feature(const_fn_floating_point_arithmetic)]
 
 #[macro_use]
@@ -38,7 +38,8 @@ use winit::{
 
 //
 
-static_res! { "res/**/*.{png,ttf}" }
+static_res! { "res/**/
+*.{png,ttf}" }
 
 struct FontIds {
     system: usize,
@@ -539,3 +540,4 @@ pub fn main() {
 
     gl.run(app)
 }
+*/

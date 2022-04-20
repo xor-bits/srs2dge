@@ -1,16 +1,21 @@
 #![feature(drain_filter)]
 #![feature(type_alias_impl_trait)]
+#![feature(generic_associated_types)]
+// #![feature(adt_const_params)]
+// #![feature(trait_alias)]
 // #![feature(iter_partition_in_place)]
 
 //
 
-use game_loop::AnyEngine;
-use glium::{
-    backend::{Context, Facade},
-    glutin::ContextBuilder,
-    Display, Frame,
+use colorful::Colorful;
+use futures::executor::block_on;
+use std::sync::Arc;
+use surface::{ISurface, Surface};
+use wgpu::{
+    util::{backend_bits_from_env, power_preference_from_env},
+    Backends, Device, DeviceDescriptor, Features, Instance, Limits, PowerPreference, Queue,
+    RequestAdapterOptionsBase,
 };
-use std::{cell::Ref, rc::Rc};
 use winit::{
     event_loop::EventLoop,
     window::{Window, WindowBuilder},
@@ -18,22 +23,39 @@ use winit::{
 
 //
 
-#[macro_use]
-pub extern crate glium;
+pub use frame::Frame;
+pub use game_loop::{AnyEngine, Runnable};
+// pub trait Runnable = game_loop::Runnable<Engine>;
+pub type GameLoop = game_loop::GameLoop<Engine>;
+
+//
+
 pub extern crate glam;
 pub extern crate winit;
 
 //
 
-pub mod batch;
-pub mod packer;
-pub mod program;
-pub mod text;
+// pub mod batch;
+// pub mod packer;
+// pub mod program;
+// pub mod text;
+pub mod buffer;
+pub mod frame;
+pub mod prelude;
+pub mod shader;
+
+//
+
+mod surface;
 
 //
 
 pub struct Engine {
-    pub facade: Display,
+    surface: Surface,
+    window: Arc<Window>,
+    device: Arc<Device>,
+    queue: Arc<Queue>,
+
     event_loop: Option<EventLoop<()>>,
 }
 
@@ -43,123 +65,63 @@ impl Engine {
     pub fn new(wb: WindowBuilder) -> Self {
         let event_loop = EventLoop::new();
         let window_builder = wb.with_visible(false);
-        let context = ContextBuilder::new()
-            // .with_vsync(true)
-            .build_windowed(window_builder, &event_loop)
-            .unwrap();
-        let facade = Display::from_gl_window(context).unwrap();
+        let window = Arc::new(window_builder.build(&event_loop).unwrap());
 
-        log::debug!("OpenGL Vendor: {}", facade.get_opengl_vendor_string());
-        log::debug!("OpenGL Renderer: {}", facade.get_opengl_renderer_string());
-        log::debug!("OpenGL Version: {}", facade.get_opengl_version_string());
+        let backend = backend_bits_from_env().unwrap_or(Backends::VULKAN /* all() */);
+        let instance = Arc::new(Instance::new(backend));
+        let surface = ISurface::new(window.clone(), instance.clone());
+        let adapter = Arc::new(
+            block_on(instance.request_adapter(&RequestAdapterOptionsBase {
+                power_preference:
+                    power_preference_from_env().unwrap_or(PowerPreference::HighPerformance),
+                force_fallback_adapter: false,
+                compatible_surface: Some(&surface),
+            }))
+            .expect("No suitable GPUs"),
+        );
+
+        if log::log_enabled!(log::Level::Debug) {
+            let gpu_info = adapter.get_info();
+            let api = format!("{:?}", gpu_info.backend).red();
+            let name = gpu_info.name.blue();
+            let ty = format!("{:?}", gpu_info.device_type).green();
+
+            log::debug!("GPU API: {api}");
+            log::debug!("GPU: {name} ({ty})");
+        }
+
+        let (device, queue) = block_on(adapter.request_device(
+            &DeviceDescriptor {
+                label: label!(),
+                features: Features::empty(),
+                limits: Limits::downlevel_webgl2_defaults(),
+            },
+            None,
+        ))
+        .unwrap();
+        let (device, queue) = (Arc::new(device), Arc::new(queue));
+
+        /* device.on_uncaptured_error(|err| match err {
+            wgpu::Error::OutOfMemory { source } => panic!("Out of memory: {source}"),
+            wgpu::Error::Validation {
+                source,
+                description,
+            } => panic!("Validation error: {source}: {description}"),
+        }); */
+
+        let surface = surface.complete(&adapter, device.clone());
 
         let event_loop = Some(event_loop);
 
-        Self { facade, event_loop }
+        Self {
+            surface,
+            window,
+            device,
+            queue,
+
+            event_loop,
+        }
     }
-
-    /* pub fn run(mut self, mut app: impl Runnable<Self> + 'static) -> ! {
-        log::debug!("Initialization took: {:?}", self.init_timer.elapsed());
-
-        let mut previous = Instant::now();
-        let mut lag = Duration::from_secs_f64(0.0);
-
-        self.facade.gl_window().window().set_visible(true);
-
-        self.event_loop
-            .take()
-            .unwrap()
-            .run(move |event, _, control| {
-                *control = if self.stop.load(Ordering::Relaxed) {
-                    ControlFlow::Exit
-                } else {
-                    ControlFlow::Poll
-                };
-
-                match &event {
-                    Event::WindowEvent {
-                        event: WindowEvent::CursorEntered { .. },
-                        ..
-                    } => self.cursor_in = true,
-                    Event::WindowEvent {
-                        event: WindowEvent::CursorLeft { .. },
-                        ..
-                    } => self.cursor_in = false,
-                    Event::WindowEvent {
-                        event: WindowEvent::CursorMoved { position, .. },
-                        ..
-                    } => {
-                        self.cursor_pos = *position;
-                    }
-                    Event::WindowEvent {
-                        event: WindowEvent::Resized(s),
-                        ..
-                    } => {
-                        self.size = (s.width as f32, s.height as f32);
-                        let s = s.to_logical::<f32>(self.scale_factor);
-                        self.aspect = s.width / s.height;
-                    }
-                    Event::RedrawRequested(_) => {
-                        // main game loop source:
-                        //  - https://gameprogrammingpatterns.com/game-loop.html
-                        let elapsed = previous.elapsed();
-                        previous = Instant::now();
-                        lag += elapsed;
-
-                        // updates
-                        while lag >= self.interval {
-                            let timer = self.update_reporter.begin();
-                            app.update(&self);
-                            self.update_reporter.end(timer);
-                            lag -= self.interval;
-                        }
-
-                        // frames
-                        let timer = self.frame_reporter.begin();
-                        {
-                            let mut frame = self.facade.draw();
-                            app.draw(
-                                &self,
-                                &mut frame,
-                                lag.as_secs_f32() / self.interval.as_secs_f32(),
-                            );
-                            frame.finish().unwrap();
-                        }
-                        let should_report = self.frame_reporter.end(timer);
-
-                        // reports
-                        if should_report {
-                            let int = self.frame_reporter.report_interval();
-                            let (u_int, u_per_sec) = self.update_reporter.last_string();
-                            let (f_int, f_per_sec) = self.frame_reporter.last_string();
-
-                            #[cfg(debug_assertions)]
-                            const DEBUG: &str = "debug build";
-                            #[cfg(not(debug_assertions))]
-                            const DEBUG: &str = "release build";
-
-                            log::debug!(
-                                "Report ({:?})({})\n        per second @ time per\nUPDATES: {:>9} @ {}\nFRAMES: {:>10} @ {}",
-                                int,
-                                DEBUG,
-                                u_per_sec,
-                                u_int,
-                                f_per_sec,
-                                f_int
-                            );
-                        }
-
-                        return;
-                    }
-                    Event::MainEventsCleared => {
-                        self.facade.gl_window().window().request_redraw();
-                    }
-                    _ => {}
-                }
-
-                app.event(&self, &event);
-            })
-    } */
 }
 
 //
@@ -168,25 +130,19 @@ impl AnyEngine for Engine {
     type Frame = Frame;
 
     fn get_frame(&mut self) -> Self::Frame {
-        self.facade.draw()
+        Self::Frame::new(&self.device, self.queue.clone(), &mut self.surface)
     }
 
-    fn finish_frame(&mut self, frame: Self::Frame) {
-        frame.finish().unwrap();
+    fn finish_frame(&mut self, _: Self::Frame) {
+        // drop frame
     }
 
-    fn get_window(&self) -> Ref<'_, Window> {
-        Ref::map(self.facade.gl_window(), |d| d.window())
+    fn get_window(&self) -> &Window {
+        &self.window
     }
 
     fn take_event_loop(&mut self) -> EventLoop<()> {
         self.event_loop.take().unwrap()
-    }
-}
-
-impl Facade for Engine {
-    fn get_context(&self) -> &Rc<Context> {
-        self.facade.get_context()
     }
 }
 
@@ -200,4 +156,28 @@ impl BuildEngine for WindowBuilder {
     fn build_engine(self) -> Engine {
         Engine::new(self)
     }
+}
+
+//
+
+// shamelessly stolen from: https://github.com/popzxc/stdext-rs
+#[macro_export]
+macro_rules! function_name {
+    () => {{
+        // Okay, this is ugly, I get it. However, this is the best we can get on a stable rust.
+        fn f() {}
+        fn type_name_of<T>(_: T) -> &'static str {
+            std::any::type_name::<T>()
+        }
+        let name = type_name_of(f);
+        // `3` is the length of the `::f`.
+        &name[..name.len() - 3]
+    }};
+}
+
+#[macro_export]
+macro_rules! label {
+    () => {
+        Some($crate::function_name!())
+    };
 }

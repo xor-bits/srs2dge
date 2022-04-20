@@ -1,6 +1,5 @@
-use crate::program::DefaultVertex;
-
 use super::Mesh;
+use crate::program::DefaultVertex;
 use glam::{Vec2, Vec2Swizzles, Vec3, Vec3Swizzles, Vec4, Vec4Swizzles};
 use glium::index::PrimitiveType;
 use std::array::IntoIter;

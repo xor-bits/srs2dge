@@ -1,27 +1,41 @@
 [package]
 name = "srs2dge"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+glsl = ["wgpu/glsl"]
+
 [dependencies]
+# logging
 env_logger = "0.9.0"
 log = "0.4.14"
+colorful = "0.2.1"
 
-parking_lot = "0.12.0"
-rand = "0.8.4"
+# syncronous await operator
+futures = { version = "0.3.21", features = ["executor"] }
 
-glium = "0.31.0"
+# graphics
+wgpu = "0.12.0"
+naga = { version = "0.8.5" }
 winit = "0.26.1"
 glam = { version = "0.20.1", features = ["serde"] }
-game_loop = { git = "https://github.com/Overpeek/game_loop", features = ["gl"] }
+game_loop = { git = "https://github.com/Overpeek/game_loop" }
 
+# resources
 image = "0.24.1"
 fontdue = "0.7.2"
 font-loader = "0.11.0"
 static_res = { git = "https://github.com/Overpeek/static_res" }
 
+# data
 serde = { version = "1.0.136", features = ["derive"] }
 rapid-qoi = "0.6.1"
 integer-sqrt = "0.1.5"
+bytemuck = "1.9.1"
+
+[dev-dependencies]
+rand = "0.8.4"
