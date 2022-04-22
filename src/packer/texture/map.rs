@@ -157,6 +157,10 @@ where
     pub fn dimensions(&self) -> Rect {
         self.inner.dimensions()
     }
+
+    pub fn get(&self, key: &K) -> Option<&TexturePosition> {
+        self.map.get(key)
+    }
 }
 
 impl<K> TextureAtlasMapFile<K>

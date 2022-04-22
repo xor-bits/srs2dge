@@ -30,3 +30,12 @@ impl TexturePosition {
         }
     }
 }
+
+impl Default for TexturePosition {
+    fn default() -> Self {
+        Self {
+            top_left: Vec2::new(0.0, 0.0),
+            bottom_right: Vec2::new(1.0, 1.0),
+        }
+    }
+}
