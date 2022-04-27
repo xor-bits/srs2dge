@@ -5,37 +5,41 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
 [features]
 default = []
 glsl = ["wgpu/glsl"]
 
 [dependencies]
 # logging
-env_logger = "0.9.0"
-log = "0.4.14"
-colorful = "0.2.1"
+log = "0.4"
+colorful = "0.2"
 
 # syncronous await operator
 futures = { version = "0.3.21", features = ["executor"] }
 
 # graphics
-wgpu = "0.12.0"
-naga = { version = "0.8.5" }
-winit = "0.26.1"
-glam = { version = "0.20.1", features = ["serde"] }
-game_loop = { git = "https://github.com/Overpeek/game_loop" }
+wgpu = "0.12"
+naga = { version = "0.8" }
+winit = "0.26"
+glam = { version = "0.20", features = ["serde", "bytemuck"] }
+main_game_loop = "0.2"
 
 # resources
-image = "0.24.1"
-fontdue = "0.7.2"
-font-loader = "0.11.0"
-static_res = { git = "https://github.com/Overpeek/static_res" }
+image = "0.24"
+fontdue = "0.7"
+font-loader = "0.11"
+static_res = "0.1"
 
 # data
-serde = { version = "1.0.136", features = ["derive"] }
-rapid-qoi = "0.6.1"
-integer-sqrt = "0.1.5"
-bytemuck = "1.9.1"
+serde = { version = "1.0", features = ["derive"] }
+rapid-qoi = "0.6"
+integer-sqrt = "0.1"
+bytemuck = { version = "1.9", features = ["derive"] }
 
 [dev-dependencies]
-rand = "0.8.4"
+rand = "0.8"
+env_logger = "0.9"
+rapier2d = "0.11"

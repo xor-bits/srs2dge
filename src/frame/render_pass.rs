@@ -1,7 +1,10 @@
-use wgpu::{BindGroup, TextureFormat};
-
-use crate::{buffer::VertexBuffer, shader::Shader};
+use crate::{
+    buffer::{index::ty::Index, IndexBuffer, VertexBuffer},
+    shader::Shader,
+};
+use bytemuck::Pod;
 use std::ops::Range;
+use wgpu::{BindGroup, TextureFormat};
 
 //
 
@@ -13,8 +16,19 @@ pub struct RenderPass<'e, const PIPELINE_BOUND: bool> {
 //
 
 impl<'e, const PIPELINE_BOUND: bool> RenderPass<'e, PIPELINE_BOUND> {
-    pub fn bind_vbo<'b: 'e, T: 'static>(mut self, buffer: &'b VertexBuffer<T>, slot: u32) -> Self {
-        buffer.bind(&mut self.inner, slot);
+    pub fn bind_vbo<'b: 'e, T: Pod + 'static>(
+        mut self,
+        buffer: &'b VertexBuffer<T>,
+        slot: u32,
+    ) -> Self {
+        self.inner
+            .set_vertex_buffer(slot, buffer.get_buffer().slice(..));
+        self
+    }
+
+    pub fn bind_ibo<'b: 'e, T: Index + 'static>(mut self, buffer: &'b IndexBuffer<T>) -> Self {
+        self.inner
+            .set_index_buffer(buffer.get_buffer().slice(..), T::FORMAT);
         self
     }
 

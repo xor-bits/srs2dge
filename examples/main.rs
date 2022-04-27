@@ -5,7 +5,7 @@
 extern crate glium;
 
 use font_loader::system_fonts::FontPropertyBuilder;
-use game_loop::{AnyEngine, Event, GameLoop, Runnable};
+use main_game_loop::{AnyEngine, Event, GameLoop, Runnable};
 use glam::{Mat4, Vec3, Vec4};
 use glium::{
     index::PrimitiveType,
@@ -482,7 +482,7 @@ pub fn main() {
         .with_title("Main")
         .with_inner_size(LogicalSize::new(400_u16, 400_u16))
         .build_engine()
-        .build_game_loop();
+        .build_main_game_loop();
 
     // DEFAULT SHADER
 

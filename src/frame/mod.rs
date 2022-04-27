@@ -1,9 +1,10 @@
-use crate::{label, surface::Surface};
+use crate::{label, target::surface::Surface};
 use std::sync::Arc;
 use wgpu::{
-    Color, CommandEncoder, CommandEncoderDescriptor, ComputePassDescriptor, Device, LoadOp,
-    Operations, Queue, RenderPassColorAttachment, RenderPassDescriptor, SurfaceTexture,
-    TextureFormat, TextureView, TextureViewDescriptor,
+    util::StagingBelt, Buffer, BufferAddress, BufferSize, BufferViewMut, Color, CommandEncoder,
+    CommandEncoderDescriptor, ComputePassDescriptor, Device, LoadOp, Operations, Queue,
+    RenderPassColorAttachment, RenderPassDescriptor, SurfaceTexture, TextureFormat, TextureView,
+    TextureViewDescriptor,
 };
 
 use self::{compute_pass::ComputePass, render_pass::RenderPass};
@@ -23,12 +24,19 @@ pub struct Frame {
     encoder: Option<CommandEncoder>,
 
     queue: Arc<Queue>,
+
+    pub(crate) belt: StagingBelt,
 }
 
 //
 
 impl Frame {
-    pub fn new(device: &Device, queue: Arc<Queue>, surface: &mut Surface) -> Self {
+    pub fn new(
+        device: &Device,
+        queue: Arc<Queue>,
+        surface: &mut Surface,
+        belt: StagingBelt,
+    ) -> Self {
         let main_texture = surface.acquire();
         let main_view = main_texture.texture.create_view(&TextureViewDescriptor {
             label: label!(),
@@ -49,11 +57,17 @@ impl Frame {
             encoder,
 
             queue,
+
+            belt,
         }
     }
 }
 
 impl Frame {
+    pub fn encoder(&mut self) -> &mut CommandEncoder {
+        self.encoder.as_mut().expect("Frame was dropped")
+    }
+
     #[must_use]
     pub fn main_render_pass(&mut self) -> RenderPass<false> {
         let pass = self
@@ -90,10 +104,25 @@ impl Frame {
 
         ComputePass::new(pass)
     }
-}
 
-impl Drop for Frame {
-    fn drop(&mut self) {
+    pub(crate) fn write_buffer(
+        &mut self,
+        target: &Buffer,
+        offset: BufferAddress,
+        size: BufferSize,
+        device: &Device,
+    ) -> BufferViewMut {
+        self.belt.write_buffer(
+            self.encoder.as_mut().expect("Frame was dropped"),
+            target,
+            offset,
+            size,
+            device,
+        )
+    }
+
+    pub(crate) fn finish(mut self) -> StagingBelt {
+        self.belt.finish();
         self.queue.submit([self
             .encoder
             .take()
@@ -103,5 +132,6 @@ impl Drop for Frame {
             .take()
             .expect("Frame was dropped twice")
             .present();
+        self.belt
     }
 }

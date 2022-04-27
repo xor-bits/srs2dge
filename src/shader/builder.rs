@@ -1,5 +1,5 @@
 use super::{module::ShaderModule, Shader};
-use crate::{label, Engine};
+use crate::{label, target::Target};
 use wgpu::{
     BlendState, ColorTargetState, ColorWrites, FragmentState, FrontFace, MultisampleState,
     PipelineLayoutDescriptor, PolygonMode, PrimitiveState, PrimitiveTopology,
@@ -91,14 +91,14 @@ impl<'s, const VS: bool, const FS: bool, const FMT: bool, const L: bool>
 }
 
 impl<'s> ShaderBuilder<'s, true, true, true, true> {
-    pub fn build(self, engine: &Engine) -> Shader {
+    pub fn build(self, target: &Target) -> Shader {
         let (vert_mod, vert_entry) = self.vert.unwrap();
         let (frag_mod, frag_entry) = self.frag.unwrap();
         let format = self.format.unwrap();
 
-        let layout = engine.device.create_pipeline_layout(&self.layout.unwrap());
+        let layout = target.device.create_pipeline_layout(&self.layout.unwrap());
 
-        let pipeline = engine
+        let pipeline = target
             .device
             .create_render_pipeline(&RenderPipelineDescriptor {
                 label: label!(),
@@ -107,7 +107,7 @@ impl<'s> ShaderBuilder<'s, true, true, true, true> {
                     module: &vert_mod.inner,
                     entry_point: vert_entry,
                     buffers: &[VertexBufferLayout {
-                        array_stride: 24,
+                        array_stride: 32,
                         step_mode: VertexStepMode::Vertex,
                         attributes: &[
                             VertexAttribute {
@@ -116,9 +116,14 @@ impl<'s> ShaderBuilder<'s, true, true, true, true> {
                                 shader_location: 0,
                             },
                             VertexAttribute {
-                                format: VertexFormat::Float32x4,
+                                format: VertexFormat::Float32x2,
                                 offset: 8,
                                 shader_location: 1,
+                            },
+                            VertexAttribute {
+                                format: VertexFormat::Float32x4,
+                                offset: 16,
+                                shader_location: 2,
                             },
                         ],
                     }],

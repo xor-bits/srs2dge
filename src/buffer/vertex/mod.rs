@@ -1,13 +1,18 @@
-use crate::{label, Engine};
-use bytemuck::Pod;
-use std::{marker::PhantomData, mem};
-use wgpu::{
-    util::{BufferInitDescriptor, DeviceExt},
-    Buffer, BufferDescriptor, BufferUsages, RenderPass,
-};
+use self::ty::DefaultVertex;
+
+use super::Buffer;
+use wgpu::BufferUsages;
 
 //
 
+pub mod ty;
+
+//
+
+pub type VertexBuffer<T = DefaultVertex> =
+    Buffer<T, { BufferUsages::VERTEX.bits() | BufferUsages::COPY_DST.bits() }>;
+
+/* #[derive(Debug)]
 pub struct VertexBuffer<T> {
     buffer: Buffer,
     _p: PhantomData<T>,
@@ -16,7 +21,7 @@ pub struct VertexBuffer<T> {
 //
 
 impl<T> VertexBuffer<T> {
-    pub fn new(engine: &Engine, elements: u32) -> Self {
+    pub fn new(engine: &Engine, elements: usize) -> Self {
         let buffer = engine.device.create_buffer(&BufferDescriptor {
             label: label!(),
             size: mem::size_of::<T>() as u64 * elements as u64,
@@ -52,4 +57,4 @@ where
 
         Self::with_buffer(buffer)
     }
-}
+} */

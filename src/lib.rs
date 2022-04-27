@@ -1,32 +1,15 @@
-#![feature(drain_filter)]
-#![feature(type_alias_impl_trait)]
-#![feature(generic_associated_types)]
-// #![feature(adt_const_params)]
-// #![feature(trait_alias)]
-// #![feature(iter_partition_in_place)]
-
-//
-
-use colorful::Colorful;
-use futures::executor::block_on;
+use main_game_loop::event::EventLoop;
+use main_game_loop::{engine::AnyEngine, event::EventReceiver};
 use std::sync::Arc;
-use surface::{ISurface, Surface};
-use wgpu::{
-    util::{backend_bits_from_env, power_preference_from_env},
-    Backends, Device, DeviceDescriptor, Features, Instance, Limits, PowerPreference, Queue,
-    RequestAdapterOptionsBase,
-};
-use winit::{
-    event_loop::EventLoop,
-    window::{Window, WindowBuilder},
-};
+use std::thread;
+use target::Target;
+use wgpu::{util::backend_bits_from_env, Backends, Instance};
+use winit::error::OsError;
+use winit::window::{Window, WindowBuilder};
 
 //
 
 pub use frame::Frame;
-pub use game_loop::{AnyEngine, Runnable};
-// pub trait Runnable = game_loop::Runnable<Engine>;
-pub type GameLoop = game_loop::GameLoop<Engine>;
 
 //
 
@@ -35,126 +18,79 @@ pub extern crate winit;
 
 //
 
-// pub mod batch;
 // pub mod packer;
 // pub mod program;
 // pub mod text;
+pub mod batch;
 pub mod buffer;
 pub mod frame;
 pub mod prelude;
 pub mod shader;
-
-//
-
-mod surface;
+pub mod target;
 
 //
 
 pub struct Engine {
-    surface: Surface,
-    window: Arc<Window>,
-    device: Arc<Device>,
-    queue: Arc<Queue>,
-
-    event_loop: Option<EventLoop<()>>,
+    instance: Arc<Instance>,
+    event_receiver: Option<EventReceiver>,
 }
 
 //
 
-impl Engine {
-    pub fn new(wb: WindowBuilder) -> Self {
-        let event_loop = EventLoop::new();
-        let window_builder = wb.with_visible(false);
-        let window = Arc::new(window_builder.build(&event_loop).unwrap());
-
-        let backend = backend_bits_from_env().unwrap_or(Backends::VULKAN /* all() */);
-        let instance = Arc::new(Instance::new(backend));
-        let surface = ISurface::new(window.clone(), instance.clone());
-        let adapter = Arc::new(
-            block_on(instance.request_adapter(&RequestAdapterOptionsBase {
-                power_preference:
-                    power_preference_from_env().unwrap_or(PowerPreference::HighPerformance),
-                force_fallback_adapter: false,
-                compatible_surface: Some(&surface),
-            }))
-            .expect("No suitable GPUs"),
-        );
-
-        if log::log_enabled!(log::Level::Debug) {
-            let gpu_info = adapter.get_info();
-            let api = format!("{:?}", gpu_info.backend).red();
-            let name = gpu_info.name.blue();
-            let ty = format!("{:?}", gpu_info.device_type).green();
-
-            log::debug!("GPU API: {api}");
-            log::debug!("GPU: {name} ({ty})");
-        }
-
-        let (device, queue) = block_on(adapter.request_device(
-            &DeviceDescriptor {
-                label: label!(),
-                features: Features::empty(),
-                limits: Limits::downlevel_webgl2_defaults(),
-            },
-            None,
-        ))
-        .unwrap();
-        let (device, queue) = (Arc::new(device), Arc::new(queue));
-
-        /* device.on_uncaptured_error(|err| match err {
-            wgpu::Error::OutOfMemory { source } => panic!("Out of memory: {source}"),
-            wgpu::Error::Validation {
-                source,
-                description,
-            } => panic!("Validation error: {source}: {description}"),
-        }); */
-
-        let surface = surface.complete(&adapter, device.clone());
-
-        let event_loop = Some(event_loop);
-
+impl Default for Engine {
+    fn default() -> Self {
         Self {
-            surface,
-            window,
-            device,
-            queue,
-
-            event_loop,
+            instance: Self::make_instance(),
+            event_receiver: Default::default(),
         }
+    }
+}
+
+impl Engine {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn new_target(&mut self) -> Result<Target, OsError> {
+        self.new_target_from_builder(WindowBuilder::new())
+    }
+
+    pub fn new_target_from(&mut self, window: Arc<Window>) -> Target {
+        Target::new(self.instance.clone(), window)
+    }
+
+    pub fn new_target_from_builder(&mut self, builder: WindowBuilder) -> Result<Target, OsError> {
+        let window = Arc::new(self.create_window(builder)?);
+        Ok(self.new_target_from(window))
+    }
+
+    fn make_instance() -> Arc<Instance> {
+        // renderdoc
+        let backend = Backends::VULKAN;
+
+        // default
+        // let backend = Backends::all();
+
+        let backend = backend_bits_from_env().unwrap_or(backend);
+        Arc::new(Instance::new(backend))
     }
 }
 
 //
 
 impl AnyEngine for Engine {
-    type Frame = Frame;
-
-    fn get_frame(&mut self) -> Self::Frame {
-        Self::Frame::new(&self.device, self.queue.clone(), &mut self.surface)
+    fn run<F>(mut self, f: F) -> !
+    where
+        F: FnOnce(Self) + Send + 'static,
+    {
+        let (sender, receiver) = EventLoop::new();
+        self.event_receiver = Some(receiver);
+        thread::spawn(move || f(self));
+        sender.run();
     }
 
-    fn finish_frame(&mut self, _: Self::Frame) {
-        // drop frame
-    }
-
-    fn get_window(&self) -> &Window {
-        &self.window
-    }
-
-    fn take_event_loop(&mut self) -> EventLoop<()> {
-        self.event_loop.take().unwrap()
-    }
-}
-
-//
-
-pub trait BuildEngine {
-    fn build_engine(self) -> Engine;
-}
-
-impl BuildEngine for WindowBuilder {
-    fn build_engine(self) -> Engine {
-        Engine::new(self)
+    fn event_receiver(&mut self) -> &mut EventReceiver {
+        self.event_receiver.as_mut().expect("GameLoop not running")
     }
 }
 

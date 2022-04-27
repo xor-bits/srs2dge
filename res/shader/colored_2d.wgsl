@@ -1,6 +1,7 @@
 struct VertexInput {
 	[[location(0)]] pos: vec2<f32>;
-	[[location(1)]] col: vec4<f32>;
+	[[location(1)]] uv: vec2<f32>;
+	[[location(2)]] col: vec4<f32>;
 };
 
 struct FragmentInput {

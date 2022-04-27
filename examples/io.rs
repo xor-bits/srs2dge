@@ -1,4 +1,4 @@
-/* use game_loop::{
+/* use main_game_loop::{
     io::input_state::{Input, InputAxis, InputState, Triggered},
     AnyEngine, Event, GameLoop, Runnable,
 };
@@ -174,7 +174,7 @@ fn main() {
 
     let input = InputState::new();
 
-    engine.build_game_loop().run(App {
+    engine.build_main_game_loop().run(App {
         left,
         right,
         left_a,

@@ -1,5 +1,6 @@
 use super::{module::ShaderModule, Shader};
-use crate::{buffer::UniformBuffer, label, Engine};
+use crate::{buffer::UniformBuffer, label, target::Target};
+use bytemuck::Pod;
 use std::{
     ops::{Deref, DerefMut},
     sync::Arc,
@@ -26,14 +27,14 @@ pub struct Colored2DShader {
 }
 
 impl Colored2DShader {
-    pub fn new(engine: &Engine) -> Self {
+    pub fn new(target: &Target) -> Self {
         let module = ShaderModule::new_wgsl_source(
-            engine,
+            target,
             std::str::from_utf8(res::shader::colored_2d_wgsl).unwrap(),
         )
         .unwrap_or_else(|err| panic!("{err}"));
 
-        let bind_layout = engine
+        let bind_layout = target
             .device
             .create_bind_group_layout(&BindGroupLayoutDescriptor {
                 label: label!(),
@@ -53,26 +54,26 @@ impl Colored2DShader {
             inner: Shader::builder()
                 .with_vertex(&module, "vs_main")
                 .with_fragment(&module, "fs_main")
-                .with_format(engine.surface.format())
+                .with_format(target.surface.format())
                 .with_layout(PipelineLayoutDescriptor {
                     label: label!(),
                     bind_group_layouts: &[&bind_layout],
                     push_constant_ranges: &[],
                 })
-                .build(engine),
+                .build(target),
             bind_layout,
 
-            device: engine.device.clone(),
+            device: target.device.clone(),
         }
     }
 
-    pub fn bind_group<T>(&self, uniform: &UniformBuffer<T>) -> BindGroup {
+    pub fn bind_group<T: Pod>(&self, uniform: &UniformBuffer<T>) -> BindGroup {
         self.device.create_bind_group(&BindGroupDescriptor {
             label: label!(),
             layout: &self.bind_layout,
             entries: &[BindGroupEntry {
                 binding: 0,
-                resource: uniform.bind(),
+                resource: uniform.get_buffer().as_entire_binding(),
             }],
         })
     }

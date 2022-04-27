@@ -59,6 +59,10 @@ impl ISurface {
         surface.configure();
         surface
     }
+
+    pub fn get_window(&self) -> Arc<Window> {
+        self.window.clone()
+    }
 }
 
 impl Surface {
@@ -124,6 +128,10 @@ impl Surface {
 
     pub fn format(&self) -> TextureFormat {
         self.format
+    }
+
+    pub fn get_window(&self) -> Arc<Window> {
+        self.surface.get_window()
     }
 }
 
