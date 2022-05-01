@@ -1,11 +1,7 @@
-use main_game_loop::event::EventLoop;
-use main_game_loop::{engine::AnyEngine, event::EventReceiver};
 use std::sync::Arc;
-use std::thread;
 use target::Target;
 use wgpu::{util::backend_bits_from_env, Backends, Instance};
-use winit::error::OsError;
-use winit::window::{Window, WindowBuilder};
+use winit::window::Window;
 
 //
 
@@ -18,21 +14,19 @@ pub extern crate winit;
 
 //
 
-// pub mod packer;
-// pub mod program;
-// pub mod text;
 pub mod batch;
 pub mod buffer;
 pub mod frame;
+pub mod packer;
 pub mod prelude;
 pub mod shader;
 pub mod target;
+pub mod text;
 
 //
 
 pub struct Engine {
     instance: Arc<Instance>,
-    event_receiver: Option<EventReceiver>,
 }
 
 //
@@ -41,7 +35,6 @@ impl Default for Engine {
     fn default() -> Self {
         Self {
             instance: Self::make_instance(),
-            event_receiver: Default::default(),
         }
     }
 }
@@ -51,46 +44,35 @@ impl Engine {
         Self::default()
     }
 
-    pub fn new_target(&mut self) -> Result<Target, OsError> {
-        self.new_target_from_builder(WindowBuilder::new())
-    }
+    pub async fn new_target(&mut self, window: Arc<Window>) -> Target {
+        #[cfg(target_arch = "wasm32")]
+        {
+            use winit::platform::web::WindowExtWebSys;
+            web_sys::window()
+                .and_then(|win| win.document())
+                .and_then(|doc| doc.body())
+                .and_then(|body| {
+                    body.append_child(&web_sys::Element::from(window.canvas()))
+                        .ok()
+                })
+                .expect("couldn't append canvas to document body");
+        }
 
-    pub fn new_target_from(&mut self, window: Arc<Window>) -> Target {
-        Target::new(self.instance.clone(), window)
-    }
-
-    pub fn new_target_from_builder(&mut self, builder: WindowBuilder) -> Result<Target, OsError> {
-        let window = Arc::new(self.create_window(builder)?);
-        Ok(self.new_target_from(window))
+        Target::new(self.instance.clone(), window).await
     }
 
     fn make_instance() -> Arc<Instance> {
         // renderdoc
-        let backend = Backends::VULKAN;
+        // let backend = Backends::VULKAN;
 
         // default
-        // let backend = Backends::all();
+        let backend = Backends::all();
+
+        // webgl
+        // let backend = Backends::GL;
 
         let backend = backend_bits_from_env().unwrap_or(backend);
         Arc::new(Instance::new(backend))
-    }
-}
-
-//
-
-impl AnyEngine for Engine {
-    fn run<F>(mut self, f: F) -> !
-    where
-        F: FnOnce(Self) + Send + 'static,
-    {
-        let (sender, receiver) = EventLoop::new();
-        self.event_receiver = Some(receiver);
-        thread::spawn(move || f(self));
-        sender.run();
-    }
-
-    fn event_receiver(&mut self) -> &mut EventReceiver {
-        self.event_receiver.as_mut().expect("GameLoop not running")
     }
 }
 

@@ -1,5 +1,6 @@
-use super::{module::ShaderModule, Shader};
-use crate::{buffer::UniformBuffer, label, target::Target};
+use crate::{
+    buffer::UniformBuffer, label, prelude::Shader, shader::module::ShaderModule, target::Target,
+};
 use bytemuck::Pod;
 use std::{
     ops::{Deref, DerefMut},
@@ -13,9 +14,7 @@ use wgpu::{
 
 //
 
-static_res::static_res! {
-    "res/**/*.{wgsl}"
-}
+const SHADER_SOURCE: &str = include_str!("colored_2d.wgsl");
 
 //
 
@@ -28,11 +27,8 @@ pub struct Colored2DShader {
 
 impl Colored2DShader {
     pub fn new(target: &Target) -> Self {
-        let module = ShaderModule::new_wgsl_source(
-            target,
-            std::str::from_utf8(res::shader::colored_2d_wgsl).unwrap(),
-        )
-        .unwrap_or_else(|err| panic!("{err}"));
+        let module = ShaderModule::new_wgsl_source(target, SHADER_SOURCE)
+            .unwrap_or_else(|err| panic!("{err}"));
 
         let bind_layout = target
             .device
@@ -50,7 +46,7 @@ impl Colored2DShader {
                 }],
             });
 
-        Colored2DShader {
+        Self {
             inner: Shader::builder()
                 .with_vertex(&module, "vs_main")
                 .with_fragment(&module, "fs_main")

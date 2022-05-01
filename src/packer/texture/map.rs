@@ -1,15 +1,18 @@
 use super::{TextureAtlas, TextureAtlasFile};
-use crate::packer::{
-    packer2d::{PositionedRect, Rect},
-    texture::TextureAtlasBuilder,
-    TexturePosition,
+use crate::{
+    packer::{
+        pos::TexturePosition,
+        rect::{PositionedRect, Rect},
+        texture::TextureAtlasBuilder,
+    },
+    target::Target,
 };
-use glium::{backend::Facade, uniforms::Sampler, Texture2d};
 use image::RgbaImage;
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BinaryHeap, HashMap},
     hash::Hash,
+    ops::Deref,
 };
 
 //
@@ -107,10 +110,7 @@ impl<K> TextureAtlasMapBuilder<K>
 where
     K: Eq + Hash + Clone,
 {
-    pub fn build<F>(mut self, facade: &F) -> TextureAtlasMap<K>
-    where
-        F: Facade,
-    {
+    pub fn build(mut self, target: &Target) -> TextureAtlasMap<K> {
         let mut builder = TextureAtlasBuilder::new();
         let mut images = vec![];
 
@@ -123,12 +123,14 @@ where
             images.push((key, v, image));
         }
 
-        let (map, iter): (Vec<(K, PositionedRect)>, Vec<(RgbaImage, PositionedRect)>) = images
+        type Map<K> = Vec<(K, PositionedRect)>;
+        type Iter = Vec<(RgbaImage, PositionedRect)>;
+        let (map, iter): (Map<K>, Iter) = images
             .into_iter()
             .map(|(key, pos, img)| ((key, pos), (img, pos)))
             .unzip();
 
-        let inner = builder.build(facade, iter.into_iter());
+        let inner = builder.build(target, iter.into_iter());
         let size = inner.dimensions();
         let map = map
             .into_iter()
@@ -143,15 +145,11 @@ impl<K> TextureAtlasMap<K>
 where
     K: Eq + Hash + Clone,
 {
-    pub fn convert(&self) -> TextureAtlasMapFile<K> {
-        let inner = self.inner.convert();
+    pub async fn convert(&self, target: &Target) -> TextureAtlasMapFile<K> {
+        let inner = self.inner.convert(target).await;
         let map = self.map.clone();
 
         TextureAtlasMapFile { inner, map }
-    }
-
-    pub fn sampled(&self) -> Sampler<'_, Texture2d> {
-        self.inner.sampled()
     }
 
     pub fn dimensions(&self) -> Rect {
@@ -159,15 +157,23 @@ where
     }
 }
 
+impl<K> Deref for TextureAtlasMap<K>
+where
+    K: Eq + Hash + Clone,
+{
+    type Target = TextureAtlas;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
 impl<K> TextureAtlasMapFile<K>
 where
     K: Eq + Hash + Clone,
 {
-    pub fn convert<F>(&self, facade: &F) -> TextureAtlasMap<K>
-    where
-        F: Facade,
-    {
-        let inner = self.inner.convert(facade);
+    pub fn convert(&self, target: &Target) -> TextureAtlasMap<K> {
+        let inner = self.inner.convert(target);
         let map = self.map.clone();
 
         TextureAtlasMap { inner, map }

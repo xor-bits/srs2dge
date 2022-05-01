@@ -1,17 +1,27 @@
-use futures::executor::block_on;
-use std::{
-    sync::{
-        mpsc::{channel, Sender, TryRecvError},
-        Arc,
+use main_game_loop::as_async;
+use std::sync::Arc;
+use wgpu::{util::StagingBelt, Device};
+
+#[cfg(not(target_arch = "wasm32"))]
+use {
+    std::{
+        sync::mpsc::{channel, Sender, TryRecvError},
+        thread::JoinHandle,
     },
-    thread::{self, JoinHandle},
+    wgpu::Maintain,
 };
-use wgpu::{util::StagingBelt, Device, Maintain};
 
 //
 
 pub struct Belt {
     belt: Option<StagingBelt>,
+
+    #[cfg(not(target_arch = "wasm32"))]
+    _poll: PollThread,
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+struct PollThread {
     poll_thread: Option<JoinHandle<()>>,
     poll_stop: Sender<()>,
 }
@@ -19,28 +29,19 @@ pub struct Belt {
 //
 
 impl Belt {
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn new(device: Arc<Device>) -> Self {
-        // poll thread
-        let (poll_stop, poll_listen) = channel();
-        let poll_thread = {
-            Some(thread::spawn(move || loop {
-                match poll_listen.try_recv() {
-                    Ok(()) | Err(TryRecvError::Disconnected) => break,
-                    Err(TryRecvError::Empty) => {}
-                }
+        let belt = Some(StagingBelt::new(128));
+        let _poll = PollThread::new(device);
 
-                device.poll(Maintain::Wait);
-                thread::yield_now();
-            }))
-        };
+        Self { belt, _poll }
+    }
 
+    #[cfg(target_arch = "wasm32")]
+    pub fn new(_: Arc<Device>) -> Self {
         let belt = Some(StagingBelt::new(128));
 
-        Self {
-            belt,
-            poll_thread,
-            poll_stop,
-        }
+        Self { belt }
     }
 
     pub fn get(&mut self) -> StagingBelt {
@@ -50,12 +51,35 @@ impl Belt {
     }
 
     pub fn set(&mut self, mut belt: StagingBelt) {
-        block_on(belt.recall());
+        as_async(belt.recall());
         self.belt = Some(belt);
     }
 }
 
-impl Drop for Belt {
+#[cfg(not(target_arch = "wasm32"))]
+impl PollThread {
+    pub fn new(device: Arc<Device>) -> Self {
+        let (poll_stop, poll_listen) = channel();
+        let poll_thread = Some(std::thread::spawn(move || loop {
+            match poll_listen.try_recv() {
+                Ok(()) | Err(TryRecvError::Disconnected) => break,
+                Err(TryRecvError::Empty) => {}
+            }
+
+            device.poll(Maintain::Wait);
+            #[cfg(target_arch = "wasm32")]
+            thread::yield_now();
+        }));
+
+        Self {
+            poll_stop,
+            poll_thread,
+        }
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+impl Drop for PollThread {
     fn drop(&mut self) {
         self.poll_stop.send(()).unwrap();
         self.poll_thread

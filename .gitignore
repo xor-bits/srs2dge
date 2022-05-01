@@ -1,3 +1,4 @@
 /target
 /packer
-/generated
+/flamegraph*
+/perf.data*

@@ -5,7 +5,6 @@ use self::{
 };
 use crate::{label, Frame};
 use colorful::Colorful;
-use futures::executor::block_on;
 use std::sync::Arc;
 use wgpu::{
     util::power_preference_from_env, Adapter, Device, DeviceDescriptor, Features, Instance, Limits,
@@ -38,18 +37,18 @@ pub struct Target {
 //
 
 impl Target {
-    pub fn new(instance: Arc<Instance>, window: Arc<Window>) -> Self {
+    pub async fn new(instance: Arc<Instance>, window: Arc<Window>) -> Self {
         // create a surface that is compatible with both the window and the instance
         let surface = ISurface::new(window, instance.clone());
 
         // get a GPU
-        let adapter = Self::make_adapter(&surface, &instance);
+        let adapter = Self::make_adapter(&surface, &instance).await;
 
         // print out some info about the selected GPU
         Self::debug_report(&adapter);
 
         // create a logical device and a queue for it
-        let (device, queue) = Self::make_device(&adapter);
+        let (device, queue) = Self::make_device(&adapter).await;
 
         // complete the surface (ready for rendering)
         let surface = surface.complete(&adapter, device.clone());
@@ -88,7 +87,7 @@ impl Target {
     }
 
     pub fn finish_frame(&mut self, frame: Frame) {
-        self.belt.set(frame.finish());
+        self.belt.set(frame.finish())
     }
 
     pub fn get_window(&self) -> Arc<Window> {
@@ -99,15 +98,17 @@ impl Target {
         Catcher::catch_error(self, f)
     }
 
-    fn make_adapter(surface: &ISurface, instance: &Instance) -> Arc<Adapter> {
+    async fn make_adapter(surface: &ISurface, instance: &Instance) -> Arc<Adapter> {
         Arc::new(
-            block_on(instance.request_adapter(&RequestAdapterOptionsBase {
-                power_preference:
-                    power_preference_from_env().unwrap_or(PowerPreference::HighPerformance),
-                force_fallback_adapter: false,
-                compatible_surface: Some(surface),
-            }))
-            .expect("No suitable GPUs"),
+            instance
+                .request_adapter(&RequestAdapterOptionsBase {
+                    power_preference: power_preference_from_env()
+                        .unwrap_or(PowerPreference::HighPerformance),
+                    force_fallback_adapter: false,
+                    compatible_surface: Some(surface),
+                })
+                .await
+                .expect("No suitable GPUs"),
         )
     }
 
@@ -123,16 +124,18 @@ impl Target {
         }
     }
 
-    fn make_device(adapter: &Adapter) -> (Arc<Device>, Arc<Queue>) {
-        let (device, queue) = block_on(adapter.request_device(
-            &DeviceDescriptor {
-                label: label!(),
-                features: Features::empty(),
-                limits: Limits::downlevel_webgl2_defaults(),
-            },
-            None,
-        ))
-        .unwrap();
+    async fn make_device(adapter: &Adapter) -> (Arc<Device>, Arc<Queue>) {
+        let (device, queue) = adapter
+            .request_device(
+                &DeviceDescriptor {
+                    label: label!(),
+                    features: Features::empty(),
+                    limits: Limits::downlevel_webgl2_defaults(),
+                },
+                None,
+            )
+            .await
+            .unwrap();
         (Arc::new(device), Arc::new(queue))
     }
 }

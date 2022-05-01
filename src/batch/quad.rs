@@ -1,6 +1,6 @@
 use super::Mesh;
-use crate::buffer::vertex::ty::DefaultVertex;
-use glam::{Vec2, Vec2Swizzles, Vec3, Vec3Swizzles, Vec4, Vec4Swizzles};
+use crate::{buffer::vertex::ty::DefaultVertex, packer::pos::TexturePosition};
+use glam::{Vec2, Vec3, Vec3Swizzles, Vec4, Vec4Swizzles};
 use std::array::IntoIter;
 use wgpu::PrimitiveTopology;
 
@@ -11,6 +11,7 @@ pub struct QuadMesh {
     pub pos: Vec2,
     pub size: Vec2,
     pub col: Vec4,
+    pub tex: TexturePosition,
 }
 
 #[derive(Debug, Clone, Copy, Default)]
@@ -18,6 +19,8 @@ pub struct IsoQuadMesh {
     pub pos: Vec2,
     pub size: Vec2,
     pub col: Vec4,
+    // TODO:
+    // pub tex: TexturePosition,
 }
 
 //
@@ -38,12 +41,17 @@ impl Mesh<DefaultVertex> for QuadMesh {
             self.pos.x + self.size.x,
             self.pos.y + self.size.y,
         );
-        let c = Vec2::new(0.0, 1.0);
+        let c = Vec4::new(
+            self.tex.top_left.x,
+            self.tex.top_left.y,
+            self.tex.bottom_right.x,
+            self.tex.bottom_right.y,
+        );
         IntoIterator::into_iter([
-            DefaultVertex::new(p.xy(), self.col, c.xx()),
-            DefaultVertex::new(p.xw(), self.col, c.xy()),
-            DefaultVertex::new(p.zy(), self.col, c.yx()),
-            DefaultVertex::new(p.zw(), self.col, c.yy()),
+            DefaultVertex::new(p.xy(), self.col, c.xy()),
+            DefaultVertex::new(p.xw(), self.col, c.xw()),
+            DefaultVertex::new(p.zy(), self.col, c.zy()),
+            DefaultVertex::new(p.zw(), self.col, c.zw()),
         ])
     }
 
