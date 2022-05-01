@@ -1,41 +1,35 @@
-use self::packer2d::{PositionedRect, Rect};
-use glam::Vec2;
-use serde::{Deserialize, Serialize};
-
 //
 
 pub mod glyph;
 pub mod packer2d;
+pub mod pos;
+pub mod rect;
 pub mod texture;
 
 //
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-pub struct TexturePosition {
-    pub top_left: Vec2,
-    pub bottom_right: Vec2,
-}
+mod dim;
 
 //
 
-impl TexturePosition {
-    pub fn new(area: Rect, pos: PositionedRect) -> Self {
-        let (w, h) = (area.width as f32, area.height as f32);
-        let top_left = Vec2::new(pos.x as f32 / w, pos.y as f32 / h);
-        let bottom_right = Vec2::new(pos.width as f32 / w, pos.height as f32 / h) + top_left;
+/* pub struct Texture {
+    texture: wgpu::Texture,
+    dim: Rect,
+} */
 
-        Self {
-            top_left,
-            bottom_right,
-        }
-    }
-}
+//
 
-impl Default for TexturePosition {
-    fn default() -> Self {
-        Self {
-            top_left: Vec2::new(0.0, 0.0),
-            bottom_right: Vec2::new(1.0, 1.0),
-        }
+/* impl Texture {
+    pub fn new(target: &Target, dim: Rect) -> Self {
+        let texture = target.device.create_texture(&TextureDescriptor {
+            label: label!(),
+            size: dim.into(),
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: TextureDimension::D2,
+            format: TextureFormat::Rgba8UnormSrgb,
+            usage: TextureUsages::TEXTURE_BINDING,
+        });
+        Self { texture, dim }
     }
-}
+} */

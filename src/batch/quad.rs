@@ -1,8 +1,8 @@
 use super::Mesh;
-use crate::{packer::TexturePosition, program::DefaultVertex};
-use glam::{Vec2, Vec2Swizzles, Vec3, Vec3Swizzles, Vec4, Vec4Swizzles};
-use glium::index::PrimitiveType;
+use crate::{buffer::vertex::ty::DefaultVertex, packer::pos::TexturePosition};
+use glam::{Vec2, Vec3, Vec3Swizzles, Vec4, Vec4Swizzles};
 use std::array::IntoIter;
+use wgpu::PrimitiveTopology;
 
 //
 
@@ -26,13 +26,13 @@ pub struct IsoQuadMesh {
 //
 
 impl Mesh<DefaultVertex> for QuadMesh {
-    const PRIM: PrimitiveType = PrimitiveType::TriangleStrip;
+    const PRIM: PrimitiveTopology = PrimitiveTopology::TriangleStrip;
 
     const VERTICES: usize = 4;
-    const INDICES: usize = 5;
+    const INDICES: usize = 6;
 
     type VertexIter = IntoIter<DefaultVertex, 4>;
-    type IndexIter = IntoIter<u32, 5>;
+    type IndexIter = IntoIter<u32, 6>;
 
     fn vertices(&self) -> Self::VertexIter {
         let p = Vec4::new(
@@ -48,44 +48,56 @@ impl Mesh<DefaultVertex> for QuadMesh {
             self.tex.bottom_right.y,
         );
         IntoIterator::into_iter([
-            DefaultVertex::from_vecs(p.xy(), self.col, c.xy()),
-            DefaultVertex::from_vecs(p.xw(), self.col, c.xw()),
-            DefaultVertex::from_vecs(p.zy(), self.col, c.zy()),
-            DefaultVertex::from_vecs(p.zw(), self.col, c.zw()),
+            DefaultVertex::new(p.xy(), self.col, c.xy()),
+            DefaultVertex::new(p.xw(), self.col, c.xw()),
+            DefaultVertex::new(p.zy(), self.col, c.zy()),
+            DefaultVertex::new(p.zw(), self.col, c.zw()),
         ])
     }
 
     fn indices(&self, offset: u32) -> Self::IndexIter {
+        let offset = offset * 4;
+        // IntoIterator::into_iter([offset, offset + 1, offset + 2, offset + 3, !0]) // webgpu doesn't seem to support primitive restart
         IntoIterator::into_iter([
-            offset * 4,
-            offset * 4 + 1,
-            offset * 4 + 2,
-            offset * 4 + 3,
-            !0,
+            offset,
+            offset + 1,
+            offset + 2,
+            offset + 2,
+            offset + 1,
+            offset + 3,
         ])
     }
 }
 
 impl Mesh<DefaultVertex> for IsoQuadMesh {
-    const PRIM: PrimitiveType = PrimitiveType::TriangleStrip;
+    const PRIM: PrimitiveTopology = PrimitiveTopology::TriangleStrip;
 
     const VERTICES: usize = 4;
-    const INDICES: usize = 5;
+    const INDICES: usize = 6;
 
     type VertexIter = IntoIter<DefaultVertex, 4>;
-    type IndexIter = IntoIter<u32, 5>;
+    type IndexIter = IntoIter<u32, 6>;
 
     fn vertices(&self) -> Self::VertexIter {
         let c = Vec3::new(0.0, 0.5, 1.0);
         IntoIterator::into_iter([
-            DefaultVertex::from_vecs(self.pos + self.size * c.xy(), self.col, c.xx()),
-            DefaultVertex::from_vecs(self.pos + self.size * c.yz(), self.col, c.xz()),
-            DefaultVertex::from_vecs(self.pos + self.size * c.yx(), self.col, c.zx()),
-            DefaultVertex::from_vecs(self.pos + self.size * c.zy(), self.col, c.zz()),
+            DefaultVertex::new(self.pos + self.size * c.xy(), self.col, c.xx()),
+            DefaultVertex::new(self.pos + self.size * c.yz(), self.col, c.xz()),
+            DefaultVertex::new(self.pos + self.size * c.yx(), self.col, c.zx()),
+            DefaultVertex::new(self.pos + self.size * c.zy(), self.col, c.zz()),
         ])
     }
 
     fn indices(&self, offset: u32) -> Self::IndexIter {
-        IntoIterator::into_iter([offset, offset + 1, offset + 2, offset + 3, !0])
+        let offset = offset * 4;
+        // IntoIterator::into_iter([offset, offset + 1, offset + 2, offset + 3, !0]) // webgpu doesn't seem to support primitive restart
+        IntoIterator::into_iter([
+            offset,
+            offset + 1,
+            offset + 2,
+            offset + 2,
+            offset + 1,
+            offset + 3,
+        ])
     }
 }

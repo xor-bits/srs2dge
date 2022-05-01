@@ -1,9 +1,20 @@
-use crate::Engine;
-use glium::{backend::Facade, index::PrimitiveType, IndexBuffer, Vertex, VertexBuffer};
+use self::quad::QuadMesh;
+use crate::{
+    buffer::{
+        vertex::ty::{DefaultVertex, Vertex},
+        IndexBuffer, VertexBuffer,
+    },
+    target::Target,
+    Frame,
+};
 use std::{
     collections::{BinaryHeap, HashSet},
     marker::PhantomData,
 };
+
+//
+
+pub use wgpu::PrimitiveTopology;
 
 //
 
@@ -12,10 +23,10 @@ pub mod quad;
 //
 
 #[derive(Debug)]
-pub struct BatchRenderer<V, M>
+pub struct BatchRenderer<M = QuadMesh, V = DefaultVertex>
 where
-    V: Vertex + Copy,
     M: Mesh<V>,
+    V: Vertex + Copy,
 {
     vbo: VertexBuffer<V>,
     ibo: IndexBuffer<u32>,
@@ -30,7 +41,7 @@ where
 }
 
 pub trait Mesh<V> {
-    const PRIM: PrimitiveType;
+    const PRIM: PrimitiveTopology;
 
     const VERTICES: usize;
     const INDICES: usize;
@@ -48,15 +59,15 @@ pub struct Idx(usize);
 
 //
 
-impl<V, M> BatchRenderer<V, M>
+impl<M, V> BatchRenderer<M, V>
 where
-    V: Vertex + Copy,
     M: Mesh<V>,
+    V: Vertex + Copy,
 {
-    pub fn new(engine: &Engine) -> Self {
+    pub fn new(target: &Target) -> Self {
         Self {
-            vbo: VertexBuffer::empty_dynamic(engine, 2 * M::VERTICES).unwrap(),
-            ibo: IndexBuffer::empty_dynamic(engine, M::PRIM, 2 * M::INDICES).unwrap(),
+            vbo: VertexBuffer::new(target, 2 * M::VERTICES),
+            ibo: IndexBuffer::new(target, 2 * M::INDICES),
             ibo_regen: false,
 
             max: 2,
@@ -107,27 +118,43 @@ where
         &mut self.used[idx.0]
     }
 
-    pub fn draw<F: Facade>(&mut self, facade: &F) -> (&'_ VertexBuffer<V>, &'_ IndexBuffer<u32>) {
+    pub fn generate(
+        &mut self,
+        target: &mut Target,
+        frame: &mut Frame,
+    ) -> (&'_ VertexBuffer<V>, &'_ IndexBuffer<u32>) {
         if self.ibo_regen {
-            let ibo: Vec<u32> = self
+            let new_data: Vec<u32> = self
                 .used
                 .iter()
                 .enumerate()
                 .flat_map(|(i, m)| m.indices(i as u32))
                 .collect();
 
-            if let Some(map) = self.ibo.slice_mut(..ibo.len()) {
-                map.write(&ibo);
+            // TODO: Copy old data instead of regenerating it
+            if self.ibo.capacity() >= new_data.len() {
+                self.ibo.upload(target, frame, &new_data);
             } else {
-                self.ibo = IndexBuffer::dynamic(facade, M::PRIM, &ibo).unwrap();
+                self.ibo = IndexBuffer::new_with(target, &new_data);
             }
         }
 
         if !self.modified.is_empty() {
-            if self.max * M::VERTICES >= self.vbo.len() {
-                let new = VertexBuffer::empty_dynamic(facade, self.max * M::VERTICES * 2).unwrap();
+            let new_data: Vec<V> = self.used.iter().flat_map(|s| s.vertices()).collect();
+
+            if self.vbo.capacity() >= new_data.len() {
+                self.vbo.upload(target, frame, &new_data);
+            } else {
+                self.vbo = VertexBuffer::new_with(target, &new_data);
+            }
+
+            // TODO: Copy old data instead of regenerating it
+            /* if self.max * M::VERTICES >= self.vbo.len() {
+                self.vbo = VertexBuffer::new_with(target, &new_data);
+
+                /* let new = VertexBuffer::empty_dynamic(facade, self.max * M::VERTICES * 2).unwrap();
                 self.vbo.copy_to(&new).unwrap();
-                self.vbo = new;
+                self.vbo = new; */
             }
 
             let mut map = self.vbo.map_write();
@@ -135,7 +162,7 @@ where
                 for (i, vert) in self.used[modified].vertices().enumerate() {
                     map.set(modified * M::VERTICES + i, vert);
                 }
-            }
+            } */
         }
 
         (&self.vbo, &self.ibo)

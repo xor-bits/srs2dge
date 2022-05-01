@@ -1,58 +1,19 @@
 //! 2D Texture packer with ability to reuse areas
 
 use integer_sqrt::IntegerSquareRoot;
+use std::mem;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct Rect {
-    pub width: u32,
-    pub height: u32,
-}
+use super::rect::{PositionedRect, Rect};
 
-impl Rect {
-    #[inline]
-    pub const fn new(width: u32, height: u32) -> Self {
-        Self { width, height }
-    }
+//
 
-    #[inline]
-    pub const fn positioned(self, x: u32, y: u32) -> PositionedRect {
-        PositionedRect {
-            x,
-            y,
-            width: self.width,
-            height: self.height,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct PositionedRect {
-    pub x: u32,
-    pub y: u32,
-
-    pub width: u32,
-    pub height: u32,
-}
-
-impl PositionedRect {
-    #[inline]
-    pub const fn new(x: u32, y: u32, width: u32, height: u32) -> Self {
-        Self {
-            x,
-            y,
-            width,
-            height,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 struct Space {
     x: u32,
     width: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 struct Row {
     y: u32,
     height: u32,
@@ -289,7 +250,6 @@ impl Packer {
                     if self.rect.width >= lim || self.rect.height >= lim {
                         return None;
                     }
-                    log::debug!("{:?}", self.rect);
                     self.next_pow2_square();
                 }
             }
@@ -339,8 +299,13 @@ impl Packer {
             return false;
         }
 
-        row.free_spaces
-            .drain_filter(|col| Self::aabb_1d(col.x, rect.x, col.width, rect.width));
+        // TODO: drain_filter
+        let mut tmp = Default::default();
+        mem::swap(&mut tmp, &mut row.free_spaces);
+        row.free_spaces = tmp
+            .into_iter()
+            .partition(|col| Self::aabb_1d(col.x, rect.x, col.width, rect.width))
+            .0;
 
         if row.free_spaces.is_empty() {
             true
@@ -543,14 +508,12 @@ mod test {
         let rects: Vec<_> = (0..100)
             .map(|_| {
                 (
-                    Rgba {
-                        0: [
-                            rng.gen_range(100..255),
-                            rng.gen_range(100..255),
-                            rng.gen_range(100..255),
-                            rng.gen_range(100..255_u8),
-                        ],
-                    },
+                    Rgba([
+                        rng.gen_range(100..255),
+                        rng.gen_range(100..255),
+                        rng.gen_range(100..255),
+                        rng.gen_range(100..255_u8),
+                    ]),
                     Rect::new(rng.gen_range(5..100), rng.gen_range(5..100)),
                 )
             })
@@ -592,14 +555,12 @@ mod test {
         let mut rects: Vec<_> = (0..100)
             .map(|_| {
                 (
-                    Rgba {
-                        0: [
-                            rng.gen_range(100..255),
-                            rng.gen_range(100..255),
-                            rng.gen_range(100..255),
-                            rng.gen_range(100..255_u8),
-                        ],
-                    },
+                    Rgba([
+                        rng.gen_range(100..255),
+                        rng.gen_range(100..255),
+                        rng.gen_range(100..255),
+                        rng.gen_range(100..255_u8),
+                    ]),
                     Rect::new(rng.gen_range(5..100), rng.gen_range(5..100)),
                 )
             })

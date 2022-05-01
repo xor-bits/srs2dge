@@ -1,29 +1,50 @@
 [package]
 name = "srs2dge"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 description = "Simple Rust 2D Game Engine"
 license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release-wasm]
+inherits = "release"
+lto = true
+codegen-units = 1
+opt-level = 'z'
+
+[features]
+default = []
+glsl = ["wgpu/glsl"]
+fontloader = ["font-loader"]
+
 [dependencies]
-env_logger = "0.9.0"
-log = "0.4.14"
+# logging
+log = "0.4"
+colorful = "0.2"
+# graphics
+wgpu = { git = "https://github.com/gfx-rs/wgpu" }
+naga = { version = "0.8" }
+winit = "0.26"
+glam = { version = "0.20", features = ["serde", "bytemuck"] }
+main_game_loop = "0.3.0"
+# resources
+image = "0.24"
+fontdue = "0.7"
+font-loader = { version = "0.11", optional = true }
+static_res = "0.1"
+# data
+serde = { version = "1.0", features = ["derive"] }
+rapid-qoi = "0.6"
+integer-sqrt = "0.1"
+bytemuck = { version = "1.9", features = ["derive"] }
 
-parking_lot = "0.12.0"
-rand = "0.8.4"
+[dev-dependencies]
+rand = "0.8"
+# rapier2d = "0.11"
 
-glium = "0.31.0"
-winit = "0.26.1"
-glam = { version = "0.20.1", features = ["serde"] }
-main_game_loop = "0.1.1"
-
-image = "0.24.1"
-fontdue = "0.7.2"
-font-loader = "0.11.0"
-static_res = "0.1.0"
-
-serde = { version = "1.0.136", features = ["derive"] }
-rapid-qoi = "0.6.1"
-integer-sqrt = "0.1.5"
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-sys = "0.3.57"

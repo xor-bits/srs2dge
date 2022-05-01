@@ -1,8 +1,17 @@
-use super::packer2d::{Packer, PositionedRect, Rect};
-use glium::{backend::Facade, texture::RawImage2d, uniforms::Sampler, Texture2d};
+use super::{
+    packer2d::Packer,
+    rect::{PositionedRect, Rect},
+};
+use crate::{label, target::Target};
 use image::RgbaImage;
 use rapid_qoi::{Colors, Qoi};
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
+use std::{mem, num::NonZeroU32, ops::Deref};
+use wgpu::{
+    util::DeviceExt, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, Extent3d,
+    ImageCopyBuffer, ImageDataLayout, MapMode, Texture, TextureDescriptor, TextureDimension,
+    TextureFormat, TextureUsages, TextureView, TextureViewDescriptor,
+};
 
 //
 
@@ -24,7 +33,8 @@ pub struct TextureAtlasBuilder {
 
 #[derive(Debug)]
 pub struct TextureAtlas {
-    texture: Texture2d,
+    texture: Texture,
+    view: TextureView,
     dim: Rect,
 }
 
@@ -80,11 +90,10 @@ impl TextureAtlasBuilder {
         self.packer.push_until(rect, self.limit)
     }
 
-    pub fn build<'i, I, R, F>(self, facade: &F, iter: I) -> TextureAtlas
+    pub fn build<I, R>(self, target: &Target, iter: I) -> TextureAtlas
     where
         R: Reference<RgbaImage>,
         I: Iterator<Item = (R, PositionedRect)>,
-        F: Facade,
     {
         let dim = self.packer.area();
 
@@ -96,24 +105,78 @@ impl TextureAtlasBuilder {
             }
         }
 
-        let image = RawImage2d::from_raw_rgba_reversed(combined.as_raw(), combined.dimensions());
-        let texture = Texture2d::new(facade, image).unwrap();
+        let texture = target.device.create_texture_with_data(
+            &target.queue,
+            &TextureDescriptor {
+                label: label!(),
+                size: Extent3d {
+                    width: dim.width,
+                    height: dim.height,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: TextureDimension::D2,
+                format: TextureFormat::Rgba8UnormSrgb,
+                usage: TextureUsages::TEXTURE_BINDING
+                    | TextureUsages::RENDER_ATTACHMENT
+                    | TextureUsages::COPY_SRC,
+            },
+            combined.as_raw(),
+        );
 
-        TextureAtlas { texture, dim }
+        let view = texture.create_view(&TextureViewDescriptor::default());
+
+        TextureAtlas { texture, view, dim }
     }
 }
 
 impl TextureAtlas {
-    pub fn convert(&self) -> TextureAtlasFile {
-        let image: RawImage2d<u8> = self.texture.read();
-        let image =
-            RgbaImage::from_raw(image.width, image.height, image.data.into_owned()).unwrap();
+    pub async fn convert(&self, target: &Target) -> TextureAtlasFile {
+        let dim = BufferDimensions::new(self.dim.width as _, self.dim.height as _);
+        let read_buffer = target.device.create_buffer(&BufferDescriptor {
+            label: label!(),
+            size: (dim.padded_bytes_per_row * dim.height) as u64,
+            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let mut encoder = target
+            .device
+            .create_command_encoder(&CommandEncoderDescriptor { label: label!() });
+
+        encoder.copy_texture_to_buffer(
+            self.texture.as_image_copy(),
+            ImageCopyBuffer {
+                buffer: &read_buffer,
+                layout: ImageDataLayout {
+                    offset: 0,
+                    bytes_per_row: Some(NonZeroU32::new(dim.padded_bytes_per_row as _).unwrap()),
+                    rows_per_image: None,
+                },
+            },
+            Extent3d {
+                width: self.dim.width,
+                height: self.dim.height,
+                depth_or_array_layers: 1,
+            },
+        );
+
+        target.queue.submit([encoder.finish()]);
+
+        let range = read_buffer.slice(..);
+        range.map_async(MapMode::Read).await.unwrap();
+
+        let bytes = range
+            .get_mapped_range()
+            .chunks(dim.padded_bytes_per_row)
+            .flat_map(|s| &s[..dim.unpadded_bytes_per_row])
+            .copied()
+            .collect();
+
+        let image = RgbaImage::from_raw(dim.width as _, dim.height as _, bytes).unwrap();
 
         TextureAtlasFile { image }
-    }
-
-    pub fn sampled(&self) -> Sampler<'_, Texture2d> {
-        self.texture.sampled()
     }
 
     pub fn dimensions(&self) -> Rect {
@@ -121,18 +184,36 @@ impl TextureAtlas {
     }
 }
 
-impl TextureAtlasFile {
-    pub fn convert<F>(&self, facade: &F) -> TextureAtlas
-    where
-        F: Facade,
-    {
-        let dim = self.image.dimensions();
-        let image = RawImage2d::from_raw_rgba_reversed(self.image.as_raw(), dim);
-        let texture = Texture2d::new(facade, image).unwrap();
-        let (width, height) = dim;
-        let dim = Rect { width, height };
+impl Deref for TextureAtlas {
+    type Target = TextureView;
 
-        TextureAtlas { texture, dim }
+    fn deref(&self) -> &Self::Target {
+        &self.view
+    }
+}
+
+impl TextureAtlasFile {
+    pub fn convert(&self, target: &Target) -> TextureAtlas {
+        let dim: Rect = self.image.dimensions().into();
+        let texture = target.device.create_texture_with_data(
+            &target.queue,
+            &TextureDescriptor {
+                label: label!(),
+                size: dim.into(),
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: TextureDimension::D2,
+                format: TextureFormat::Rgba8UnormSrgb,
+                usage: TextureUsages::TEXTURE_BINDING
+                    | TextureUsages::RENDER_ATTACHMENT
+                    | TextureUsages::COPY_SRC,
+            },
+            self.image.as_raw(),
+        );
+
+        let view = texture.create_view(&TextureViewDescriptor::default());
+
+        TextureAtlas { texture, view, dim }
     }
 }
 
@@ -149,7 +230,7 @@ impl Serialize for TextureAtlasFile {
 
         let image = qoi
             .encode_alloc(self.image.as_raw())
-            .map_err(|err| serde::ser::Error::custom(err))?;
+            .map_err(serde::ser::Error::custom)?;
 
         serializer.serialize_bytes(&image)
     }
@@ -172,11 +253,34 @@ impl<'de> Deserialize<'de> for TextureAtlasFile {
             }
         }
 
-        let (qoi, image) =
-            Qoi::decode_alloc(&image).map_err(|err| serde::de::Error::custom(err))?;
+        let (qoi, image) = Qoi::decode_alloc(image).map_err(serde::de::Error::custom)?;
 
         Ok(Self {
             image: RgbaImage::from_raw(qoi.width, qoi.height, image).unwrap(),
         })
+    }
+}
+
+//
+
+struct BufferDimensions {
+    width: usize,
+    height: usize,
+    unpadded_bytes_per_row: usize,
+    padded_bytes_per_row: usize,
+}
+
+impl BufferDimensions {
+    fn new(width: usize, height: usize) -> Self {
+        let unpadded_bytes_per_row = width * mem::size_of::<u32>();
+        let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT as usize;
+        let padded_bytes_per_row_padding = (align - unpadded_bytes_per_row % align) % align;
+        let padded_bytes_per_row = unpadded_bytes_per_row + padded_bytes_per_row_padding;
+        Self {
+            width,
+            height,
+            unpadded_bytes_per_row,
+            padded_bytes_per_row,
+        }
     }
 }

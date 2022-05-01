@@ -1,104 +1,101 @@
-#![feature(drain_filter)]
-#![feature(type_alias_impl_trait)]
-#![feature(generic_associated_types)]
-// #![feature(iter_partition_in_place)]
+use std::sync::Arc;
+use target::Target;
+use wgpu::{util::backend_bits_from_env, Backends, Instance};
+use winit::window::Window;
 
 //
 
-use glium::{
-    backend::{Context, Facade},
-    glutin::ContextBuilder,
-    Display, Frame,
-};
-use main_game_loop::AnyEngine;
-use std::rc::Rc;
-use winit::{
-    event_loop::EventLoop,
-    window::{Window, WindowBuilder},
-};
+pub use frame::Frame;
 
 //
 
-#[macro_use]
-pub extern crate glium;
 pub extern crate glam;
 pub extern crate winit;
 
 //
 
 pub mod batch;
+pub mod buffer;
+pub mod frame;
 pub mod packer;
-pub mod program;
+pub mod prelude;
+pub mod shader;
+pub mod target;
 pub mod text;
 
 //
 
 pub struct Engine {
-    pub facade: Display,
-    event_loop: Option<EventLoop<()>>,
+    instance: Arc<Instance>,
 }
 
 //
+
+impl Default for Engine {
+    fn default() -> Self {
+        Self {
+            instance: Self::make_instance(),
+        }
+    }
+}
 
 impl Engine {
-    pub fn new(wb: WindowBuilder) -> Self {
-        let event_loop = EventLoop::new();
-        let window_builder = wb.with_visible(false);
-        let context = ContextBuilder::new()
-            // .with_vsync(true)
-            .build_windowed(window_builder, &event_loop)
-            .unwrap();
-        let facade = Display::from_gl_window(context).unwrap();
+    pub fn new() -> Self {
+        Self::default()
+    }
 
-        log::debug!("OpenGL Vendor: {}", facade.get_opengl_vendor_string());
-        log::debug!("OpenGL Renderer: {}", facade.get_opengl_renderer_string());
-        log::debug!("OpenGL Version: {}", facade.get_opengl_version_string());
+    pub async fn new_target(&mut self, window: Arc<Window>) -> Target {
+        #[cfg(target_arch = "wasm32")]
+        {
+            use winit::platform::web::WindowExtWebSys;
+            web_sys::window()
+                .and_then(|win| win.document())
+                .and_then(|doc| doc.body())
+                .and_then(|body| {
+                    body.append_child(&web_sys::Element::from(window.canvas()))
+                        .ok()
+                })
+                .expect("couldn't append canvas to document body");
+        }
 
-        let event_loop = Some(event_loop);
+        Target::new(self.instance.clone(), window).await
+    }
 
-        Self { facade, event_loop }
+    fn make_instance() -> Arc<Instance> {
+        // renderdoc
+        // let backend = Backends::VULKAN;
+
+        // default
+        let backend = Backends::all();
+
+        // webgl
+        // let backend = Backends::GL;
+
+        let backend = backend_bits_from_env().unwrap_or(backend);
+        Arc::new(Instance::new(backend))
     }
 }
 
 //
 
-impl AnyEngine for Engine {
-    type Frame = Frame;
-
-    fn get_frame(&mut self) -> Self::Frame {
-        self.facade.draw()
-    }
-
-    fn finish_frame(&mut self, frame: Self::Frame) {
-        frame.finish().unwrap();
-    }
-
-    fn use_window<F, T>(&self, f: F) -> T
-    where
-        F: FnOnce(&Window) -> T,
-    {
-        f(self.facade.gl_window().window())
-    }
-
-    fn take_event_loop(&mut self) -> EventLoop<()> {
-        self.event_loop.take().unwrap()
-    }
+// shamelessly stolen from: https://github.com/popzxc/stdext-rs
+#[macro_export]
+macro_rules! function_name {
+    () => {{
+        // Okay, this is ugly, I get it. However, this is the best we can get on a stable rust.
+        fn f() {}
+        fn type_name_of<T>(_: T) -> &'static str {
+            std::any::type_name::<T>()
+        }
+        let name = type_name_of(f);
+        // `3` is the length of the `::f`.
+        &name[..name.len() - 3]
+    }};
 }
 
-impl Facade for Engine {
-    fn get_context(&self) -> &Rc<Context> {
-        self.facade.get_context()
-    }
-}
-
-//
-
-pub trait BuildEngine {
-    fn build_engine(self) -> Engine;
-}
-
-impl BuildEngine for WindowBuilder {
-    fn build_engine(self) -> Engine {
-        Engine::new(self)
-    }
+#[macro_export]
+macro_rules! label {
+    () => {
+        Some($crate::function_name!())
+    };
 }

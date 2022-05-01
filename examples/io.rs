@@ -1,6 +1,4 @@
-use glam::{Mat4, Vec2, Vec4};
-use glium::{texture::RawImage2d, uniform, DrawParameters, Frame, Program, Surface, Texture2d};
-use main_game_loop::{
+/* TODO: use main_game_loop::{
     io::input_state::{Input, InputAxis, InputState, Triggered},
     AnyEngine, Event, GameLoop, Runnable,
 };
@@ -193,9 +191,85 @@ impl Runnable<Engine> for App {
 fn main() {
     env_logger::init();
 
-    WindowBuilder::new()
-        .with_title("GamePad")
-        .build_engine()
-        .build_game_loop()
-        .run::<App>()
+    let engine = WindowBuilder::new().with_title("GamePad").build_engine();
+
+    let mut batcher = BatchRenderer::<DefaultVertex, QuadMesh>::new(&engine);
+    let left = batcher.push_with(QuadMesh {
+        pos: Vec2::new(-0.5, 0.0),
+        size: Vec2::new(0.1, 0.1),
+        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+    });
+    let right = batcher.push_with(QuadMesh {
+        pos: Vec2::new(0.5, 0.0),
+        size: Vec2::new(0.1, 0.1),
+        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+    });
+
+    let left_a = batcher.push_with(QuadMesh {
+        pos: Vec2::new(-0.75, 0.0),
+        size: Vec2::new(0.05, 0.05),
+        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+    });
+    let left_b = batcher.push_with(QuadMesh {
+        pos: Vec2::new(-0.75, 0.1),
+        size: Vec2::new(0.05, 0.05),
+        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+    });
+    let left_c = batcher.push_with(QuadMesh {
+        pos: Vec2::new(-0.7, 0.05),
+        size: Vec2::new(0.05, 0.05),
+        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+    });
+    let left_d = batcher.push_with(QuadMesh {
+        pos: Vec2::new(-0.8, 0.05),
+        size: Vec2::new(0.05, 0.05),
+        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+    });
+
+    let right_a = batcher.push_with(QuadMesh {
+        pos: Vec2::new(0.75, 0.0),
+        size: Vec2::new(0.05, 0.05),
+        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+    });
+    let right_b = batcher.push_with(QuadMesh {
+        pos: Vec2::new(0.75, 0.1),
+        size: Vec2::new(0.05, 0.05),
+        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+    });
+    let right_c = batcher.push_with(QuadMesh {
+        pos: Vec2::new(0.7, 0.05),
+        size: Vec2::new(0.05, 0.05),
+        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+    });
+    let right_d = batcher.push_with(QuadMesh {
+        pos: Vec2::new(0.8, 0.05),
+        size: Vec2::new(0.05, 0.05),
+        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+    });
+
+    let program = default_program(&engine);
+    let texture = RawImage2d::from_raw_rgba_reversed(&[1.0, 1.0, 1.0, 1.0], (1, 1));
+    let texture = Texture2d::new(&engine, texture).unwrap();
+
+    let input = InputState::new();
+
+    engine.build_main_game_loop().run(App {
+        left,
+        right,
+        left_a,
+        left_b,
+        left_c,
+        left_d,
+        right_a,
+        right_b,
+        right_c,
+        right_d,
+        batcher,
+
+        program,
+        texture,
+
+        input,
+    });
 }
+ */

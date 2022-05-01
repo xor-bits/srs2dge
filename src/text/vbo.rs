@@ -1,55 +1,60 @@
 use super::{format::FString, pos_iter::CharPositionIter};
-use crate::{packer::glyph::Glyphs, program::DefaultVertex};
+use crate::{
+    batch::{quad::QuadMesh, Mesh},
+    packer::glyph::Glyphs,
+    prelude::vertex::ty::DefaultVertex,
+    target::Target,
+};
 use glam::{Vec2, Vec4};
 use image::RgbaImage;
 
-pub fn text<'s, F>(string: F, glyphs: &mut Glyphs, px: f32, x: f32, y: f32) -> Vec<DefaultVertex>
-where
-    F: Into<&'s FString>,
-{
-    let string: &FString = string.into();
+//
 
+pub fn text(
+    target: &Target,
+    string: &FString,
+    glyphs: &mut Glyphs,
+    px: f32,
+    x: f32,
+    y: f32,
+) -> (Vec<DefaultVertex>, Vec<u32>) {
     // setup glyphs
     for (c, format) in string.chars() {
         glyphs.queue(c, px as u16, format.font);
     }
-    glyphs.flush();
+    glyphs.flush(target);
 
     // gen vbo
-    CharPositionIter::new(string, glyphs, px)
-        .flat_map(|c| {
-            let glyph = glyphs
+    let vertices: Vec<_> = CharPositionIter::new(string, glyphs, px)
+        .map(|c| {
+            let tex = glyphs
                 .get_indexed(c.index, px as u16, c.format.font)
                 .unwrap();
-            let color = Vec4::new(c.format.color.x, c.format.color.y, c.format.color.z, 1.0);
+            let col = Vec4::new(c.format.color.x, c.format.color.y, c.format.color.z, 1.0);
 
-            [
-                DefaultVertex::from_vecs(
-                    Vec2::new(c.x as f32 + x, c.y as f32 + y),
-                    color,
-                    Vec2::new(glyph.top_left.x, glyph.top_left.y),
-                ),
-                DefaultVertex::from_vecs(
-                    Vec2::new(c.x as f32 + x, c.y as f32 + c.height as f32 + y),
-                    color,
-                    Vec2::new(glyph.top_left.x, glyph.bottom_right.y),
-                ),
-                DefaultVertex::from_vecs(
-                    Vec2::new(
-                        c.x as f32 + c.width as f32 + x,
-                        c.y as f32 + c.height as f32 + y,
-                    ),
-                    color,
-                    Vec2::new(glyph.bottom_right.x, glyph.bottom_right.y),
-                ),
-                DefaultVertex::from_vecs(
-                    Vec2::new(c.x as f32 + c.width as f32 + x, c.y as f32 + y),
-                    color,
-                    Vec2::new(glyph.bottom_right.x, glyph.top_left.y),
-                ),
-            ]
+            QuadMesh {
+                pos: Vec2::new(c.x as f32 + x, c.y as f32 + y),
+                size: Vec2::new(c.width as f32, c.height as f32),
+                col,
+                tex,
+            }
         })
-        .collect()
+        .collect();
+
+    let indices = vertices.clone();
+
+    let vertices = vertices
+        .into_iter()
+        .flat_map(|mesh| mesh.vertices())
+        .collect();
+
+    let indices = indices
+        .into_iter()
+        .enumerate()
+        .flat_map(|(i, mesh)| mesh.indices(i as u32))
+        .collect();
+
+    (vertices, indices)
 }
 
 pub fn baked_text<'s, F>(string: F, glyphs: &Glyphs, px: f32) -> Option<RgbaImage>
