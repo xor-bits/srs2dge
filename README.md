@@ -6,3 +6,6 @@
 
 </div>
 
+### Live demo at: https://gpu.ovpk.net
+
+Note: Firefox nightly with webgpu required
