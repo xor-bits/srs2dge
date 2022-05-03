@@ -1,17 +1,31 @@
-/* TODO: use main_game_loop::{
-    io::input_state::{Input, InputAxis, InputState, Triggered},
-    AnyEngine, Event, GameLoop, Runnable,
+use glam::{Mat4, Vec2, Vec4};
+use main_game_loop::{
+    as_async,
+    event::{Event, EventLoop, EventLoopTarget},
+    init_log,
+    state::{
+        input::{Input, InputAxis, InputState, Triggered},
+        window::WindowState,
+    },
 };
 use srs2dge::{
     batch::{quad::QuadMesh, BatchRenderer, Idx},
-    program::{default_program, DefaultVertex},
-    BuildEngine, Engine,
+    buffer::{vertex::ty::DefaultVertex, UniformBuffer},
+    shader::presets::Colored2DShader,
+    target::Target,
+    Engine,
 };
-use winit::window::WindowBuilder;
+use std::sync::Arc;
+use winit::{
+    event::WindowEvent,
+    event_loop::ControlFlow,
+    window::{Window, WindowBuilder},
+};
 
 //
 
 struct App {
+    target: Target,
     left: Idx,
     right: Idx,
     left_a: Idx,
@@ -22,80 +36,101 @@ struct App {
     right_b: Idx,
     right_c: Idx,
     right_d: Idx,
-    batcher: BatchRenderer<DefaultVertex, QuadMesh>,
+    batcher: BatchRenderer,
 
-    program: Program,
-
-    texture: Texture2d,
+    shader: Colored2DShader,
+    ubo: UniformBuffer<Mat4>,
 
     input: InputState,
+    window: WindowState,
 }
 
 //
 
-impl Runnable<Engine> for App {
-    fn init(gl: &mut GameLoop<Engine>) -> Self {
-        let mut batcher = BatchRenderer::<DefaultVertex, QuadMesh>::new(&gl.engine);
+impl App {
+    async fn init(target: &EventLoopTarget) -> Self {
+        let mut engine = Engine::new();
+        let target = engine
+            .new_target(Arc::new(Window::new(target).unwrap()))
+            .await;
+
+        let mut batcher = BatchRenderer::new(&target);
         let left = batcher.push_with(QuadMesh {
             pos: Vec2::new(-0.5, 0.0),
             size: Vec2::new(0.1, 0.1),
             col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+            tex: Default::default(),
         });
         let right = batcher.push_with(QuadMesh {
             pos: Vec2::new(0.5, 0.0),
             size: Vec2::new(0.1, 0.1),
             col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+            tex: Default::default(),
         });
 
         let left_a = batcher.push_with(QuadMesh {
             pos: Vec2::new(-0.75, 0.0),
             size: Vec2::new(0.05, 0.05),
             col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+            tex: Default::default(),
         });
         let left_b = batcher.push_with(QuadMesh {
             pos: Vec2::new(-0.75, 0.1),
             size: Vec2::new(0.05, 0.05),
             col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+            tex: Default::default(),
         });
         let left_c = batcher.push_with(QuadMesh {
             pos: Vec2::new(-0.7, 0.05),
             size: Vec2::new(0.05, 0.05),
             col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+            tex: Default::default(),
         });
         let left_d = batcher.push_with(QuadMesh {
             pos: Vec2::new(-0.8, 0.05),
             size: Vec2::new(0.05, 0.05),
             col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+            tex: Default::default(),
         });
 
         let right_a = batcher.push_with(QuadMesh {
             pos: Vec2::new(0.75, 0.0),
             size: Vec2::new(0.05, 0.05),
             col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+            tex: Default::default(),
         });
         let right_b = batcher.push_with(QuadMesh {
             pos: Vec2::new(0.75, 0.1),
             size: Vec2::new(0.05, 0.05),
             col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+            tex: Default::default(),
         });
         let right_c = batcher.push_with(QuadMesh {
             pos: Vec2::new(0.7, 0.05),
             size: Vec2::new(0.05, 0.05),
             col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+            tex: Default::default(),
         });
         let right_d = batcher.push_with(QuadMesh {
             pos: Vec2::new(0.8, 0.05),
             size: Vec2::new(0.05, 0.05),
             col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+            tex: Default::default(),
         });
 
-        let program = default_program(&gl.engine);
-        let texture = RawImage2d::from_raw_rgba_reversed(&[1.0, 1.0, 1.0, 1.0], (1, 1));
-        let texture = Texture2d::new(&gl.engine, texture).unwrap();
+        let shader = Colored2DShader::new(&target);
 
         let input = InputState::new();
+        let window = WindowState::new(&target.get_window());
+
+        let ubo = UniformBuffer::new_single(
+            &target,
+            Mat4::orthographic_rh(-window.aspect, window.aspect, -1.0, 1.0, -100.0, 100.0),
+        );
 
         Self {
+            target,
+
             left,
             right,
             left_a,
@@ -108,20 +143,22 @@ impl Runnable<Engine> for App {
             right_d,
             batcher,
 
-            program,
-            texture,
+            shader,
+            ubo,
 
             input,
+            window,
         }
     }
 
-    fn update(&mut self, _: &mut GameLoop<Engine>) {}
+    fn event(&mut self, event: Event, control: &mut ControlFlow) {
+        *control = ControlFlow::Poll;
+        self.input.event(&event);
+        self.window.event(&event);
 
-    fn event(&mut self, gl: &mut GameLoop<Engine>, event: &Event) {
-        self.input.event(event);
-
-        if self.input.should_close() {
-            gl.stop();
+        if self.window.should_close {
+            *control = ControlFlow::Exit;
+            return;
         }
 
         let color = |active: bool| -> Vec4 {
@@ -159,117 +196,40 @@ impl Runnable<Engine> for App {
             color(self.input.get_input(Input::Reload, 0).triggered());
         self.batcher.get_mut(self.right_d).col =
             color(self.input.get_input(Input::Crouch, 0).triggered());
+
+        if let Event::MainEventsCleared = event {
+            self.draw();
+        }
     }
 
-    fn draw(&mut self, gl: &mut GameLoop<Engine>, frame: &mut Frame, _: f32) {
-        frame.clear_all_srgb((0.2, 0.2, 0.2, 1.0), 1.0, 0);
+    fn draw(&mut self) {
+        let mut frame = self.target.get_frame();
 
-        let (vbo, ibo) = self.batcher.draw(&gl.engine);
-
-        let ubo = uniform! {
-            mat: Mat4::orthographic_rh_gl(-gl.aspect, gl.aspect, 1.0, -1.0, -1.0, 1.0).to_cols_array_2d(),
-            sprite: self.texture.sampled()
-        };
+        let (vbo, ibo) = self.batcher.generate(&mut self.target, &mut frame);
 
         frame
-            .draw(
-                vbo,
-                ibo,
-                &self.program,
-                &ubo,
-                &DrawParameters {
-                    primitive_restart_index: true,
-                    ..Default::default()
-                },
-            )
-            .unwrap();
+            .main_render_pass()
+            .bind_vbo(&vbo, 0)
+            .bind_ibo(&ibo)
+            .bind_group(&self.shader.bind_group(&self.ubo))
+            .bind_shader(&self.shader)
+            .draw_indexed(0..ibo.capacity() as _, 0, 0..1);
+
+        self.target.finish_frame(frame);
     }
 }
 
 //
 
-fn main() {
-    env_logger::init();
-
-    let engine = WindowBuilder::new().with_title("GamePad").build_engine();
-
-    let mut batcher = BatchRenderer::<DefaultVertex, QuadMesh>::new(&engine);
-    let left = batcher.push_with(QuadMesh {
-        pos: Vec2::new(-0.5, 0.0),
-        size: Vec2::new(0.1, 0.1),
-        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
-    });
-    let right = batcher.push_with(QuadMesh {
-        pos: Vec2::new(0.5, 0.0),
-        size: Vec2::new(0.1, 0.1),
-        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
-    });
-
-    let left_a = batcher.push_with(QuadMesh {
-        pos: Vec2::new(-0.75, 0.0),
-        size: Vec2::new(0.05, 0.05),
-        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
-    });
-    let left_b = batcher.push_with(QuadMesh {
-        pos: Vec2::new(-0.75, 0.1),
-        size: Vec2::new(0.05, 0.05),
-        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
-    });
-    let left_c = batcher.push_with(QuadMesh {
-        pos: Vec2::new(-0.7, 0.05),
-        size: Vec2::new(0.05, 0.05),
-        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
-    });
-    let left_d = batcher.push_with(QuadMesh {
-        pos: Vec2::new(-0.8, 0.05),
-        size: Vec2::new(0.05, 0.05),
-        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
-    });
-
-    let right_a = batcher.push_with(QuadMesh {
-        pos: Vec2::new(0.75, 0.0),
-        size: Vec2::new(0.05, 0.05),
-        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
-    });
-    let right_b = batcher.push_with(QuadMesh {
-        pos: Vec2::new(0.75, 0.1),
-        size: Vec2::new(0.05, 0.05),
-        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
-    });
-    let right_c = batcher.push_with(QuadMesh {
-        pos: Vec2::new(0.7, 0.05),
-        size: Vec2::new(0.05, 0.05),
-        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
-    });
-    let right_d = batcher.push_with(QuadMesh {
-        pos: Vec2::new(0.8, 0.05),
-        size: Vec2::new(0.05, 0.05),
-        col: Vec4::new(1.0, 1.0, 1.0, 1.0),
-    });
-
-    let program = default_program(&engine);
-    let texture = RawImage2d::from_raw_rgba_reversed(&[1.0, 1.0, 1.0, 1.0], (1, 1));
-    let texture = Texture2d::new(&engine, texture).unwrap();
-
-    let input = InputState::new();
-
-    engine.build_main_game_loop().run(App {
-        left,
-        right,
-        left_a,
-        left_b,
-        left_c,
-        left_d,
-        right_a,
-        right_b,
-        right_c,
-        right_d,
-        batcher,
-
-        program,
-        texture,
-
-        input,
+async fn run() {
+    let target = EventLoop::new();
+    let mut app = App::init(&target).await;
+    target.run(move |e, _, c| {
+        app.event(e, c);
     });
 }
- */
+
+fn main() {
+    init_log();
+    as_async(run());
+}
