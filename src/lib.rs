@@ -44,6 +44,7 @@ impl Engine {
         Self::default()
     }
 
+
     pub async fn new_target(&mut self, window: Arc<Window>) -> Target {
         #[cfg(target_arch = "wasm32")]
         {

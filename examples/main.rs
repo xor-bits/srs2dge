@@ -4,7 +4,10 @@ use main_game_loop::{
     event::{Event, EventLoop, EventLoopTarget},
     init_log,
     report::Reporter,
-    state::window::WindowState,
+    state::{
+        input::{Input, InputAxis, InputState},
+        window::WindowState,
+    },
     update::{UpdateLoop, UpdateRate},
 };
 use srs2dge::{
@@ -35,6 +38,7 @@ static_res! { "res/**/*.{png,ttf}" }
 struct App {
     target: Target,
     ws: WindowState,
+    is: InputState,
 
     update_loop: Option<UpdateLoop>,
     reporter: Reporter,
@@ -91,6 +95,7 @@ impl App {
         let update_loop = UpdateLoop::new(update_rate);
 
         let ws = WindowState::new(&target.get_window());
+        let is = InputState::new();
 
         let texture_shader = Texture2DShader::new(&target);
         let text_shader = TextShader::new(&target);
@@ -200,6 +205,7 @@ impl App {
         Self {
             target,
             ws,
+            is,
 
             update_loop: Some(update_loop),
             reporter,
@@ -215,6 +221,9 @@ impl App {
     }
 
     fn update(&mut self) {
+        self.quad.speed -= self.is.get_axis(InputAxis::Look, 0).x
+            * UpdateRate::PerSecond(60).to_interval().as_secs_f32()
+            / 2.0;
         self.quad.a += self.quad.speed;
     }
 
@@ -308,6 +317,7 @@ impl App {
     fn event(&mut self, event: Event<'_>, control: &mut ControlFlow) {
         *control = ControlFlow::Poll;
         self.ws.event(&event);
+        self.is.event(&event);
 
         if self.ws.should_close {
             *control = ControlFlow::Exit;
@@ -331,6 +341,8 @@ impl App {
                     Reporter::report_all("3.0s", [("FRAME", &mut self.reporter)]),
                 );
             }
+        } else {
+            log::debug!("{event:?}");
         }
     }
 }
