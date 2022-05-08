@@ -634,6 +634,8 @@ dependencies = [
 [[package]]
 name = "fontsdf"
 version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a44e12fd2b0a0188c5c644a7abdca509b08a377f6b88e4339f38ecc2f2046c1"
 dependencies = [
  "fontdue",
  "glam",
