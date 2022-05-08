@@ -17,7 +17,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Deps
-      run: rustup update
+      run: sudo apt install -y pkg-config libudev-dev && rustup update
     - name: Build
       run: cargo build --verbose
     - name: Run tests
