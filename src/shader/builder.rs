@@ -1,46 +1,77 @@
-use super::{module::ShaderModule, Shader};
-use crate::{label, target::Target};
+use super::{layout::AutoLayout, module::ShaderModule, Shader};
+use crate::{
+    buffer::{
+        index::{DefaultIndex, Index},
+        vertex::{DefaultVertex, Vertex},
+    },
+    label,
+    target::Target,
+};
+use std::marker::PhantomData;
 use wgpu::{
     BlendState, ColorTargetState, ColorWrites, FragmentState, FrontFace, MultisampleState,
     PipelineLayoutDescriptor, PolygonMode, PrimitiveState, PrimitiveTopology,
-    RenderPipelineDescriptor, TextureFormat, VertexAttribute, VertexBufferLayout, VertexFormat,
-    VertexState, VertexStepMode,
+    RenderPipelineDescriptor, TextureFormat, VertexState,
 };
 
 //
 
-pub struct ShaderBuilder<'s, const VS: bool, const FS: bool, const FMT: bool, const L: bool> {
-    vert: Option<(&'s ShaderModule, &'s str)>,
-    frag: Option<(&'s ShaderModule, &'s str)>,
+pub struct ShaderBuilder<
+    's,
+    V = DefaultVertex,
+    I = DefaultIndex,
+    const VS: bool = false,
+    const FS: bool = false,
+    const FMT: bool = false,
+> {
+    pub(crate) vert: Option<(&'s ShaderModule<'s>, &'s str)>,
+    pub(crate) frag: Option<(&'s ShaderModule<'s>, &'s str)>,
     format: Option<TextureFormat>,
     layout: Option<PipelineLayoutDescriptor<'s>>,
-    // bind_layout: Vec<BindGroupLayoutDescriptor<'s>>,
+    topology: PrimitiveTopology,
+    label: Option<&'s str>,
+
+    _p: PhantomData<(V, I)>,
 }
 
 //
 
-impl<'s, const VS: bool, const FS: bool, const FMT: bool, const L: bool>
-    ShaderBuilder<'s, VS, FS, FMT, L>
+impl<'s, V, I, const VS: bool, const FS: bool, const FMT: bool> Default
+    for ShaderBuilder<'s, V, I, VS, FS, FMT>
 {
-    pub fn new() -> ShaderBuilder<'s, false, false, false, false> {
-        ShaderBuilder {
+    fn default() -> Self {
+        Self {
             vert: None,
             frag: None,
             format: None,
             layout: None,
-            // bind_layout: vec![],
+            topology: PrimitiveTopology::TriangleStrip,
+            label: label!(),
+
+            _p: PhantomData::default(),
         }
     }
+}
 
-    fn pass<const VSN: bool, const FSN: bool, const FMTN: bool, const LN: bool>(
+impl<'s, V, I, const VS: bool, const FS: bool, const FMT: bool>
+    ShaderBuilder<'s, V, I, VS, FS, FMT>
+{
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    fn pass<Vn, In, const VSN: bool, const FSN: bool, const FMTN: bool>(
         self,
-    ) -> ShaderBuilder<'s, VSN, FSN, FMTN, LN> {
+    ) -> ShaderBuilder<'s, Vn, In, VSN, FSN, FMTN> {
         ShaderBuilder {
             vert: self.vert,
             frag: self.frag,
             format: self.format,
             layout: self.layout,
-            // bind_layout: self.bind_layout,
+            topology: self.topology,
+            label: self.label,
+
+            _p: PhantomData::default(),
         }
     }
 
@@ -48,7 +79,7 @@ impl<'s, const VS: bool, const FS: bool, const FMT: bool, const L: bool>
         self,
         module: &'n ShaderModule,
         entry: &'n str,
-    ) -> ShaderBuilder<'s, true, FS, FMT, L> {
+    ) -> ShaderBuilder<'s, V, I, true, FS, FMT> {
         ShaderBuilder {
             vert: Some((module, entry)),
             ..self.pass()
@@ -59,30 +90,42 @@ impl<'s, const VS: bool, const FS: bool, const FMT: bool, const L: bool>
         self,
         module: &'n ShaderModule,
         entry: &'n str,
-    ) -> ShaderBuilder<'s, VS, true, FMT, L> {
+    ) -> ShaderBuilder<'s, V, I, VS, true, FMT> {
         ShaderBuilder {
             frag: Some((module, entry)),
             ..self.pass()
         }
     }
 
-    pub fn with_format(self, format: TextureFormat) -> ShaderBuilder<'s, VS, FS, true, L> {
+    pub fn with_format(self, format: TextureFormat) -> ShaderBuilder<'s, V, I, VS, FS, true> {
         ShaderBuilder {
             format: Some(format),
             ..self.pass()
         }
     }
 
-    /* pub(crate) fn with_bind_layout<'l: 's>(self, layout: BindGroupLayoutDescriptor<'l>) -> Self {
-        self.bind_layout.push(layout);
-        self
-    } */
+    pub fn with_vertex_format<Vn>(self) -> ShaderBuilder<'s, Vn, I, VS, FS, true> {
+        ShaderBuilder { ..self.pass() }
+    }
 
-    // TODO: allow custom shaders
-    pub(crate) fn with_layout<'l: 's>(
+    pub fn with_index_format<In>(self) -> ShaderBuilder<'s, V, In, VS, FS, true> {
+        ShaderBuilder { ..self.pass() }
+    }
+
+    pub fn with_topology(mut self, topology: PrimitiveTopology) -> Self {
+        self.topology = topology;
+        self
+    }
+
+    pub fn with_label<'n: 's>(mut self, label: Option<&'n str>) -> Self {
+        self.label = label;
+        self
+    }
+
+    pub fn with_baked_layout<'l: 's>(
         self,
         layout: PipelineLayoutDescriptor<'l>,
-    ) -> ShaderBuilder<'s, VS, FS, FMT, true> {
+    ) -> ShaderBuilder<'s, V, I, VS, FS, FMT> {
         ShaderBuilder {
             layout: Some(layout),
             ..self.pass()
@@ -90,47 +133,38 @@ impl<'s, const VS: bool, const FS: bool, const FMT: bool, const L: bool>
     }
 }
 
-impl<'s> ShaderBuilder<'s, true, true, true, true> {
-    pub fn build(self, target: &Target) -> Shader {
+impl<'s, V, I> ShaderBuilder<'s, V, I, true, true, true>
+where
+    V: Vertex,
+    I: Index,
+{
+    pub fn build(self, target: &Target) -> Shader<V, I> {
         let (vert_mod, vert_entry) = self.vert.unwrap();
         let (frag_mod, frag_entry) = self.frag.unwrap();
         let format = self.format.unwrap();
 
-        let layout = target.device.create_pipeline_layout(&self.layout.unwrap());
+        let layout = match self.layout {
+            Some(l) => target.device.create_pipeline_layout(&l),
+            None => {
+                let a = AutoLayout::new(target, (vert_mod, vert_entry), (frag_mod, frag_entry));
+                let a = a.get();
+                target.device.create_pipeline_layout(&a.get())
+            }
+        };
 
         let pipeline = target
             .device
             .create_render_pipeline(&RenderPipelineDescriptor {
-                label: label!(),
+                label: self.label,
                 layout: Some(&layout),
                 vertex: VertexState {
                     module: &vert_mod.inner,
                     entry_point: vert_entry,
-                    buffers: &[VertexBufferLayout {
-                        array_stride: 32,
-                        step_mode: VertexStepMode::Vertex,
-                        attributes: &[
-                            VertexAttribute {
-                                format: VertexFormat::Float32x2,
-                                offset: 0,
-                                shader_location: 0,
-                            },
-                            VertexAttribute {
-                                format: VertexFormat::Float32x2,
-                                offset: 8,
-                                shader_location: 1,
-                            },
-                            VertexAttribute {
-                                format: VertexFormat::Float32x4,
-                                offset: 16,
-                                shader_location: 2,
-                            },
-                        ],
-                    }],
+                    buffers: V::LAYOUT,
                 },
                 primitive: PrimitiveState {
-                    topology: PrimitiveTopology::TriangleList,
-                    strip_index_format: None,
+                    topology: PrimitiveTopology::TriangleStrip,
+                    strip_index_format: Some(I::FORMAT),
                     front_face: FrontFace::Ccw,
                     cull_mode: None,
                     unclipped_depth: false,
@@ -153,9 +187,9 @@ impl<'s> ShaderBuilder<'s, true, true, true, true> {
 
         Shader {
             pipeline,
-            layout,
-
             format,
+
+            _p: PhantomData::default(),
         }
     }
 }

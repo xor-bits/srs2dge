@@ -2,16 +2,12 @@ use super::{
     packer2d::Packer,
     rect::{PositionedRect, Rect},
 };
-use crate::{label, target::Target};
+use crate::{target::Target, texture::Texture};
 use image::RgbaImage;
 use rapid_qoi::{Colors, Qoi};
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
-use std::{mem, num::NonZeroU32, ops::Deref};
-use wgpu::{
-    util::DeviceExt, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, Extent3d,
-    ImageCopyBuffer, ImageDataLayout, MapMode, Texture, TextureDescriptor, TextureDimension,
-    TextureFormat, TextureUsages, TextureView, TextureViewDescriptor,
-};
+use std::ops::Deref;
+use wgpu::TextureUsages;
 
 //
 
@@ -20,6 +16,10 @@ pub use map::*;
 //
 
 mod map;
+
+//
+
+const USAGE: u32 = TextureUsages::TEXTURE_BINDING.bits() | TextureUsages::COPY_DST.bits();
 
 //
 
@@ -33,9 +33,7 @@ pub struct TextureAtlasBuilder {
 
 #[derive(Debug)]
 pub struct TextureAtlas {
-    texture: Texture,
-    view: TextureView,
-    dim: Rect,
+    texture: Texture<USAGE>,
 }
 
 #[derive(Debug, Clone)]
@@ -43,9 +41,13 @@ pub struct TextureAtlasFile {
     image: RgbaImage,
 }
 
+//
+
 pub trait Reference<T> {
     fn reference(&self) -> &'_ T;
 }
+
+//
 
 impl<T> Reference<T> for T {
     fn reference(&self) -> &'_ T {
@@ -93,7 +95,7 @@ impl TextureAtlasBuilder {
     pub fn build<I, R>(self, target: &Target, iter: I) -> TextureAtlas
     where
         R: Reference<RgbaImage>,
-        I: Iterator<Item = (R, PositionedRect)>,
+        I: IntoIterator<Item = (R, PositionedRect)>,
     {
         let dim = self.packer.area();
 
@@ -105,115 +107,31 @@ impl TextureAtlasBuilder {
             }
         }
 
-        let texture = target.device.create_texture_with_data(
-            &target.queue,
-            &TextureDescriptor {
-                label: label!(),
-                size: Extent3d {
-                    width: dim.width,
-                    height: dim.height,
-                    depth_or_array_layers: 1,
-                },
-                mip_level_count: 1,
-                sample_count: 1,
-                dimension: TextureDimension::D2,
-                format: TextureFormat::Rgba8UnormSrgb,
-                usage: TextureUsages::TEXTURE_BINDING
-                    | TextureUsages::RENDER_ATTACHMENT
-                    | TextureUsages::COPY_SRC,
-            },
-            combined.as_raw(),
-        );
+        let texture = Texture::new_rgba_with(target, &combined);
 
-        let view = texture.create_view(&TextureViewDescriptor::default());
-
-        TextureAtlas { texture, view, dim }
+        TextureAtlas { texture }
     }
 }
 
 impl TextureAtlas {
     pub async fn convert(&self, target: &Target) -> TextureAtlasFile {
-        let dim = BufferDimensions::new(self.dim.width as _, self.dim.height as _);
-        let read_buffer = target.device.create_buffer(&BufferDescriptor {
-            label: label!(),
-            size: (dim.padded_bytes_per_row * dim.height) as u64,
-            usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let mut encoder = target
-            .device
-            .create_command_encoder(&CommandEncoderDescriptor { label: label!() });
-
-        encoder.copy_texture_to_buffer(
-            self.texture.as_image_copy(),
-            ImageCopyBuffer {
-                buffer: &read_buffer,
-                layout: ImageDataLayout {
-                    offset: 0,
-                    bytes_per_row: Some(NonZeroU32::new(dim.padded_bytes_per_row as _).unwrap()),
-                    rows_per_image: None,
-                },
-            },
-            Extent3d {
-                width: self.dim.width,
-                height: self.dim.height,
-                depth_or_array_layers: 1,
-            },
-        );
-
-        target.queue.submit([encoder.finish()]);
-
-        let range = read_buffer.slice(..);
-        range.map_async(MapMode::Read).await.unwrap();
-
-        let bytes = range
-            .get_mapped_range()
-            .chunks(dim.padded_bytes_per_row)
-            .flat_map(|s| &s[..dim.unpadded_bytes_per_row])
-            .copied()
-            .collect();
-
-        let image = RgbaImage::from_raw(dim.width as _, dim.height as _, bytes).unwrap();
-
+        let image = self.texture.read(target).await;
         TextureAtlasFile { image }
-    }
-
-    pub fn dimensions(&self) -> Rect {
-        self.dim
     }
 }
 
 impl Deref for TextureAtlas {
-    type Target = TextureView;
+    type Target = Texture<USAGE>;
 
     fn deref(&self) -> &Self::Target {
-        &self.view
+        &self.texture
     }
 }
 
 impl TextureAtlasFile {
     pub fn convert(&self, target: &Target) -> TextureAtlas {
-        let dim: Rect = self.image.dimensions().into();
-        let texture = target.device.create_texture_with_data(
-            &target.queue,
-            &TextureDescriptor {
-                label: label!(),
-                size: dim.into(),
-                mip_level_count: 1,
-                sample_count: 1,
-                dimension: TextureDimension::D2,
-                format: TextureFormat::Rgba8UnormSrgb,
-                usage: TextureUsages::TEXTURE_BINDING
-                    | TextureUsages::RENDER_ATTACHMENT
-                    | TextureUsages::COPY_SRC,
-            },
-            self.image.as_raw(),
-        );
-
-        let view = texture.create_view(&TextureViewDescriptor::default());
-
-        TextureAtlas { texture, view, dim }
+        let texture = Texture::new_rgba_with(target, &self.image);
+        TextureAtlas { texture }
     }
 }
 
@@ -258,29 +176,5 @@ impl<'de> Deserialize<'de> for TextureAtlasFile {
         Ok(Self {
             image: RgbaImage::from_raw(qoi.width, qoi.height, image).unwrap(),
         })
-    }
-}
-
-//
-
-struct BufferDimensions {
-    width: usize,
-    height: usize,
-    unpadded_bytes_per_row: usize,
-    padded_bytes_per_row: usize,
-}
-
-impl BufferDimensions {
-    fn new(width: usize, height: usize) -> Self {
-        let unpadded_bytes_per_row = width * mem::size_of::<u32>();
-        let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT as usize;
-        let padded_bytes_per_row_padding = (align - unpadded_bytes_per_row % align) % align;
-        let padded_bytes_per_row = unpadded_bytes_per_row + padded_bytes_per_row_padding;
-        Self {
-            width,
-            height,
-            unpadded_bytes_per_row,
-            padded_bytes_per_row,
-        }
     }
 }

@@ -1,3 +1,4 @@
+use crate::{label, target::Target, Frame};
 use bytemuck::Pod;
 use std::{marker::PhantomData, mem, num::NonZeroU64};
 use wgpu::{
@@ -12,12 +13,11 @@ pub use indirect::*;
 pub use uniform::*;
 pub use vertex::*;
 
-use crate::{label, target::Target, Frame};
-
 //
 
 pub mod index;
 pub mod indirect;
+pub mod prelude;
 pub mod uniform;
 pub mod vertex;
 
@@ -82,7 +82,7 @@ where
         mapping[..new_data.len()].copy_from_slice(new_data);
     }
 
-    pub(crate) fn get_buffer(&self) -> &wgpu::Buffer {
+    pub fn get_buffer(&self) -> &wgpu::Buffer {
         &self.buffer
     }
 

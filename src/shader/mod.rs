@@ -1,36 +1,46 @@
 use self::builder::ShaderBuilder;
-use crate::frame::render_pass::RenderPass;
-use wgpu::{PipelineLayout, RenderPipeline, TextureFormat};
+use crate::buffer::{index::Index, vertex::Vertex};
+use std::marker::PhantomData;
+use wgpu::{BindGroup, BindGroupLayout, Device, RenderPipeline, TextureFormat};
 
 //
 
 pub mod builder;
+pub mod layout;
 pub mod module;
+pub mod prelude;
 pub mod presets;
 
 //
 
-pub struct Shader {
-    pipeline: RenderPipeline,
-    layout: PipelineLayout,
+pub struct Shader<V, I>
+where
+    V: Vertex,
+    I: Index,
+{
+    pub(crate) pipeline: RenderPipeline,
+    pub(crate) format: TextureFormat,
 
-    format: TextureFormat,
+    _p: PhantomData<(V, I)>,
 }
 
 //
 
-impl Shader {
-    pub fn builder<'s>() -> ShaderBuilder<'s, false, false, false, false> {
-        ShaderBuilder::<false, false, false, false>::new()
-    }
+pub trait Layout {
+    type Bindings<'a>;
 
-    pub(crate) fn bind<'a, const B: bool>(&'a self, render_pass: &mut RenderPass<'a, B>) {
-        let _ = &self.layout;
+    fn bind_group_layout(device: &Device) -> BindGroupLayout;
+    fn bind_group(&self, bindings: Self::Bindings<'_>) -> BindGroup;
+}
 
-        if render_pass.format != self.format {
-            panic!("Shader output incompatible with this render target");
-        } else {
-            render_pass.inner.set_pipeline(&self.pipeline);
-        }
+//
+
+impl<V, I> Shader<V, I>
+where
+    V: Vertex,
+    I: Index,
+{
+    pub fn builder<'s>() -> ShaderBuilder<'s, V, I> {
+        ShaderBuilder::<'s, V, I>::new()
     }
 }

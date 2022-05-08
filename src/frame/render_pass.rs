@@ -1,58 +1,99 @@
 use crate::{
-    buffer::{index::ty::Index, IndexBuffer, VertexBuffer},
+    buffer::{index::Index, IndexBuffer, Vertex, VertexBuffer},
     shader::Shader,
 };
-use bytemuck::Pod;
-use std::ops::Range;
+use std::{marker::PhantomData, ops::Range};
 use wgpu::{BindGroup, TextureFormat};
 
 //
 
-pub struct RenderPass<'e, const PIPELINE_BOUND: bool> {
+pub struct RenderPass<'e, Sv = (), Bv = (), Si = (), Bi = (), const PIPELINE_BOUND: bool = false> {
     pub(crate) inner: wgpu::RenderPass<'e>,
     pub(crate) format: TextureFormat,
+
+    _p: PhantomData<(Sv, Bv, Si, Bi)>,
 }
 
 //
 
-impl<'e, const PIPELINE_BOUND: bool> RenderPass<'e, PIPELINE_BOUND> {
-    pub fn bind_vbo<'b: 'e, T: Pod + 'static>(
+impl<'e, Sv, Bv, Si, Bi, const PIPELINE_BOUND: bool>
+    RenderPass<'e, Sv, Bv, Si, Bi, PIPELINE_BOUND>
+{
+    pub fn bind_vbo<'b, T>(
         mut self,
         buffer: &'b VertexBuffer<T>,
-        slot: u32,
-    ) -> Self {
+        // slot: u32,
+    ) -> RenderPass<'e, Sv, T, Si, Bi, PIPELINE_BOUND>
+    where
+        'b: 'e,
+        T: Vertex + 'static,
+    {
         self.inner
-            .set_vertex_buffer(slot, buffer.get_buffer().slice(..));
-        self
+            .set_vertex_buffer(0, buffer.get_buffer().slice(..));
+        self.pass()
     }
 
-    pub fn bind_ibo<'b: 'e, T: Index + 'static>(mut self, buffer: &'b IndexBuffer<T>) -> Self {
+    pub fn bind_ibo<'b, T>(
+        mut self,
+        buffer: &'b IndexBuffer<T>,
+    ) -> RenderPass<'e, Sv, Bv, Si, T, PIPELINE_BOUND>
+    where
+        'b: 'e,
+        T: Index + 'static,
+    {
         self.inner
             .set_index_buffer(buffer.get_buffer().slice(..), T::FORMAT);
-        self
+        self.pass()
     }
 
-    pub fn bind_shader<'s: 'e>(mut self, shader: &'s Shader) -> RenderPass<'e, true> {
-        shader.bind(&mut self);
-        Self::pass(self)
+    pub fn bind_shader<'s, V, I>(
+        mut self,
+        shader: &'s Shader<V, I>,
+    ) -> RenderPass<'e, V, Bv, I, Bi, true>
+    where
+        's: 'e,
+        V: Vertex + 'static,
+        I: Index + 'static,
+    {
+        if self.format != shader.format {
+            panic!("Shader output incompatible with this render target");
+        } else {
+            self.inner.set_pipeline(&shader.pipeline);
+        }
+        self.pass()
     }
 
-    pub fn bind_group<'g: 'e>(mut self, bind_group: &'g BindGroup) -> Self {
+    pub fn bind_group<'g>(mut self, bind_group: &'g BindGroup) -> Self
+    where
+        'g: 'e,
+    {
         self.inner.set_bind_group(0, bind_group, &[]);
-        self
+        self.pass()
+    }
+
+    pub fn done(self) -> RenderPass<'e> {
+        self.pass()
     }
 
     pub(crate) fn new(inner: wgpu::RenderPass<'e>, format: TextureFormat) -> Self {
-        Self { inner, format }
+        Self {
+            inner,
+            format,
+            _p: PhantomData::default(),
+        }
     }
 
-    fn pass<const N: bool>(self) -> RenderPass<'e, N> {
-        let RenderPass { inner, format } = self;
-        RenderPass { inner, format }
+    fn pass<Svn, Bvn, Sin, Bin, const N: bool>(self) -> RenderPass<'e, Svn, Bvn, Sin, Bin, N> {
+        RenderPass {
+            inner: self.inner,
+            format: self.format,
+            _p: PhantomData::default(),
+        }
     }
 }
 
-impl<'e> RenderPass<'e, true> {
+// implement for all renderpasses where buffers match shaders and shader is bound
+impl<'e, V, I> RenderPass<'e, V, V, I, I, true> {
     pub fn draw(mut self, vertices: Range<u32>, instances: Range<u32>) -> Self {
         self.inner.draw(vertices, instances);
         self

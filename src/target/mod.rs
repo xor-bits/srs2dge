@@ -8,12 +8,13 @@ use colorful::Colorful;
 use std::sync::Arc;
 use wgpu::{
     util::power_preference_from_env, Adapter, Device, DeviceDescriptor, Features, Instance, Limits,
-    PowerPreference, Queue, RequestAdapterOptionsBase,
+    PowerPreference, Queue, RequestAdapterOptionsBase, TextureFormat,
 };
 use winit::window::Window;
 
 //
 
+pub mod prelude;
 pub mod surface;
 
 //
@@ -27,7 +28,7 @@ pub struct Target {
     pub(crate) device: Arc<Device>,
     pub(crate) queue: Arc<Queue>,
 
-    pub(crate) surface: Surface,
+    pub(crate) surface: Option<Surface>,
     pub(crate) belt: Belt,
     catcher: Catcher,
 
@@ -42,7 +43,7 @@ impl Target {
         let surface = ISurface::new(window, instance.clone());
 
         // get a GPU
-        let adapter = Self::make_adapter(&surface, &instance).await;
+        let adapter = Self::make_adapter(Some(&surface), &instance).await;
 
         // print out some info about the selected GPU
         Self::debug_report(&adapter);
@@ -51,7 +52,7 @@ impl Target {
         let (device, queue) = Self::make_device(&adapter).await;
 
         // complete the surface (ready for rendering)
-        let surface = surface.complete(&adapter, device.clone());
+        let surface = Some(surface.complete(&adapter, device.clone()));
 
         // create a belt for fast data uploading
         let belt = Belt::new(device.clone());
@@ -72,6 +73,35 @@ impl Target {
         }
     }
 
+    pub async fn new_headless(instance: Arc<Instance>) -> Self {
+        // get a GPU
+        let adapter = Self::make_adapter(None, &instance).await;
+
+        // print out some info about the selected GPU
+        Self::debug_report(&adapter);
+
+        // create a logical device and a queue for it
+        let (device, queue) = Self::make_device(&adapter).await;
+
+        // create a belt for fast data uploading
+        let belt = Belt::new(device.clone());
+
+        // create a catcher to catch non fatal errors
+        // for example: shader compilation errors
+        let catcher = Catcher::new(&device);
+
+        Self {
+            device,
+            queue,
+
+            surface: None,
+            belt,
+            catcher,
+
+            active: false,
+        }
+    }
+
     #[must_use]
     pub fn get_frame(&mut self) -> Frame {
         if self.active {
@@ -81,7 +111,7 @@ impl Target {
         Frame::new(
             &self.device,
             self.queue.clone(),
-            &mut self.surface,
+            self.surface.as_mut().expect("TODO: Draw in headless mode"),
             self.belt.get(),
         )
     }
@@ -90,22 +120,36 @@ impl Target {
         self.belt.set(frame.finish())
     }
 
-    pub fn get_window(&self) -> Arc<Window> {
-        self.surface.get_window()
+    pub fn get_window(&self) -> Option<Arc<Window>> {
+        self.surface.as_ref().map(|surface| surface.get_window())
     }
 
-    pub(crate) fn catch_error<T, F: FnOnce(&Self) -> T>(&self, f: F) -> Result<T, String> {
+    pub fn get_format(&self) -> TextureFormat {
+        self.surface
+            .as_ref()
+            .map(|surface| surface.format())
+            .unwrap_or(TextureFormat::Rgba8Unorm)
+    }
+
+    pub fn get_device(&self) -> Arc<Device> {
+        self.device.clone()
+    }
+
+    pub fn catch_error<T, F: FnOnce(&Self) -> T>(&self, f: F) -> Result<T, String> {
         Catcher::catch_error(self, f)
     }
 
-    async fn make_adapter(surface: &ISurface, instance: &Instance) -> Arc<Adapter> {
+    async fn make_adapter(
+        compatible_surface: Option<&wgpu::Surface>,
+        instance: &Instance,
+    ) -> Arc<Adapter> {
         Arc::new(
             instance
                 .request_adapter(&RequestAdapterOptionsBase {
                     power_preference: power_preference_from_env()
                         .unwrap_or(PowerPreference::HighPerformance),
                     force_fallback_adapter: false,
-                    compatible_surface: Some(surface),
+                    compatible_surface,
                 })
                 .await
                 .expect("No suitable GPUs"),

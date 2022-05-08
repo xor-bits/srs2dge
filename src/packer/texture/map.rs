@@ -1,11 +1,6 @@
-use super::{TextureAtlas, TextureAtlasFile};
-use crate::{
-    packer::{
-        pos::TexturePosition,
-        rect::{PositionedRect, Rect},
-        texture::TextureAtlasBuilder,
-    },
-    target::Target,
+use crate::prelude::{
+    PositionedRect, Rect, Target, TextureAtlas, TextureAtlasBuilder, TextureAtlasFile,
+    TexturePosition,
 };
 use image::RgbaImage;
 use serde::{Deserialize, Serialize};
@@ -131,7 +126,7 @@ where
             .unzip();
 
         let inner = builder.build(target, iter.into_iter());
-        let size = inner.dimensions();
+        let size = inner.dim();
         let map = map
             .into_iter()
             .map(|(key, rect)| (key, TexturePosition::new(size, rect)))
@@ -150,10 +145,6 @@ where
         let map = self.map.clone();
 
         TextureAtlasMapFile { inner, map }
-    }
-
-    pub fn dimensions(&self) -> Rect {
-        self.inner.dimensions()
     }
 
     pub fn get(&self, key: &K) -> Option<&TexturePosition> {

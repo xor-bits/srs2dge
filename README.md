@@ -8,4 +8,6 @@
 
 ### Live demo at: https://gpu.ovpk.net
 
-Note: Firefox nightly with webgpu required
+### To debug with RenderDoc:
+
+Set environmental variable `WGPU_BACKEND` to `vk`

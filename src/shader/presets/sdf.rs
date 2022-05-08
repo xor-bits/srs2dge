@@ -20,7 +20,7 @@ use wgpu::{
 
 //
 
-const SHADER_SOURCE: &str = include_str!("text.wgsl");
+const SHADER_SOURCE: &str = include_str!("sdf.wgsl");
 
 //
 
@@ -28,7 +28,7 @@ type Internal<I> = Shader<DefaultVertex, I>;
 
 //
 
-pub struct TextShader<I = DefaultIndex>
+pub struct SdfShader<I = DefaultIndex>
 where
     I: Index,
 {
@@ -39,7 +39,7 @@ where
     device: Arc<Device>,
 }
 
-impl<I> TextShader<I>
+impl<I> SdfShader<I>
 where
     I: Index,
 {
@@ -54,9 +54,9 @@ where
             address_mode_u: AddressMode::ClampToEdge,
             address_mode_v: AddressMode::ClampToEdge,
             address_mode_w: AddressMode::ClampToEdge,
-            mag_filter: FilterMode::Nearest,
-            min_filter: FilterMode::Nearest,
-            mipmap_filter: FilterMode::Nearest,
+            mag_filter: FilterMode::Linear, // important!
+            min_filter: FilterMode::Linear,
+            mipmap_filter: FilterMode::Linear,
             lod_min_clamp: 0.0,
             lod_max_clamp: f32::MAX,
             compare: None,
@@ -84,7 +84,7 @@ where
     }
 }
 
-impl<I> Layout for TextShader<I>
+impl<I> Layout for SdfShader<I>
 where
     I: Index,
 {
@@ -108,7 +108,7 @@ where
                     binding: 1,
                     visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Texture {
-                        sample_type: TextureSampleType::Float { filterable: false },
+                        sample_type: TextureSampleType::Float { filterable: true }, // again, very important!
                         view_dimension: TextureViewDimension::D2,
                         multisampled: false,
                     },
@@ -117,7 +117,7 @@ where
                 BindGroupLayoutEntry {
                     binding: 2,
                     visibility: ShaderStages::FRAGMENT,
-                    ty: BindingType::Sampler(SamplerBindingType::NonFiltering),
+                    ty: BindingType::Sampler(SamplerBindingType::Filtering), // yet again, super important!
                     count: None,
                 },
             ],
@@ -146,7 +146,7 @@ where
     }
 }
 
-impl<I> Deref for TextShader<I>
+impl<I> Deref for SdfShader<I>
 where
     I: Index,
 {
@@ -157,7 +157,7 @@ where
     }
 }
 
-impl<I> DerefMut for TextShader<I>
+impl<I> DerefMut for SdfShader<I>
 where
     I: Index,
 {

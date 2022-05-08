@@ -1,4 +1,6 @@
+use self::{compute_pass::ComputePass, render_pass::RenderPass};
 use crate::{label, target::surface::Surface};
+use glam::Vec4;
 use std::sync::Arc;
 use wgpu::{
     util::StagingBelt, Buffer, BufferAddress, BufferSize, BufferViewMut, Color, CommandEncoder,
@@ -7,11 +9,10 @@ use wgpu::{
     TextureViewDescriptor,
 };
 
-use self::{compute_pass::ComputePass, render_pass::RenderPass};
-
 //
 
 pub mod compute_pass;
+pub mod prelude;
 pub mod render_pass;
 
 //
@@ -24,6 +25,8 @@ pub struct Frame {
     encoder: Option<CommandEncoder>,
 
     queue: Arc<Queue>,
+
+    clear_color: Vec4,
 
     pub(crate) belt: StagingBelt,
 }
@@ -58,6 +61,8 @@ impl Frame {
 
             queue,
 
+            clear_color: Vec4::new(0.1, 0.1, 0.1, 1.0),
+
             belt,
         }
     }
@@ -68,8 +73,11 @@ impl Frame {
         self.encoder.as_mut().expect("Frame was dropped")
     }
 
-    #[must_use]
-    pub fn main_render_pass(&mut self) -> RenderPass<false> {
+    pub fn set_clear_color(&mut self, color: Vec4) {
+        self.clear_color = color;
+    }
+
+    pub fn main_render_pass(&mut self) -> RenderPass<(), (), (), (), false> {
         let pass = self
             .encoder
             .as_mut()
@@ -81,10 +89,10 @@ impl Frame {
                     resolve_target: None,
                     ops: Operations {
                         load: LoadOp::Clear(Color {
-                            r: 0.2,
-                            g: 0.2,
-                            b: 0.2,
-                            a: 1.0,
+                            r: self.clear_color.x as _,
+                            g: self.clear_color.y as _,
+                            b: self.clear_color.z as _,
+                            a: self.clear_color.w as _,
                         }),
                         store: true,
                     },

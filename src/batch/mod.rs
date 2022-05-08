@@ -1,7 +1,7 @@
 use self::quad::QuadMesh;
 use crate::{
     buffer::{
-        vertex::ty::{DefaultVertex, Vertex},
+        vertex::{DefaultVertex, Vertex},
         IndexBuffer, VertexBuffer,
     },
     target::Target,
@@ -18,6 +18,7 @@ pub use wgpu::PrimitiveTopology;
 
 //
 
+pub mod prelude;
 pub mod quad;
 
 //

@@ -1,35 +1,49 @@
 use crate::{label, target::Target};
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
 use wgpu::ShaderModuleDescriptor;
 
 //
 
-#[cfg(not(feature = "glsl"))]
-use wgpu::ShaderSource;
-#[cfg(feature = "glsl")]
-pub use {naga::ShaderStage, wgpu::ShaderSource};
+pub use naga::{FastHashMap, ShaderStage};
+pub use wgpu::ShaderSource;
 
 //
 
-pub struct ShaderModule {
+pub struct ShaderModule<'a> {
     pub(crate) inner: wgpu::ShaderModule,
+    pub(crate) source: ShaderSource<'a>,
 }
 
 //
 
-impl ShaderModule {
-    pub fn new_wgsl_source(target: &Target, source: &str) -> Result<Arc<Self>, String> {
-        Self::from_descriptor(
+impl<'a> ShaderModule<'a> {
+    pub fn new_wgsl_source(target: &Target, source: Cow<'a, str>) -> Result<Self, String> {
+        Self::new(target, ShaderSource::Wgsl(source))
+    }
+
+    #[cfg(feature = "glsl")]
+    pub fn new_glsl_source(
+        target: &Target,
+        source: Cow<'a, str>,
+        stage: ShaderStage,
+        defines: FastHashMap<String, String>,
+    ) -> Result<Self, String> {
+        Self::new(
             target,
-            ShaderModuleDescriptor {
-                label: label!(),
-                source: ShaderSource::Wgsl(Cow::Borrowed(source)),
+            ShaderSource::Glsl {
+                shader: source,
+                stage,
+                defines,
             },
         )
     }
 
-    #[cfg(feature = "glsl")]
-    pub fn new_glsl_source(target: &Target, source: ShaderSource) -> Result<Arc<Self>, String> {
+    #[cfg(feature = "spirv")]
+    pub fn new_spirv_source(target: &Target, source: &'a [u32]) -> Result<Self, String> {
+        Self::new(target, ShaderSource::SpirV(Cow::Borrowed(source)))
+    }
+
+    pub fn new(target: &Target, source: ShaderSource<'a>) -> Result<Self, String> {
         Self::from_descriptor(
             target,
             ShaderModuleDescriptor {
@@ -41,14 +55,11 @@ impl ShaderModule {
 
     fn from_descriptor(
         target: &Target,
-        descriptor: ShaderModuleDescriptor,
-    ) -> Result<Arc<Self>, String> {
-        Ok(Self::from_module(target.catch_error(|engine| {
-            engine.device.create_shader_module(&descriptor)
-        })?))
-    }
-
-    fn from_module(inner: wgpu::ShaderModule) -> Arc<Self> {
-        Arc::new(Self { inner })
+        descriptor: ShaderModuleDescriptor<'a>,
+    ) -> Result<Self, String> {
+        Ok(Self {
+            inner: target.catch_error(|engine| engine.device.create_shader_module(&descriptor))?,
+            source: descriptor.source,
+        })
     }
 }

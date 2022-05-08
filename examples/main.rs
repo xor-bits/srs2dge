@@ -1,37 +1,13 @@
-use glam::{Mat4, Vec3, Vec4};
-use main_game_loop::{
-    as_async,
-    event::{Event, EventLoop, EventLoopTarget},
-    init_log,
-    report::Reporter,
-    state::{
-        input::{Input, InputAxis, InputState},
-        window::WindowState,
-    },
-    update::{UpdateLoop, UpdateRate},
-};
-use srs2dge::{
-    packer::{
-        glyph::Glyphs,
-        rect::Rect,
-        texture::{TextureAtlasMap, TextureAtlasMapBuilder},
-    },
-    prelude::{vertex::ty::DefaultVertex, IndexBuffer, UniformBuffer, VertexBuffer},
-    shader::presets::{TextShader, Texture2DShader},
-    target::Target,
-    text::{
-        format::{FString, Format, Formatted},
-        vbo,
-    },
-    Engine,
-};
-use static_res::static_res;
 use std::sync::Arc;
 use winit::{event_loop::ControlFlow, window::Window};
 
+use glam::*;
+use main_game_loop::prelude::*;
+use srs2dge::prelude::*;
+
 //
 
-static_res! { "res/**/*.{png,ttf}" }
+static_res::static_res! { "res/**/*.{png,ttf}" }
 
 //
 
@@ -83,18 +59,17 @@ struct FontIds {
 
 impl App {
     async fn new(target: &EventLoopTarget) -> Self {
-        let mut engine = Engine::new();
+        let engine = Engine::new();
 
-        let target = engine
-            .new_target(Arc::new(Window::new(target).unwrap()))
-            .await;
+        let window = Arc::new(Window::new(target).unwrap());
+        let target = engine.new_target(window.clone()).await;
 
         let reporter = Reporter::new();
 
         let update_rate = UpdateRate::PerSecond(60);
         let update_loop = UpdateLoop::new(update_rate);
 
-        let ws = WindowState::new(&target.get_window());
+        let ws = WindowState::new(&window);
         let is = InputState::new();
 
         let texture_shader = Texture2DShader::new(&target);
@@ -120,7 +95,9 @@ impl App {
         let texture = TextureAtlasMapBuilder::new()
             .with(
                 0,
-                image::load_from_memory(res::sprite_png).unwrap().to_rgba8(),
+                image::load_from_memory(res::texture::sprite_png)
+                    .unwrap()
+                    .to_rgba8(),
             )
             .build(&target);
 
@@ -136,14 +113,11 @@ impl App {
             speed,
         };
 
-        let mut glyphs = Glyphs::new(&target, Rect::new(512, 512));
+        let mut glyphs = Glyphs::new(&target, Rect::new(512, 512), Some(64));
 
         let fonts = FontIds {
-            /* system: glyphs
-            .add_font_property(FontPropertyBuilder::new().italic().build())
-            .unwrap(), */
-            roboto: glyphs.add_font_bytes(res::roboto::font_ttf).unwrap(),
-            fira: glyphs.add_font_bytes(res::fira::font_ttf).unwrap(),
+            roboto: glyphs.add_font_bytes(res::font::roboto::font_ttf).unwrap(),
+            fira: glyphs.add_font_bytes(res::font::fira::font_ttf).unwrap(),
         };
 
         let mut t = FString::from_iter([
@@ -167,7 +141,7 @@ impl App {
             font: fonts.roboto,
         });
 
-        let (vbo, ibo) = vbo::text(&target, &t, &mut glyphs, 18.0, 100.0, 100.0);
+        let (vbo, ibo) = vbo::text(&target, &t, &mut glyphs, 18.0, 100.0, 100.0).unwrap();
         let (vbo, ibo) = (
             VertexBuffer::new_with(&target, &vbo),
             IndexBuffer::new_with(&target, &ibo),
@@ -246,7 +220,7 @@ impl App {
             .color(0.0, 0.0, 0.0)
             .into();
         let (vertices, indices) =
-            vbo::text(&self.target, &t, &mut self.text.glyphs, 18.0, 500.0, 0.0);
+            vbo::text(&self.target, &t, &mut self.text.glyphs, 18.0, 500.0, 0.0).unwrap();
         self.dyn_text.vbo.upload(
             &mut self.target,
             &mut frame,
@@ -282,31 +256,31 @@ impl App {
             .main_render_pass()
             // quad draw
             .bind_ibo(&self.quad.ibo)
-            .bind_vbo(&self.quad.vbo, 0)
+            .bind_vbo(&self.quad.vbo)
             .bind_group(
                 &self
                     .texture_shader
-                    .bind_group(&self.quad.ubo, &self.quad.texture),
+                    .bind_group((&self.quad.ubo, &self.quad.texture)),
             )
             .bind_shader(&self.texture_shader)
             .draw_indexed(0..6, 0, 0..1)
             // static text draw
             .bind_ibo(&self.text.ibo)
-            .bind_vbo(&self.text.vbo, 0)
+            .bind_vbo(&self.text.vbo)
             .bind_group(
                 &self
                     .text_shader
-                    .bind_group(&self.text.ubo, &self.text.glyphs),
+                    .bind_group((&self.text.ubo, &self.text.glyphs)),
             )
             .bind_shader(&self.text_shader)
             .draw_indexed(0..self.text.ibo.capacity() as _, 0, 0..1)
             // dynamic text draw
             .bind_ibo(&self.dyn_text.ibo)
-            .bind_vbo(&self.dyn_text.vbo, 0)
+            .bind_vbo(&self.dyn_text.vbo)
             .bind_group(
                 &self
                     .text_shader
-                    .bind_group(&self.text.ubo, &self.text.glyphs),
+                    .bind_group((&self.text.ubo, &self.text.glyphs)),
             )
             .bind_shader(&self.text_shader)
             .draw_indexed(0..self.dyn_text.ibo.capacity() as _, 0, 0..1);
@@ -336,16 +310,14 @@ impl App {
             self.reporter.end(timer);
 
             if self.reporter.should_report() {
-                log::debug!(
-                    "\n{}",
-                    Reporter::report_all("3.0s", [("FRAME", &mut self.reporter)]),
-                );
+                let report = Reporter::report_all("3.0s", [("FRAME", &mut self.reporter)]);
+                log::debug!("\n{}", report,);
             }
-        } else {
-            log::debug!("{event:?}");
         }
     }
 }
+
+//
 
 async fn run() {
     let target = EventLoop::new();
@@ -356,6 +328,6 @@ async fn run() {
 }
 
 fn main() {
-    init_log();
+    // init_log();
     as_async(run());
 }

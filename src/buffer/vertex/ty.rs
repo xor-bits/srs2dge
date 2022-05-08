@@ -1,5 +1,6 @@
 use bytemuck::{Pod, Zeroable};
 use glam::{Vec2, Vec4};
+use wgpu::{VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode};
 
 //
 
@@ -9,6 +10,12 @@ pub struct DefaultVertex {
     pos: Vec2,
     uv: Vec2,
     col: Vec4,
+}
+
+//
+
+pub trait Vertex: Pod {
+    const LAYOUT: &'static [VertexBufferLayout<'static>];
 }
 
 //
@@ -39,10 +46,34 @@ impl DefaultVertex {
     }
 }
 
+impl Vertex for DefaultVertex {
+    const LAYOUT: &'static [VertexBufferLayout<'static>] = &[VertexBufferLayout {
+        array_stride: 32,
+        step_mode: VertexStepMode::Vertex,
+        attributes: &[
+            VertexAttribute {
+                format: VertexFormat::Float32x2,
+                offset: 0,
+                shader_location: 0,
+            },
+            VertexAttribute {
+                format: VertexFormat::Float32x2,
+                offset: 8,
+                shader_location: 1,
+            },
+            VertexAttribute {
+                format: VertexFormat::Float32x4,
+                offset: 16,
+                shader_location: 2,
+            },
+        ],
+    }];
+}
+
 //
 
-pub trait Vertex: Pod {}
+impl Vertex for () {
+    const LAYOUT: &'static [VertexBufferLayout<'static>] = &[];
+}
 
-//
-
-impl<T> Vertex for T where T: Pod {}
+// impl<T> Vertex for T where T: Pod {}

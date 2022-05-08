@@ -1,26 +1,9 @@
-use glam::{Mat4, Vec2, Vec4};
-use main_game_loop::{
-    as_async,
-    event::{Event, EventLoop, EventLoopTarget},
-    init_log,
-    state::{
-        input::{Input, InputAxis, InputState, Triggered},
-        window::WindowState,
-    },
-};
-use srs2dge::{
-    batch::{quad::QuadMesh, BatchRenderer, Idx},
-    buffer::{vertex::ty::DefaultVertex, UniformBuffer},
-    shader::presets::Colored2DShader,
-    target::Target,
-    Engine,
-};
 use std::sync::Arc;
-use winit::{
-    event::WindowEvent,
-    event_loop::ControlFlow,
-    window::{Window, WindowBuilder},
-};
+use winit::{event_loop::ControlFlow, window::Window};
+
+use glam::*;
+use main_game_loop::prelude::*;
+use srs2dge::prelude::*;
 
 //
 
@@ -49,10 +32,9 @@ struct App {
 
 impl App {
     async fn init(target: &EventLoopTarget) -> Self {
-        let mut engine = Engine::new();
-        let target = engine
-            .new_target(Arc::new(Window::new(target).unwrap()))
-            .await;
+        let engine = Engine::new();
+        let window = Arc::new(Window::new(target).unwrap());
+        let target = engine.new_target(window.clone()).await;
 
         let mut batcher = BatchRenderer::new(&target);
         let left = batcher.push_with(QuadMesh {
@@ -121,7 +103,7 @@ impl App {
         let shader = Colored2DShader::new(&target);
 
         let input = InputState::new();
-        let window = WindowState::new(&target.get_window());
+        let window = WindowState::new(&window);
 
         let ubo = UniformBuffer::new_single(
             &target,
@@ -209,8 +191,8 @@ impl App {
 
         frame
             .main_render_pass()
-            .bind_vbo(&vbo, 0)
-            .bind_ibo(&ibo)
+            .bind_vbo(vbo)
+            .bind_ibo(ibo)
             .bind_group(&self.shader.bind_group(&self.ubo))
             .bind_shader(&self.shader)
             .draw_indexed(0..ibo.capacity() as _, 0, 0..1);

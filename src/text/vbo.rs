@@ -2,7 +2,7 @@ use super::{format::FString, pos_iter::CharPositionIter};
 use crate::{
     batch::{quad::QuadMesh, Mesh},
     packer::glyph::Glyphs,
-    prelude::vertex::ty::DefaultVertex,
+    prelude::vertex::DefaultVertex,
     target::Target,
 };
 use glam::{Vec2, Vec4};
@@ -17,15 +17,17 @@ pub fn text(
     px: f32,
     x: f32,
     y: f32,
-) -> (Vec<DefaultVertex>, Vec<u32>) {
+) -> Result<(Vec<DefaultVertex>, Vec<u32>), &'static str> {
+    let sdf = glyphs.is_sdf();
+
     // setup glyphs
     for (c, format) in string.chars() {
         glyphs.queue(c, px as u16, format.font);
     }
-    glyphs.flush(target);
+    glyphs.flush(target)?;
 
     // gen vbo
-    let vertices: Vec<_> = CharPositionIter::new(string, glyphs, px)
+    let vertices: Vec<_> = CharPositionIter::new(string, glyphs, px, sdf)
         .map(|c| {
             let tex = glyphs
                 .get_indexed(c.index, px as u16, c.format.font)
@@ -54,13 +56,14 @@ pub fn text(
         .flat_map(|(i, mesh)| mesh.indices(i as u32))
         .collect();
 
-    (vertices, indices)
+    Ok((vertices, indices))
 }
 
 pub fn baked_text<'s, F>(string: F, glyphs: &Glyphs, px: f32) -> Option<RgbaImage>
 where
     F: Into<&'s FString> + Clone,
 {
+    let sdf = glyphs.is_sdf();
     let string: &FString = string.into();
 
     // text bounding box
@@ -69,7 +72,7 @@ where
     let mut y_min = 0;
     let mut y_max = 0;
 
-    for c in CharPositionIter::new(string, glyphs, px) {
+    for c in CharPositionIter::new(string, glyphs, px, sdf) {
         x_min = x_min.min(c.x);
         y_min = y_min.min(c.y);
 
@@ -80,11 +83,11 @@ where
     let height = (y_max - y_min).max(0) as usize;
 
     let mut text = vec![0; width * height * 4];
-    for c in CharPositionIter::new(string, glyphs, px) {
+    for c in CharPositionIter::new(string, glyphs, px, sdf) {
         let (metrics, bitmap) = glyphs
-            .font(c.format.font)
+            .get_font(c.format.font)
             .unwrap()
-            .rasterize_indexed(c.index, px);
+            .rasterize_indexed(c.index, px, sdf);
 
         for (index, pixel) in bitmap.iter().enumerate() {
             let x = (c.x - x_min) as usize + index % metrics.width;

@@ -20,3 +20,7 @@ impl Index for u16 {
 impl Index for u32 {
     const FORMAT: IndexFormat = IndexFormat::Uint32;
 }
+
+impl Index for () {
+    const FORMAT: IndexFormat = IndexFormat::Uint16;
+}

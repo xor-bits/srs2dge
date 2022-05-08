@@ -1,5 +1,4 @@
-use super::Mesh;
-use crate::{buffer::vertex::ty::DefaultVertex, packer::pos::TexturePosition};
+use crate::prelude::{DefaultVertex, Mesh, TexturePosition};
 use glam::{Vec2, Vec3, Vec3Swizzles, Vec4, Vec4Swizzles};
 use std::array::IntoIter;
 use wgpu::PrimitiveTopology;
@@ -29,10 +28,10 @@ impl Mesh<DefaultVertex> for QuadMesh {
     const PRIM: PrimitiveTopology = PrimitiveTopology::TriangleStrip;
 
     const VERTICES: usize = 4;
-    const INDICES: usize = 6;
+    const INDICES: usize = 5;
 
     type VertexIter = IntoIter<DefaultVertex, 4>;
-    type IndexIter = IntoIter<u32, 6>;
+    type IndexIter = IntoIter<u32, 5>;
 
     fn vertices(&self) -> Self::VertexIter {
         let p = Vec4::new(
@@ -57,15 +56,16 @@ impl Mesh<DefaultVertex> for QuadMesh {
 
     fn indices(&self, offset: u32) -> Self::IndexIter {
         let offset = offset * 4;
-        // IntoIterator::into_iter([offset, offset + 1, offset + 2, offset + 3, !0]) // webgpu doesn't seem to support primitive restart
-        IntoIterator::into_iter([
+        IntoIterator::into_iter([offset, offset + 1, offset + 2, offset + 3, !0])
+        // webgpu doesn't seem to support primitive restart
+        /* IntoIterator::into_iter([
             offset,
             offset + 1,
             offset + 2,
             offset + 2,
             offset + 1,
             offset + 3,
-        ])
+        ]) */
     }
 }
 
@@ -73,10 +73,10 @@ impl Mesh<DefaultVertex> for IsoQuadMesh {
     const PRIM: PrimitiveTopology = PrimitiveTopology::TriangleStrip;
 
     const VERTICES: usize = 4;
-    const INDICES: usize = 6;
+    const INDICES: usize = 5;
 
     type VertexIter = IntoIter<DefaultVertex, 4>;
-    type IndexIter = IntoIter<u32, 6>;
+    type IndexIter = IntoIter<u32, 5>;
 
     fn vertices(&self) -> Self::VertexIter {
         let c = Vec3::new(0.0, 0.5, 1.0);
@@ -90,14 +90,15 @@ impl Mesh<DefaultVertex> for IsoQuadMesh {
 
     fn indices(&self, offset: u32) -> Self::IndexIter {
         let offset = offset * 4;
-        // IntoIterator::into_iter([offset, offset + 1, offset + 2, offset + 3, !0]) // webgpu doesn't seem to support primitive restart
-        IntoIterator::into_iter([
+        IntoIterator::into_iter([offset, offset + 1, offset + 2, offset + 3, !0])
+        // webgpu doesn't seem to support primitive restart
+        /* IntoIterator::into_iter([
             offset,
             offset + 1,
             offset + 2,
             offset + 2,
             offset + 1,
             offset + 3,
-        ])
+        ]) */
     }
 }

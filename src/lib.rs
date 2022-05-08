@@ -1,7 +1,15 @@
+#![feature(generic_associated_types)]
+
+//
+
+use main_game_loop::event::EventLoopTarget;
 use std::sync::Arc;
 use target::Target;
 use wgpu::{util::backend_bits_from_env, Backends, Instance};
-use winit::window::Window;
+use winit::{
+    error::OsError,
+    window::{Window, WindowBuilder},
+};
 
 //
 
@@ -22,6 +30,7 @@ pub mod prelude;
 pub mod shader;
 pub mod target;
 pub mod text;
+pub mod texture;
 
 //
 
@@ -44,36 +53,66 @@ impl Engine {
         Self::default()
     }
 
-
-    pub async fn new_target(&mut self, window: Arc<Window>) -> Target {
+    pub async fn new_target(&self, window: Arc<Window>) -> Target {
         #[cfg(target_arch = "wasm32")]
         {
             use winit::platform::web::WindowExtWebSys;
-            web_sys::window()
-                .and_then(|win| win.document())
-                .and_then(|doc| doc.body())
-                .and_then(|body| {
-                    body.append_child(&web_sys::Element::from(window.canvas()))
-                        .ok()
-                })
-                .expect("couldn't append canvas to document body");
+
+            let win = web_sys::window().unwrap();
+            let doc = win.document().unwrap();
+
+            doc.body()
+                .unwrap()
+                .append_child(&web_sys::Element::from(window.canvas()))
+                .unwrap();
         }
 
         Target::new(self.instance.clone(), window).await
     }
 
+    pub async fn new_target_element_id(&self, window: Arc<Window>, canvas_div_id: &str) -> Target {
+        let _ = canvas_div_id;
+        #[cfg(target_arch = "wasm32")]
+        {
+            use winit::platform::web::WindowExtWebSys;
+
+            let win = web_sys::window().unwrap();
+            let doc = win.document().unwrap();
+
+            doc.get_element_by_id(canvas_div_id)
+                .unwrap()
+                .append_child(&web_sys::Element::from(window.canvas()))
+                .unwrap();
+        }
+
+        Target::new(self.instance.clone(), window).await
+    }
+
+    pub async fn new_target_default(&self, target: &EventLoopTarget) -> Result<Target, OsError> {
+        Ok(self
+            .new_target(Arc::new(
+                WindowBuilder::new()
+                    .with_title(env!("CARGO_PKG_NAME"))
+                    .build(target)?,
+            ))
+            .await)
+    }
+
+    pub async fn new_target_headless(&self) -> Target {
+        Target::new_headless(self.instance.clone()).await
+    }
+
     fn make_instance() -> Arc<Instance> {
         // renderdoc
-        // let backend = Backends::VULKAN;
+        // let default = Backends::VULKAN;
 
-        // default
-        let backend = Backends::all();
+        // any
+        let default = Backends::all();
 
         // webgl
-        // let backend = Backends::GL;
+        // let default = Backends::GL;
 
-        let backend = backend_bits_from_env().unwrap_or(backend);
-        Arc::new(Instance::new(backend))
+        Arc::new(Instance::new(backend_bits_from_env().unwrap_or(default)))
     }
 }
 
