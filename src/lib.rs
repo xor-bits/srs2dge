@@ -17,7 +17,10 @@ pub use frame::Frame;
 
 //
 
+pub extern crate bytemuck;
 pub extern crate glam;
+pub extern crate naga;
+pub extern crate wgpu;
 pub extern crate winit;
 
 //
