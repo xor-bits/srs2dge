@@ -19,9 +19,9 @@ jobs:
     - name: Deps
       run: sudo apt install -y pkg-config libudev-dev && rustup update
     - name: Build
-      run: cargo build --verbose
+      run: cargo +nightly build --verbose
     - name: Run tests
-      run: cargo test --verbose
+      run: cargo +nightly test --verbose
 
     - uses: actions/cache@v2
       with:
