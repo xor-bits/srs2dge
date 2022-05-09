@@ -79,7 +79,7 @@ impl Surface {
                 format,
                 width,
                 height,
-                present_mode: PresentMode::Immediate,
+                present_mode: PresentMode::Mailbox,
             },
         );
     }
@@ -115,11 +115,12 @@ impl Surface {
                 }
 
                 // recreate the swapchain
-                Ok(SurfaceTexture {
+                x @ (Ok(SurfaceTexture {
                     suboptimal: true, ..
                 })
-                | Err(SurfaceError::Outdated) => {
+                | Err(SurfaceError::Outdated)) => {
                     log::debug!("Outdated | Suboptimal");
+                    drop(x);
                     self.configure();
                 }
             }

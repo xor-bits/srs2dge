@@ -42,7 +42,7 @@ impl App {
         let mut glyphs = Glyphs::new(&target, Rect::new(256, 256), Some(64));
         let texture = Texture::new_grey_with(
             &target,
-            &image::load_from_memory(include_bytes!("../res/texture/sdf.png"))
+            &image::load_from_memory(include_bytes!("../res/texture/sprite.png"))
                 .unwrap()
                 .to_luma8(),
         );

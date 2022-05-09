@@ -55,7 +55,7 @@ impl Mesh<DefaultVertex> for QuadMesh {
     }
 
     fn indices(&self, offset: u32) -> Self::IndexIter {
-        let offset = offset * 4;
+        let offset = offset * Self::VERTICES as u32;
         IntoIterator::into_iter([offset, offset + 1, offset + 2, offset + 3, !0])
         // webgpu doesn't seem to support primitive restart
         /* IntoIterator::into_iter([

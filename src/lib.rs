@@ -28,6 +28,7 @@ pub extern crate winit;
 pub mod batch;
 pub mod buffer;
 pub mod frame;
+pub mod gizmos;
 pub mod packer;
 pub mod prelude;
 pub mod shader;

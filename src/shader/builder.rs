@@ -163,7 +163,7 @@ where
                     buffers: V::LAYOUT,
                 },
                 primitive: PrimitiveState {
-                    topology: PrimitiveTopology::TriangleStrip,
+                    topology: self.topology,
                     strip_index_format: Some(I::FORMAT),
                     front_face: FrontFace::Ccw,
                     cull_mode: None,
