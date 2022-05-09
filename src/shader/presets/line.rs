@@ -40,7 +40,7 @@ impl<I> LineShader<I>
 where
     I: Index,
 {
-    pub fn new(target: &Target) -> Self {
+    pub fn new(target: &Target, strip: bool) -> Self {
         let module = ShaderModule::new_wgsl_source(target, Cow::Borrowed(SHADER_SOURCE))
             .unwrap_or_else(|err| panic!("{err}"));
 
@@ -57,7 +57,11 @@ where
                     push_constant_ranges: &[],
                 })
                 .with_label(label!())
-                .with_topology(PrimitiveTopology::LineList)
+                .with_topology(if strip {
+                    PrimitiveTopology::LineStrip
+                } else {
+                    PrimitiveTopology::LineList
+                })
                 .build(target),
             layout,
 

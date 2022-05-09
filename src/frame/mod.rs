@@ -21,6 +21,7 @@ pub struct Frame {
     main_texture: Option<SurfaceTexture>,
     main_view: TextureView,
     main_format: TextureFormat,
+    main_dim: (u32, u32),
 
     encoder: Option<CommandEncoder>,
 
@@ -46,6 +47,7 @@ impl Frame {
             ..Default::default()
         });
         let main_format = surface.format();
+        let main_dim = surface.get_dim();
 
         let encoder = device.create_command_encoder(&CommandEncoderDescriptor { label: label!() });
 
@@ -56,6 +58,7 @@ impl Frame {
             main_texture,
             main_view,
             main_format,
+            main_dim,
 
             encoder,
 
@@ -111,6 +114,10 @@ impl Frame {
             .begin_compute_pass(&ComputePassDescriptor { label: label!() });
 
         ComputePass::new(pass)
+    }
+
+    pub fn get_dim(&self) -> (u32, u32) {
+        self.main_dim
     }
 
     pub(crate) fn write_buffer(

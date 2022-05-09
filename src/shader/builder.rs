@@ -152,6 +152,14 @@ where
             }
         };
 
+        let strip_index_format = if let PrimitiveTopology::LineStrip
+        | PrimitiveTopology::TriangleStrip = self.topology
+        {
+            Some(I::FORMAT)
+        } else {
+            None
+        };
+
         let pipeline = target
             .device
             .create_render_pipeline(&RenderPipelineDescriptor {
@@ -164,7 +172,7 @@ where
                 },
                 primitive: PrimitiveState {
                     topology: self.topology,
-                    strip_index_format: Some(I::FORMAT),
+                    strip_index_format,
                     front_face: FrontFace::Ccw,
                     cull_mode: None,
                     unclipped_depth: false,

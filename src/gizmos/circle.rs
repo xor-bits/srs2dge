@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use crate::{
     prelude::{
         DefaultVertex, IndexBuffer, Layout, LineShader, Mesh, RenderPass, UniformBuffer,
@@ -7,52 +9,66 @@ use crate::{
     Frame,
 };
 use glam::{Mat4, Vec2, Vec4};
-use std::array::IntoIter;
 use wgpu::{BindGroup, PrimitiveTopology};
 
 //
 
-pub struct GizmosLine {
-    pub from: Vec2,
-    pub to: Vec2,
+const RES: u32 = 50;
+
+//
+
+pub struct GizmosCircle {
+    pub middle: Vec2,
+    pub radius: f32,
     pub col: Vec4,
 }
 
 //
 
-impl GizmosLine {
-    pub fn new(from: Vec2, to: Vec2, col: Vec4) -> Self {
-        Self { from, to, col }
+impl GizmosCircle {
+    pub fn new(middle: Vec2, radius: f32, col: Vec4) -> Self {
+        Self {
+            middle,
+            radius,
+            col,
+        }
     }
 }
 
-impl Mesh<DefaultVertex> for GizmosLine {
-    const PRIM: PrimitiveTopology = PrimitiveTopology::LineList;
+impl Mesh<DefaultVertex> for GizmosCircle {
+    const PRIM: PrimitiveTopology = PrimitiveTopology::LineStrip;
 
-    const VERTICES: usize = 2;
-    const INDICES: usize = 2;
+    const VERTICES: usize = RES as usize;
+    const INDICES: usize = RES as usize + 2;
 
-    type VertexIter = IntoIter<DefaultVertex, 2>;
-    type IndexIter = IntoIter<u32, 2>;
+    type VertexIter = impl Iterator<Item = DefaultVertex>;
+    type IndexIter = impl Iterator<Item = u32>;
 
     fn vertices(&self) -> Self::VertexIter {
-        [
-            DefaultVertex::new(self.from, self.col, Vec2::ZERO),
-            DefaultVertex::new(self.to, self.col, Vec2::ZERO),
-        ]
-        .into_iter()
+        let col = self.col;
+        let middle = self.middle;
+        let radius = self.radius;
+        (0..RES)
+            .map(|i| i as f32 / RES as f32 * 2.0 * PI)
+            .map(move |v| {
+                DefaultVertex::new(
+                    middle + radius * Vec2::new(v.cos(), v.sin()),
+                    col,
+                    Vec2::ZERO,
+                )
+            })
     }
 
     fn indices(&self, offset: u32) -> Self::IndexIter {
         let offset = offset * Self::VERTICES as u32;
-        IntoIterator::into_iter([offset, offset + 1])
+        (0..RES).chain([0]).map(move |i| i + offset).chain([!0])
     }
 }
 
 //
 
-pub(super) struct GizmosLines {
-    lines: Vec<GizmosLine>,
+pub(super) struct GizmosCircles {
+    circles: Vec<GizmosCircle>,
 
     vbo: VertexBuffer,
     ibo: IndexBuffer,
@@ -63,32 +79,34 @@ pub(super) struct GizmosLines {
 
 //
 
-impl GizmosLines {
+impl GizmosCircles {
     pub fn new(target: &Target, ubo: &UniformBuffer<Mat4>) -> Self {
-        let shader = LineShader::new(target, false);
+        let shader = LineShader::new(target, true);
         let bind_group = shader.bind_group(ubo);
 
         Self {
-            lines: vec![],
+            circles: vec![],
 
-            vbo: VertexBuffer::new(target, 80),
-            ibo: IndexBuffer::new(target, 80),
+            vbo: VertexBuffer::new(target, 1000),
+            ibo: IndexBuffer::new(target, 1000),
             ibo_len: 0,
             shader,
             bind_group,
         }
     }
 
-    #[inline(always)]
-    pub fn push(&mut self, line: GizmosLine) {
-        self.lines.push(line);
+    pub fn push(&mut self, circle: GizmosCircle) {
+        self.circles.push(circle);
     }
 
     pub fn prepare(&mut self, target: &mut Target, frame: &mut Frame) {
-        let vbo_data: Vec<DefaultVertex> =
-            self.lines.iter().flat_map(|line| line.vertices()).collect();
+        let vbo_data: Vec<DefaultVertex> = self
+            .circles
+            .iter()
+            .flat_map(|line| line.vertices())
+            .collect();
         let ibo_data: Vec<u32> = self
-            .lines
+            .circles
             .drain(..)
             .enumerate()
             .flat_map(|(i, line)| line.indices(i as _))

@@ -1,6 +1,6 @@
 use instant::Instant;
 use std::sync::Arc;
-use winit::window::Window;
+use winit::{event_loop::ControlFlow, window::Window};
 
 use glam::*;
 use main_game_loop::prelude::*;
@@ -13,19 +13,24 @@ struct App {
     timer: Instant,
 }
 
+//
+
 impl App {
-    async fn new(target: &EventLoopTarget) -> Self {
+    async fn init(target: &EventLoopTarget) -> Self {
         let engine = Engine::new();
         let target = engine
             .new_target(Arc::new(Window::new(target).unwrap()))
             .await;
-        Self {
-            target,
-            timer: Instant::now(),
-        }
-    }
+        let timer = Instant::now();
 
-    fn event(&mut self) {
+        Self { target, timer }
+    }
+}
+
+impl Runnable for App {
+    fn event(&mut self, _: Event, _: &EventLoopTarget, _: &mut ControlFlow) {}
+
+    fn draw(&mut self) {
         let t = self.timer.elapsed().as_secs_f32();
         const PHASE_OFFS: f32 = 2.0 / 3.0 * std::f32::consts::PI;
         let phase_a = t;
@@ -43,15 +48,6 @@ impl App {
     }
 }
 
-async fn run() {
-    let target = EventLoop::new();
-    let mut app = App::new(&target).await;
-    target.run(move |_, _, _| {
-        app.event();
-    });
-}
+//
 
-fn main() {
-    init_log();
-    as_async(run());
-}
+main_app!(async App);

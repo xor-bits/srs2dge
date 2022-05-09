@@ -20,6 +20,9 @@ pub struct Surface {
     device: Arc<Device>,
     surface: ISurface,
     format: TextureFormat,
+
+    width: u32,
+    height: u32,
 }
 
 //
@@ -51,10 +54,13 @@ impl ISurface {
             .get_preferred_format(adapter)
             .expect("Surface is not incompatible");
 
-        let surface = Surface {
+        let mut surface = Surface {
             device,
             surface,
             format,
+
+            width: 0, // properly configured in just a bit
+            height: 0,
         };
         surface.configure();
         surface
@@ -66,12 +72,14 @@ impl ISurface {
 }
 
 impl Surface {
-    pub fn configure(&self) {
+    pub fn configure(&mut self) {
         let window = self.surface.window.as_ref();
         let size = window.inner_size();
         let (width, height) = (size.width, size.height);
         let format = self.format;
 
+        self.width = width;
+        self.height = height;
         self.surface.surface.configure(
             &self.device,
             &SurfaceConfiguration {
@@ -133,6 +141,10 @@ impl Surface {
 
     pub fn get_window(&self) -> Arc<Window> {
         self.surface.get_window()
+    }
+
+    pub fn get_dim(&self) -> (u32, u32) {
+        (self.width, self.height)
     }
 }
 
