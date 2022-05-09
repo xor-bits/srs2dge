@@ -15,12 +15,14 @@ use self::{
     circle::{GizmosCircle, GizmosCircles},
     line::{GizmosLine, GizmosLines},
     r#box::{GizmosBox, GizmosBoxes},
+    text::GizmosText,
 };
 use crate::{
     prelude::{RenderPass, UniformBuffer},
     target::Target,
     Frame,
 };
+use fontsdf::Font;
 use glam::{Mat4, Vec2, Vec4, Vec4Swizzles};
 use main_game_loop::prelude::WindowState;
 use winit::dpi::{PhysicalPosition, Pixel};
@@ -30,6 +32,7 @@ use winit::dpi::{PhysicalPosition, Pixel};
 pub mod r#box;
 pub mod circle;
 pub mod line;
+pub mod text;
 
 //
 
@@ -37,6 +40,7 @@ pub struct Gizmos {
     mat: Option<Mat4>,
     current_mat: Mat4,
     ubo: UniformBuffer<Mat4>,
+    font: Font,
 
     lines: GizmosLines,
     circles: GizmosCircles,
@@ -52,6 +56,7 @@ impl Gizmos {
     pub fn new(target: &Target) -> Self {
         let current_mat = Mat4::IDENTITY;
         let ubo = UniformBuffer::new_single(target, current_mat);
+        let font = Font::from_bytes(include_bytes!("../../res/font/fira/font.ttf")).unwrap();
 
         let lines = GizmosLines::new(target, &ubo);
         let circles = GizmosCircles::new(target, &ubo);
@@ -61,6 +66,7 @@ impl Gizmos {
             mat: None,
             current_mat,
             ubo,
+            font,
 
             lines,
             circles,
@@ -81,6 +87,12 @@ impl Gizmos {
     #[inline(always)]
     pub fn add_box(&mut self, r#box: GizmosBox) {
         self.boxes.push(r#box);
+    }
+
+    /// Just use proper text rendering
+    #[inline(always)]
+    pub fn add_text(&mut self, text: GizmosText) -> Option<()> {
+        text.lines(self)
     }
 
     /// Override the Model View Projection (MVP) matrix

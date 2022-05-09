@@ -5,7 +5,7 @@ use winit::{dpi::PhysicalPosition, event::WindowEvent, event_loop::ControlFlow, 
 use glam::*;
 use main_game_loop::prelude::*;
 use srs2dge::{
-    gizmos::{circle::GizmosCircle, line::GizmosLine, r#box::GizmosBox, Gizmos},
+    gizmos::{circle::GizmosCircle, line::GizmosLine, r#box::GizmosBox, text::GizmosText, Gizmos},
     prelude::*,
 };
 
@@ -63,13 +63,20 @@ impl Runnable for App {
         let c = Vec2::new((t * 4.0).cos(), (t * 4.0).sin()) * r_c;
         let d = Vec2::new((t * 0.8).cos(), (t * 0.8).sin()) * r_d;
 
+        self.debug.add_text(GizmosText::new(
+            Vec2::new(-0.9, -0.9),
+            &self.ws,
+            "Do not draw text like this",
+            Vec4::X + Vec4::W,
+        ));
+
         // lines
         self.debug
-            .add_line(GizmosLine::new(a, b, Vec4::new(1.0, 0.0, 0.0, 1.0)));
+            .add_line(GizmosLine::new(a, b, Vec4::X + Vec4::W));
         self.debug
-            .add_line(GizmosLine::new(b, c, Vec4::new(0.0, 1.0, 0.0, 1.0)));
+            .add_line(GizmosLine::new(b, c, Vec4::Y + Vec4::W));
         self.debug
-            .add_line(GizmosLine::new(c, d, Vec4::new(0.0, 0.0, 1.0, 1.0)));
+            .add_line(GizmosLine::new(c, d, Vec4::Z + Vec4::W));
 
         // rings
         self.debug

@@ -71,8 +71,8 @@ impl GizmosLines {
         Self {
             lines: vec![],
 
-            vbo: VertexBuffer::new(target, 80),
-            ibo: IndexBuffer::new(target, 80),
+            vbo: VertexBuffer::new(target, 2),
+            ibo: IndexBuffer::new(target, 2),
             ibo_len: 0,
             shader,
             bind_group,
@@ -94,6 +94,12 @@ impl GizmosLines {
             .flat_map(|(i, line)| line.indices(i as _))
             .collect();
 
+        if self.vbo.capacity() < vbo_data.len() {
+            self.vbo = VertexBuffer::new(target, vbo_data.len() * 2);
+        }
+        if self.ibo.capacity() < ibo_data.len() {
+            self.ibo = IndexBuffer::new(target, ibo_data.len() * 2);
+        }
         self.vbo.upload(target, frame, &vbo_data);
         self.ibo.upload(target, frame, &ibo_data);
         self.ibo_len = ibo_data.len() as _;

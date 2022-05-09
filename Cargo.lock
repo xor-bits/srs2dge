@@ -633,9 +633,9 @@ dependencies = [
 
 [[package]]
 name = "fontsdf"
-version = "0.4.0"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a44e12fd2b0a0188c5c644a7abdca509b08a377f6b88e4339f38ecc2f2046c1"
+checksum = "d71816b325a0029c231e7a5d4e10cb7b0f334d74b4f4b8be477644c04687ba27"
 dependencies = [
  "fontdue",
  "glam",
@@ -1075,9 +1075,9 @@ dependencies = [
 
 [[package]]
 name = "main_game_loop"
-version = "0.3.2"
+version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd49bca541e4b9efb4a402b9961f043c2fd5e3248476291d5b75799eaed05e34"
+checksum = "6ec8526800706667402d13e054fe5732dd075ece96372c518f33de9a917b3d2f"
 dependencies = [
  "console_error_panic_hook",
  "console_log",

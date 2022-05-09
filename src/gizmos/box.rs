@@ -92,8 +92,8 @@ impl GizmosBoxes {
         Self {
             boxes: vec![],
 
-            vbo: VertexBuffer::new(target, 1000),
-            ibo: IndexBuffer::new(target, 1000),
+            vbo: VertexBuffer::new(target, 4),
+            ibo: IndexBuffer::new(target, 6),
             ibo_len: 0,
             shader,
             bind_group,
@@ -114,6 +114,12 @@ impl GizmosBoxes {
             .flat_map(|(i, line)| line.indices(i as _))
             .collect();
 
+        if self.vbo.capacity() < vbo_data.len() {
+            self.vbo = VertexBuffer::new(target, vbo_data.len() * 2);
+        }
+        if self.ibo.capacity() < ibo_data.len() {
+            self.ibo = IndexBuffer::new(target, ibo_data.len() * 2);
+        }
         self.vbo.upload(target, frame, &vbo_data);
         self.ibo.upload(target, frame, &ibo_data);
         self.ibo_len = ibo_data.len() as _;
