@@ -113,7 +113,7 @@ impl App {
             speed,
         };
 
-        let mut glyphs = Glyphs::new(&target, Rect::new(512, 512), Some(64));
+        let mut glyphs = Glyphs::new(&target, Rect::new(128, 128), None);
 
         let fonts = FontIds {
             roboto: glyphs.add_font_bytes(res::font::roboto::font_ttf).unwrap(),
