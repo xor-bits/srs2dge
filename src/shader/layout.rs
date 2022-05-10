@@ -217,26 +217,3 @@ fn parse(source: &ShaderSource) -> Module {
         _ => unimplemented!(),
     }
 }
-
-//
-
-#[cfg(test)]
-mod tests {
-    use super::AutoLayout;
-    use crate::{prelude::ShaderModule, Engine};
-    use std::borrow::Cow;
-
-    //
-
-    const SOURCE: &str = include_str!("../../res/shader/test.wgsl");
-
-    //
-
-    #[test]
-    fn main() {
-        let engine = Engine::new();
-        let target = pollster::block_on(engine.new_target_headless());
-        let module = ShaderModule::new_wgsl_source(&target, Cow::Borrowed(SOURCE)).unwrap();
-        AutoLayout::new(&target, (&module, "vs_main"), (&module, "fs_main"));
-    }
-}

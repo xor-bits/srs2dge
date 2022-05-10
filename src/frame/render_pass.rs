@@ -28,8 +28,7 @@ impl<'e, Sv, Bv, Si, Bi, const PIPELINE_BOUND: bool>
         'b: 'e,
         T: Vertex + 'static,
     {
-        self.inner
-            .set_vertex_buffer(0, buffer.inner().slice(..));
+        self.inner.set_vertex_buffer(0, buffer.inner().slice(..));
         self.pass()
     }
 
