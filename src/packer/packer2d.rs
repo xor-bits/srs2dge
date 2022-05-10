@@ -1,9 +1,7 @@
 //! 2D Texture packer with ability to reuse areas
 
-use integer_sqrt::IntegerSquareRoot;
-use std::mem;
-
 use super::rect::{PositionedRect, Rect};
+use integer_sqrt::IntegerSquareRoot;
 
 //
 
@@ -65,7 +63,7 @@ impl Packer {
 
     /// The resulting rect will be the sums the rectangles (**sides**, not area)
     ///
-    /// ```no_run
+    /// ```ignore
     /// +----------+-------+
     /// | original | new   |
     /// +----------+-------+
@@ -299,13 +297,14 @@ impl Packer {
             return false;
         }
 
-        // TODO: drain_filter
-        let mut tmp = Default::default();
-        mem::swap(&mut tmp, &mut row.free_spaces);
-        row.free_spaces = tmp
-            .into_iter()
-            .partition(|col| Self::aabb_1d(col.x, rect.x, col.width, rect.width))
-            .0;
+        row.free_spaces
+            .drain_filter(|col| Self::aabb_1d(col.x, rect.x, col.width, rect.width));
+        // let mut tmp = Default::default();
+        // mem::swap(&mut tmp, &mut row.free_spaces);
+        // row.free_spaces = tmp
+        // .into_iter()
+        // .partition(|col| Self::aabb_1d(col.x, rect.x, col.width, rect.width))
+        // .1;
 
         if row.free_spaces.is_empty() {
             true

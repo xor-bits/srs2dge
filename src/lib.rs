@@ -1,5 +1,6 @@
 #![feature(generic_associated_types)]
 #![feature(type_alias_impl_trait)]
+#![feature(drain_filter)]
 // #![feature(generic_const_exprs)]
 
 //
