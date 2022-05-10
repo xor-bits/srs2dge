@@ -22,6 +22,13 @@ const DEFAULT_USAGE: u32 = TextureUsages::TEXTURE_BINDING.bits();
 
 //
 
+pub const fn has_render_attachment(usage: u32) -> bool {
+    TextureUsages::from_bits_truncate(usage).contains(TextureUsages::RENDER_ATTACHMENT)
+    // usage & TextureUsages::RENDER_ATTACHMENT.bits() != 0
+}
+
+//
+
 #[derive(Debug)]
 pub struct Texture<const USAGE: u32 = DEFAULT_USAGE> {
     texture: wgpu::Texture,
@@ -29,6 +36,16 @@ pub struct Texture<const USAGE: u32 = DEFAULT_USAGE> {
     view: TextureView,
     dim: Rect,
 }
+
+//
+
+pub type RenderTargetTexture = Texture<
+    {
+        TextureUsages::TEXTURE_BINDING.bits()
+            | TextureUsages::RENDER_ATTACHMENT.bits()
+            | TextureUsages::COPY_SRC.bits()
+    },
+>;
 
 //
 
@@ -63,8 +80,16 @@ impl<const USAGE: u32> Texture<USAGE> {
         )
     }
 
-    pub fn dim(&self) -> Rect {
+    pub fn new_format(target: &Target, dim: Rect, format: TextureFormat) -> Self {
+        Self::new_inner(target, format, dim, None)
+    }
+
+    pub fn get_dim(&self) -> Rect {
         self.dim
+    }
+
+    pub fn get_format(&self) -> TextureFormat {
+        self.format
     }
 
     pub fn write(

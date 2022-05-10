@@ -131,7 +131,7 @@ where
             entries: &[
                 BindGroupEntry {
                     binding: 0,
-                    resource: uniform.get_buffer().as_entire_binding(),
+                    resource: uniform.inner().as_entire_binding(),
                 },
                 BindGroupEntry {
                     binding: 1,

@@ -98,7 +98,7 @@ where
             layout: &self.layout,
             entries: &[BindGroupEntry {
                 binding: 0,
-                resource: bindings.get_buffer().as_entire_binding(),
+                resource: bindings.inner().as_entire_binding(),
             }],
         })
     }

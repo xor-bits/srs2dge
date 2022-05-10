@@ -43,7 +43,7 @@ impl Runnable for App {
 
         let mut frame = self.target.get_frame();
         frame.set_clear_color(c);
-        frame.main_render_pass();
+        frame.primary_render_pass();
         self.target.finish_frame(frame);
     }
 }

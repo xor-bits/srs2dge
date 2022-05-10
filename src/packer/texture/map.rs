@@ -126,7 +126,7 @@ where
             .unzip();
 
         let inner = builder.build(target, iter.into_iter());
-        let size = inner.dim();
+        let size = inner.get_dim();
         let map = map
             .into_iter()
             .map(|(key, rect)| (key, TexturePosition::new(size, rect)))

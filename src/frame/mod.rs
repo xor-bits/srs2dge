@@ -1,5 +1,9 @@
 use self::{compute_pass::ComputePass, render_pass::RenderPass};
-use crate::{label, target::surface::Surface};
+use crate::{
+    label,
+    target::surface::Surface,
+    texture::{has_render_attachment, Texture},
+};
 use glam::Vec4;
 use std::sync::Arc;
 use wgpu::{
@@ -80,7 +84,7 @@ impl Frame {
         self.clear_color = color;
     }
 
-    pub fn main_render_pass(&mut self) -> RenderPass<(), (), (), (), false> {
+    pub fn primary_render_pass(&mut self) -> RenderPass<(), (), (), (), false> {
         let pass = self
             .encoder
             .as_mut()
@@ -104,6 +108,42 @@ impl Frame {
             });
 
         RenderPass::new(pass, self.main_format)
+    }
+
+    pub fn secondary_render_pass<'a, const USAGE: u32>(
+        &'a mut self,
+        target: &'a Texture<USAGE>,
+    ) -> Option<RenderPass<'a, (), (), (), (), false>>
+// where // Rust can't do this yet
+//     If<{ has_render_attachment(USAGE) }>: True,
+    {
+        if !has_render_attachment(USAGE) {
+            return None;
+        }
+
+        let pass = self
+            .encoder
+            .as_mut()
+            .expect("Frame was dropped")
+            .begin_render_pass(&RenderPassDescriptor {
+                label: label!(),
+                color_attachments: &[RenderPassColorAttachment {
+                    view: target,
+                    resolve_target: None,
+                    ops: Operations {
+                        load: LoadOp::Clear(Color {
+                            r: self.clear_color.x as _,
+                            g: self.clear_color.y as _,
+                            b: self.clear_color.z as _,
+                            a: self.clear_color.w as _,
+                        }),
+                        store: true,
+                    },
+                }],
+                depth_stencil_attachment: None,
+            });
+
+        Some(RenderPass::new(pass, target.get_format()))
     }
 
     pub fn compute_pass(&mut self) -> ComputePass {

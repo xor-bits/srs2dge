@@ -118,7 +118,7 @@ impl Runnable for App {
         );
 
         frame
-            .main_render_pass()
+            .primary_render_pass()
             .bind_vbo(&self.text_vbo)
             .bind_ibo(&self.text_ibo)
             .bind_group(&self.sdf_shader.bind_group((&self.ubo, &self.glyphs)))

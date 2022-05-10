@@ -119,7 +119,7 @@ impl Runnable for App {
 
         let mut frame = self.target.get_frame();
         self.debug.prepare(&mut self.target, &mut frame, &self.ws);
-        self.debug.draw(frame.main_render_pass());
+        self.debug.draw(frame.primary_render_pass());
         self.target.finish_frame(frame);
     }
 }

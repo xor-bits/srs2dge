@@ -1,4 +1,5 @@
 use wgpu::Extent3d;
+use winit::dpi::PhysicalSize;
 
 //
 
@@ -70,6 +71,12 @@ impl From<Rect> for (usize, usize) {
     }
 }
 
+impl From<Rect> for PhysicalSize<u32> {
+    fn from(rect: Rect) -> Self {
+        Self::new(rect.width, rect.height)
+    }
+}
+
 impl From<(u32, u32)> for Rect {
     fn from((width, height): (u32, u32)) -> Self {
         Self { width, height }
@@ -82,6 +89,12 @@ impl From<(usize, usize)> for Rect {
             width: width as _,
             height: height as _,
         }
+    }
+}
+
+impl From<PhysicalSize<u32>> for Rect {
+    fn from(rect: PhysicalSize<u32>) -> Self {
+        Self::new(rect.width, rect.height)
     }
 }
 

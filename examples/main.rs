@@ -253,7 +253,7 @@ impl App {
         );
 
         frame
-            .main_render_pass()
+            .primary_render_pass()
             // quad draw
             .bind_ibo(&self.quad.ibo)
             .bind_vbo(&self.quad.vbo)

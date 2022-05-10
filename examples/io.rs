@@ -190,7 +190,7 @@ impl App {
         let (vbo, ibo) = self.batcher.generate(&mut self.target, &mut frame);
 
         frame
-            .main_render_pass()
+            .primary_render_pass()
             .bind_vbo(vbo)
             .bind_ibo(ibo)
             .bind_group(&self.shader.bind_group(&self.ubo))

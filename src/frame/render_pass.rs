@@ -29,7 +29,7 @@ impl<'e, Sv, Bv, Si, Bi, const PIPELINE_BOUND: bool>
         T: Vertex + 'static,
     {
         self.inner
-            .set_vertex_buffer(0, buffer.get_buffer().slice(..));
+            .set_vertex_buffer(0, buffer.inner().slice(..));
         self.pass()
     }
 
@@ -42,7 +42,7 @@ impl<'e, Sv, Bv, Si, Bi, const PIPELINE_BOUND: bool>
         T: Index + 'static,
     {
         self.inner
-            .set_index_buffer(buffer.get_buffer().slice(..), T::FORMAT);
+            .set_index_buffer(buffer.inner().slice(..), T::FORMAT);
         self.pass()
     }
 

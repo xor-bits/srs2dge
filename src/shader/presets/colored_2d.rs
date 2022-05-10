@@ -41,15 +41,48 @@ where
     I: Index,
 {
     pub fn new(target: &Target) -> Self {
-        let module = ShaderModule::new_wgsl_source(target, Cow::Borrowed(SHADER_SOURCE))
-            .unwrap_or_else(|err| panic!("{err}"));
+        let module = Self::built_in(target);
+        Self::new_custom(target, &module, "vs_main", &module, "fs_main")
+    }
 
+    pub fn new_custom_vert(
+        target: &Target,
+        module: &ShaderModule,
+        entry: &str,
+    ) -> Result<Self, String> {
+        target.catch_error(|target| {
+            Self::new_custom(target, module, entry, &Self::built_in(target), "fs_main")
+        })
+    }
+
+    pub fn new_custom_frag(
+        target: &Target,
+        module: &ShaderModule,
+        entry: &str,
+    ) -> Result<Self, String> {
+        target.catch_error(|target| {
+            Self::new_custom(target, &Self::built_in(target), "vs_main", module, entry)
+        })
+    }
+
+    pub fn built_in(target: &Target) -> ShaderModule {
+        ShaderModule::new_wgsl_source(target, Cow::Borrowed(SHADER_SOURCE))
+            .unwrap_or_else(|err| panic!("Built in shader compilation failed: {err}"))
+    }
+
+    pub fn new_custom(
+        target: &Target,
+        vert_module: &ShaderModule,
+        vert_entry: &str,
+        frag_module: &ShaderModule,
+        frag_entry: &str,
+    ) -> Self {
         let layout = Self::bind_group_layout(&target.device);
 
         Self {
             inner: Shader::builder()
-                .with_vertex(&module, "vs_main")
-                .with_fragment(&module, "fs_main")
+                .with_vertex(vert_module, vert_entry)
+                .with_fragment(frag_module, frag_entry)
                 .with_format(target.get_format())
                 .with_baked_layout(PipelineLayoutDescriptor {
                     label: label!(),
@@ -93,7 +126,7 @@ where
             layout: &self.layout,
             entries: &[BindGroupEntry {
                 binding: 0,
-                resource: bindings.get_buffer().as_entire_binding(),
+                resource: bindings.inner().as_entire_binding(),
             }],
         })
     }

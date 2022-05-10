@@ -34,17 +34,15 @@ impl Mesh<DefaultVertex> for QuadMesh {
     type IndexIter = IntoIter<u32, 5>;
 
     fn vertices(&self) -> Self::VertexIter {
-        let p = Vec4::new(
-            self.pos.x,
-            self.pos.y,
-            self.pos.x + self.size.x,
-            self.pos.y + self.size.y,
-        );
+        let radius = self.size * 0.5;
+        let top_left = self.pos - radius;
+        let bottom_right = self.pos + radius;
+        let p = Vec4::new(top_left.x, top_left.y, bottom_right.x, bottom_right.y);
         let c = Vec4::new(
             self.tex.top_left.x,
-            self.tex.top_left.y,
-            self.tex.bottom_right.x,
             self.tex.bottom_right.y,
+            self.tex.bottom_right.x,
+            self.tex.top_left.y,
         );
         IntoIterator::into_iter([
             DefaultVertex::new(p.xy(), self.col, c.xy()),
