@@ -9,7 +9,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - name: Deps
@@ -23,7 +23,12 @@ jobs:
       - uses: Swatinem/rust-cache@v1
       - uses: actions-rs/cargo@v1
         with:
-          command: check
+          command: install
+          args: nextest
+      - uses: actions-rs/cargo@v1
+        with:
+          command: nextest
+          args: run
 
   clippy:
     runs-on: ubuntu-latest
