@@ -40,7 +40,7 @@ impl<'s> CharPositionIter<'s> {
             px,
 
             x_origin: 0,
-            y_origin: px as i32,
+            y_origin: 0,
             last_c: None,
 
             sdf,
@@ -60,7 +60,7 @@ impl<'s> Iterator for CharPositionIter<'s> {
             match c {
                 '\n' => {
                     self.x_origin = 0;
-                    self.y_origin += (self.px * 1.4) as i32;
+                    self.y_origin -= (self.px * 1.4) as i32;
                     self.last_c = None;
                 }
                 '\t' => {
@@ -84,7 +84,7 @@ impl<'s> Iterator for CharPositionIter<'s> {
             index,
             format,
             x: self.x_origin + metrics.xmin,
-            y: self.y_origin - metrics.height as i32 - metrics.ymin,
+            y: self.y_origin + metrics.ymin,
             width: metrics.width as _,
             height: metrics.height as _,
         };

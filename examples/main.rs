@@ -141,7 +141,7 @@ impl App {
             font: fonts.roboto,
         });
 
-        let (vbo, ibo) = vbo::text(&target, &t, &mut glyphs, 18.0, 100.0, 100.0).unwrap();
+        let (vbo, ibo) = vbo::text(&target, &t, &mut glyphs, 18.0, 100.0, -50.0).unwrap();
         let (vbo, ibo) = (
             VertexBuffer::new_with(&target, &vbo),
             IndexBuffer::new_with(&target, &ibo),
@@ -152,8 +152,8 @@ impl App {
             Mat4::orthographic_rh(
                 0.0,
                 ws.size.width as _,
+                -(ws.size.height as f32),
                 0.0,
-                ws.size.height as _,
                 -100.0,
                 100.0,
             ),
@@ -204,15 +204,6 @@ impl App {
     fn draw(&mut self, delta: f32) {
         let mut frame = self.target.get_frame();
 
-        self.quad.ubo.upload(
-            &mut self.target,
-            &mut frame,
-            &[
-                Mat4::from_diagonal(Vec4::new(1.0, self.ws.aspect, 1.0, 1.0))
-                    * Mat4::from_rotation_z(self.quad.a + self.quad.speed * delta),
-            ],
-        );
-
         let (frametime, fps) = self.reporter.last_string();
         let t = format!("AVG frametime: {}\nAVG FPS: {}", frametime, fps)
             .default()
@@ -220,7 +211,7 @@ impl App {
             .color(0.0, 0.0, 0.0)
             .into();
         let (vertices, indices) =
-            vbo::text(&self.target, &t, &mut self.text.glyphs, 18.0, 500.0, 0.0).unwrap();
+            vbo::text(&self.target, &t, &mut self.text.glyphs, 18.0, 500.0, -50.0).unwrap();
         self.dyn_text.vbo.upload(
             &mut self.target,
             &mut frame,
@@ -245,7 +236,7 @@ impl App {
             &[Mat4::orthographic_rh(
                 0.0,
                 self.ws.size.width as _,
-                self.ws.size.height as _,
+                -(self.ws.size.height as f32),
                 0.0,
                 -100.0,
                 100.0,

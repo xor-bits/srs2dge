@@ -34,9 +34,11 @@ pub fn text(
                 .unwrap();
             let col = Vec4::new(c.format.color.x, c.format.color.y, c.format.color.z, 1.0);
 
+            // TODO: mesh anchoring
+            let size = Vec2::new(c.width as f32, c.height as f32);
             QuadMesh {
-                pos: Vec2::new(c.x as f32 + x, c.y as f32 + y),
-                size: Vec2::new(c.width as f32, c.height as f32),
+                pos: Vec2::new(c.x as f32 + x, c.y as f32 + y) + 0.5 * size,
+                size,
                 col,
                 tex,
             }

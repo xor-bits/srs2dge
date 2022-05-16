@@ -39,7 +39,7 @@ fn vs_main(vin: VertexInput) -> FragmentInput {
 fn fs_main(fin: FragmentInput) -> @location(0) vec4<f32> {
 	let aa = 0.01;
 	let val = textureSample(t_texture, s_texture, fin.uv).x;
-	
+
 	// border
 	let alpha = smoothstep(0.35 - aa, 0.35 + aa, val);
 
@@ -47,3 +47,4 @@ fn fs_main(fin: FragmentInput) -> @location(0) vec4<f32> {
 	let col = vec3<f32>(smoothstep(0.5 - aa, 0.5 + aa, val));
 	return fin.col * vec4<f32>(col, alpha);
 }
+

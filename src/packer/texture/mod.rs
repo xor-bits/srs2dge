@@ -115,7 +115,7 @@ impl TextureAtlasBuilder {
 
 impl TextureAtlas {
     pub async fn convert(&self, target: &Target) -> TextureAtlasFile {
-        let image = self.texture.read(target).await;
+        let image = self.texture.read(target).await.into_rgba8();
         TextureAtlasFile { image }
     }
 }

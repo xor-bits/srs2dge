@@ -49,7 +49,7 @@ impl App {
         let target = engine
             .new_target(Arc::new(
                 WindowBuilder::new()
-                    .with_inner_size(PhysicalSize::new(570, 210))
+                    .with_inner_size(PhysicalSize::new(560, 150))
                     .build(target)
                     .unwrap(),
             ))
@@ -57,7 +57,7 @@ impl App {
 
         let ws = WindowState::new(&target.get_window().unwrap());
 
-        let mut glyphs = Glyphs::new(&target, Rect::new(256, 256), None);
+        let mut glyphs = Glyphs::new(&target, Rect::new(128, 156), None);
 
         let (v, i) = text(
             &target,
@@ -72,6 +72,7 @@ impl App {
             50.0,
         )
         .unwrap();
+        let _ = glyphs.read(&target).await.save("target/text_glyphs.png");
         let vbo = VertexBuffer::new_with(&target, &v);
         let ibo = IndexBuffer::new_with(&target, &i);
         let ubo = UniformBuffer::new(&target, 1);
@@ -110,8 +111,8 @@ impl Runnable for App {
             &[Mat4::orthographic_rh(
                 0.0,
                 self.ws.size.width as _,
-                self.ws.size.height as _,
                 0.0,
+                self.ws.size.height as _,
                 -100.0,
                 100.0,
             )],

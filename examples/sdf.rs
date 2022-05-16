@@ -31,7 +31,7 @@ impl App {
         let target = engine
             .new_target(Arc::new(
                 WindowBuilder::new()
-                    .with_inner_size(PhysicalSize::new(570, 210))
+                    .with_inner_size(PhysicalSize::new(560, 350))
                     .build(target)
                     .unwrap(),
             ))
@@ -39,7 +39,7 @@ impl App {
 
         let ws = WindowState::new(&target.get_window().unwrap());
 
-        let mut glyphs = Glyphs::new(&target, Rect::new(256, 256), Some(64));
+        let mut glyphs = Glyphs::new(&target, Rect::new(128, 128), Some(48));
         let texture = Texture::new_grey_with(
             &target,
             &image::load_from_memory(include_bytes!("../res/texture/sprite.png"))
@@ -55,19 +55,20 @@ impl App {
                 "blue".default().color(0.0, 0.0, 1.0),
             ]),
             &mut glyphs,
-            200.0, // note this rendered size is a whole a lot bigger than the actual glyph resolution in the memory
+            80.0, // note this rendered size is a whole a lot bigger than the actual glyph resolution in the memory
             50.0,
             50.0,
         )
         .unwrap();
+        let _ = glyphs.read(&target).await.save("target/sdf_glyphs.png");
         let text_vbo = VertexBuffer::new_with(&target, &v);
         let text_ibo = IndexBuffer::new_with(&target, &i);
         let ubo = UniformBuffer::new(&target, 1);
         let sdf_shader = SdfShader::new(&target);
 
         let quad = QuadMesh {
-            pos: Vec2::new(300.0, 300.0),
-            size: Vec2::new(250.0, 250.0),
+            pos: Vec2::new(200.0, 200.0),
+            size: Vec2::new(150.0, 150.0),
             col: Vec4::new(1.0, 1.0, 1.0, 1.0),
             tex: TexturePosition::default(),
         };
@@ -110,8 +111,8 @@ impl Runnable for App {
             &[Mat4::orthographic_rh(
                 0.0,
                 self.ws.size.width as _,
-                self.ws.size.height as _,
                 0.0,
+                self.ws.size.height as _,
                 -100.0,
                 100.0,
             )],

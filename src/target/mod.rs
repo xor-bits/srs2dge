@@ -174,7 +174,10 @@ impl Target {
                 &DeviceDescriptor {
                     label: label!(),
                     features: Features::empty(),
-                    limits: Limits::downlevel_webgl2_defaults(),
+                    limits: Limits {
+                        max_texture_dimension_2d: 16384,
+                        ..Limits::downlevel_webgl2_defaults()
+                    },
                 },
                 None,
             )

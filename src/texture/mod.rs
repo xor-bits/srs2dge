@@ -138,8 +138,8 @@ impl<const USAGE: u32> Texture<USAGE> {
         Ok(())
     }
 
-    pub async fn read(&self, target: &Target) -> RgbaImage {
-        let dim = BufferDimensions::new(self.dim.width as _, self.dim.height as _);
+    pub async fn read(&self, target: &Target) -> DynamicImage {
+        let dim = BufferDimensions::new(self.dim.width as _, self.dim.height as _, self.format);
 
         // cache these buffers
         let read_buffer = target.device.create_buffer(&BufferDescriptor {
@@ -182,7 +182,20 @@ impl<const USAGE: u32> Texture<USAGE> {
             .copied()
             .collect();
 
-        RgbaImage::from_raw(dim.width as _, dim.height as _, bytes).unwrap()
+        match self.format {
+            TextureFormat::Rgba8Unorm
+            | TextureFormat::Rgba8UnormSrgb
+            | TextureFormat::Bgra8Unorm
+            | TextureFormat::Bgra8UnormSrgb => {
+                RgbaImage::from_raw(dim.width as _, dim.height as _, bytes)
+                    .unwrap()
+                    .into()
+            }
+            TextureFormat::R8Unorm => GrayImage::from_raw(dim.width as _, dim.height as _, bytes)
+                .unwrap()
+                .into(),
+            _ => unimplemented!(),
+        }
     }
 
     fn new_inner(target: &Target, format: TextureFormat, dim: Rect, data: Option<&[u8]>) -> Self {
@@ -230,8 +243,17 @@ struct BufferDimensions {
 }
 
 impl BufferDimensions {
-    fn new(width: usize, height: usize) -> Self {
-        let unpadded_bytes_per_row = width * mem::size_of::<u32>();
+    fn new(width: usize, height: usize, format: TextureFormat) -> Self {
+        let pixel_size = match format {
+            TextureFormat::Rgba8Unorm
+            | TextureFormat::Rgba8UnormSrgb
+            | TextureFormat::Bgra8Unorm
+            | TextureFormat::Bgra8UnormSrgb => mem::size_of::<f32>(),
+            TextureFormat::R8Unorm => mem::size_of::<u8>(),
+            _ => unimplemented!(),
+        };
+
+        let unpadded_bytes_per_row = width * pixel_size;
         let align = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT as usize;
         let padded_bytes_per_row_padding = (align - unpadded_bytes_per_row % align) % align;
         let padded_bytes_per_row = unpadded_bytes_per_row + padded_bytes_per_row_padding;

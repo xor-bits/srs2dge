@@ -16,7 +16,9 @@ type GlyphHash = usize;
 
 //
 
-const USAGE: u32 = TextureUsages::TEXTURE_BINDING.bits() | TextureUsages::COPY_DST.bits();
+const USAGE: u32 = TextureUsages::TEXTURE_BINDING.bits()
+    | TextureUsages::COPY_DST.bits()
+    | TextureUsages::COPY_SRC.bits();
 
 //
 

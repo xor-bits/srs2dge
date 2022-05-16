@@ -78,8 +78,8 @@ impl Runnable for App {
             &[Mat4::orthographic_lh(
                 -2.0 * self.ws.aspect,
                 2.0 * self.ws.aspect,
-                2.0,
                 -2.0,
+                2.0,
                 -100.0,
                 100.0,
             )],
