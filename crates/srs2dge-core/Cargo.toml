@@ -1,0 +1,47 @@
+[package]
+name = "srs2dge-core"
+version = "0.2.0"
+edition = "2021"
+description = "Simple Rust 2D Game Engine"
+license = "MIT"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = []
+glsl = ["wgpu/glsl", "naga/glsl-in"]
+spirv = ["wgpu/spirv", "naga/spv-in"]
+fontloader = ["font-loader"]
+
+[dependencies]
+# logging
+colorful = "0.2"
+log = "0.4"
+# graphics
+glam = { version = "0.20", features = ["serde", "bytemuck"] }
+main_game_loop = "0.3"
+naga = { git = "https://github.com/gfx-rs/naga", rev = "1aa91549", features = [
+	"wgsl-in",
+	"validate",
+] }
+wgpu = { git = "https://github.com/gfx-rs/wgpu", rev = "af259aa1", features = [
+	"webgl",
+] }
+winit = "0.26"
+# resources
+font-loader = { version = "0.11", optional = true }
+fontsdf = "0.4"
+image = "0.24"
+# data
+serde = { version = "1.0", features = ["derive"] }
+rapid-qoi = "0.6"
+integer-sqrt = "0.1"
+bytemuck = { version = "1.9", features = ["derive"] }
+specs = "0.17"
+
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+web-sys = "0.3"
+
+[dev-dependencies]
+rand = "0.8"

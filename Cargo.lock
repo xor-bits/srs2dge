@@ -42,6 +42,12 @@ checksum = "08f9b8508dccb7687a1d6c4ce66b2b0ecef467c94667de27d8d7fe1f8d2a9cdc"
 
 [[package]]
 name = "arrayvec"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23b62fc65de8e4e7f52534fb52b0f3ed04746ae267519eef2a83941e8085068b"
+
+[[package]]
+name = "arrayvec"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8da52d66c7071e2e3fa2a1e5c6d088fec47b593032b254f5e980de8ea54454d6"
@@ -54,6 +60,12 @@ checksum = "006ca68e0f2b03f22d6fa9f2860f85aed430d257fec20f8879b2145e7c7ae1a6"
 dependencies = [
  "libloading",
 ]
+
+[[package]]
+name = "atom"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9ff149ed9780025acfdb36862d35b28856bb693ceb451259a7164442f22fdc3"
 
 [[package]]
 name = "atty"
@@ -427,6 +439,16 @@ dependencies = [
  "lazy_static",
  "memoffset",
  "scopeguard",
+]
+
+[[package]]
+name = "crossbeam-queue"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f25d8400f4a7a5778f0e4e52384a48cbd9b5c495d110786187fc750075277a2"
+dependencies = [
+ "cfg-if 1.0.0",
+ "crossbeam-utils",
 ]
 
 [[package]]
@@ -861,6 +883,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dfa686283ad6dd069f105e5ab091b04c62850d3e4cf5d67debad1933f55023df"
 
 [[package]]
+name = "hibitset"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93a1bb8316a44459a7d14253c4d28dd7395cbd23cc04a68c46e851b8e46d64b1"
+dependencies = [
+ "atom",
+ "rayon",
+]
+
+[[package]]
 name = "humantime"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1165,6 +1197,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "mopa"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a785740271256c230f57462d3b83e52f998433a7062fc18f96d5999474a9f915"
+
+[[package]]
 name = "naga"
 version = "0.8.0"
 source = "git+https://github.com/gfx-rs/naga?rev=1aa91549#1aa9154964238af8c692cf521ff90e1f2395e147"
@@ -1271,6 +1309,16 @@ dependencies = [
  "cfg-if 1.0.0",
  "libc",
  "memoffset",
+]
+
+[[package]]
+name = "nom"
+version = "5.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ffb4262d26ed83a1c0a33a38fe2bb15797329c85770da05e6b828ddb782627af"
+dependencies = [
+ "memchr",
+ "version_check",
 ]
 
 [[package]]
@@ -1798,6 +1846,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae1a47186c03a32177042e55dbc5fd5aee900b8e0069a8d70fba96a9375cd012"
 
 [[package]]
+name = "shred"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eb0210289d693217926314867c807e0b7b42f7e23c136adb31f8697f5bf242d3"
+dependencies = [
+ "arrayvec 0.5.2",
+ "hashbrown",
+ "mopa",
+ "rayon",
+ "smallvec",
+ "tynm",
+]
+
+[[package]]
+name = "shrev"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b5752e017e03af9d735b4b069f53b7a7fd90fefafa04d8bd0c25581b0bff437f"
+
+[[package]]
 name = "slotmap"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1832,6 +1900,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "specs"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5dcc1e4ba7ab1f08ecb3d7e2f693defc3907e2c03bb0924f9978be45b364f83f"
+dependencies = [
+ "crossbeam-queue",
+ "hashbrown",
+ "hibitset",
+ "log",
+ "rayon",
+ "shred",
+ "shrev",
+ "tuple_utils",
+]
+
+[[package]]
 name = "spin"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1855,25 +1939,75 @@ name = "srs2dge"
 version = "0.2.0"
 dependencies = [
  "anyhow",
+ "instant",
+ "pollster",
+ "rand",
+ "srs2dge-link-dynamic",
+ "srs2dge-link-static",
+ "static_res",
+]
+
+[[package]]
+name = "srs2dge-core"
+version = "0.2.0"
+dependencies = [
  "bytemuck",
  "colorful",
  "font-loader",
  "fontsdf",
  "glam",
  "image",
- "instant",
  "integer-sqrt",
  "log",
  "main_game_loop",
  "naga",
- "pollster",
  "rand",
  "rapid-qoi",
  "serde",
- "static_res",
+ "specs",
  "web-sys",
  "wgpu",
  "winit",
+]
+
+[[package]]
+name = "srs2dge-gizmos"
+version = "0.2.0"
+dependencies = [
+ "srs2dge-core",
+ "srs2dge-presets",
+]
+
+[[package]]
+name = "srs2dge-link-dynamic"
+version = "0.2.0"
+dependencies = [
+ "srs2dge-link-static",
+]
+
+[[package]]
+name = "srs2dge-link-static"
+version = "0.2.0"
+dependencies = [
+ "srs2dge-core",
+ "srs2dge-gizmos",
+ "srs2dge-presets",
+ "srs2dge-res",
+]
+
+[[package]]
+name = "srs2dge-presets"
+version = "0.2.0"
+dependencies = [
+ "srs2dge-core",
+ "srs2dge-res",
+]
+
+[[package]]
+name = "srs2dge-res"
+version = "0.2.0"
+dependencies = [
+ "srs2dge-core",
 ]
 
 [[package]]
@@ -2028,6 +2162,21 @@ name = "ttf-parser"
 version = "0.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c74c96594835e10fa545e2a51e8709f30b173a092bfd6036ef2cec53376244f3"
+
+[[package]]
+name = "tuple_utils"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44834418e2c5b16f47bedf35c28e148db099187dd5feee6367fb2525863af4f1"
+
+[[package]]
+name = "tynm"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a4df2caa2dc9c3d1f7641ba981f4cd40ab229775aa7aeb834c9ab2850d50623d"
+dependencies = [
+ "nom 5.1.2",
+]
 
 [[package]]
 name = "unicode-width"
@@ -2242,7 +2391,7 @@ name = "wgpu"
 version = "0.12.0"
 source = "git+https://github.com/gfx-rs/wgpu?rev=af259aa1#af259aa12a6df033f8e23460215af5f1b64cf3a1"
 dependencies = [
- "arrayvec",
+ "arrayvec 0.7.2",
  "js-sys",
  "log",
  "naga",
@@ -2262,7 +2411,7 @@ name = "wgpu-core"
 version = "0.12.0"
 source = "git+https://github.com/gfx-rs/wgpu?rev=af259aa1#af259aa12a6df033f8e23460215af5f1b64cf3a1"
 dependencies = [
- "arrayvec",
+ "arrayvec 0.7.2",
  "bitflags",
  "cfg_aliases",
  "codespan-reporting",
@@ -2284,7 +2433,7 @@ name = "wgpu-hal"
 version = "0.12.0"
 source = "git+https://github.com/gfx-rs/wgpu?rev=af259aa1#af259aa12a6df033f8e23460215af5f1b64cf3a1"
 dependencies = [
- "arrayvec",
+ "arrayvec 0.7.2",
  "ash",
  "bit-set",
  "bitflags",
@@ -2448,7 +2597,7 @@ version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "463705a63313cd4301184381c5e8042f0a7e9b4bb63653f216311d4ae74690b7"
 dependencies = [
- "nom",
+ "nom 7.1.1",
 ]
 
 [[package]]

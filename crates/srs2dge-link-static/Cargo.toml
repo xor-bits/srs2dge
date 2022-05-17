@@ -1,0 +1,21 @@
+[package]
+name = "srs2dge-link-static"
+version = "0.2.0"
+edition = "2021"
+description = "Simple Rust 2D Game Engine"
+license = "MIT"
+
+[features]
+default = []
+presets = ["srs2dge-presets"]
+gizmos = ["srs2dge-gizmos"]
+res = ["srs2dge-res"]
+glsl = ["srs2dge-core/glsl"]
+spirv = ["srs2dge-core/spirv"]
+fontloader = ["srs2dge-core/fontloader"]
+
+[dependencies]
+srs2dge-core = { path = "../srs2dge-core", version = "0.2" }
+srs2dge-presets = { path = "../srs2dge-presets", version = "0.2", optional = true }
+srs2dge-gizmos = { path = "../srs2dge-gizmos", version = "0.2", optional = true }
+srs2dge-res = { path = "../srs2dge-res", version = "0.2", optional = true }

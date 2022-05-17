@@ -1,0 +1,10 @@
+[package]
+name = "srs2dge-presets"
+version = "0.2.0"
+edition = "2021"
+description = "Simple Rust 2D Game Engine"
+license = "MIT"
+
+[dependencies]
+srs2dge-core = { path = "../srs2dge-core", version = "0.2" }
+srs2dge-res = { path = "../srs2dge-res", version = "0.2" }

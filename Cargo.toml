@@ -5,42 +5,16 @@ edition = "2021"
 description = "Simple Rust 2D Game Engine"
 license = "MIT"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[lib]
-crate-type = ["cdylib", "rlib"]
-
 [features]
-default = []
-glsl = ["wgpu/glsl", "naga/glsl-in"]
-spirv = ["wgpu/spirv", "naga/spv-in"]
-fontloader = ["font-loader"]
+default = ["presets", "gizmos", "res"]
+dynamic = ["srs2dge-link-dynamic"]
+presets = ["srs2dge-link-static/presets"]
+gizmos = ["srs2dge-link-static/gizmos"]
+res = ["srs2dge-link-static/res"]
 
 [dependencies]
-# logging
-log = "0.4"
-colorful = "0.2"
-# graphics
-wgpu = { git = "https://github.com/gfx-rs/wgpu", rev = "af259aa1", features = [
-	"webgl",
-] }
-naga = { git = "https://github.com/gfx-rs/naga", rev = "1aa91549", features = [
-	"wgsl-in",
-	"validate",
-] }
-winit = "0.26"
-glam = { version = "0.20", features = ["serde", "bytemuck"] }
-main_game_loop = "0.3"
-# resources
-image = "0.24"
-fontsdf = "0.4.0"
-font-loader = { version = "0.11", optional = true }
-# data
-serde = { version = "1.0", features = ["derive"] }
-rapid-qoi = "0.6"
-integer-sqrt = "0.1"
-bytemuck = { version = "1.9", features = ["derive"] }
-
+srs2dge-link-static = { path = "crates/srs2dge-link-static", version = "0.2" }
+srs2dge-link-dynamic = { path = "crates/srs2dge-link-dynamic", version = "0.2", optional = true }
 
 [dev-dependencies]
 rand = "0.8"
@@ -50,6 +24,5 @@ pollster = "0.2"
 instant = "0.1"
 # rapier2d = "0.11"
 
-
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-web-sys = "0.3"
+[workspace]
+members = ["crates/*"]

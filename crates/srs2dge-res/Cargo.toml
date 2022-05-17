@@ -1,0 +1,9 @@
+[package]
+name = "srs2dge-res"
+version = "0.2.0"
+edition = "2021"
+description = "srs2dge static resources"
+license = "MIT"
+
+[dependencies]
+srs2dge-core = { path = "../srs2dge-core", version = "0.2" }
