@@ -22,3 +22,4 @@ instant = "0.1"
 
 [workspace]
 members = ["crates/*"]
+resolver = "2"

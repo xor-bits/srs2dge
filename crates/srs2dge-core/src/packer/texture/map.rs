@@ -147,8 +147,8 @@ where
         TextureAtlasMapFile { inner, map }
     }
 
-    pub fn get(&self, key: &K) -> Option<&TexturePosition> {
-        self.map.get(key)
+    pub fn get(&self, key: &K) -> Option<TexturePosition> {
+        self.map.get(key).copied()
     }
 }
 

@@ -11,6 +11,7 @@ pub mod shader {
 }
 
 pub mod texture {
+    pub const EMPTY: &[u8] = include_bytes!("../res/texture/empty.png");
     pub const RUST: &[u8] = include_bytes!("../res/texture/rust.png");
     pub const SDF: &[u8] = include_bytes!("../res/texture/sdf.png");
     pub const SPRITE: &[u8] = include_bytes!("../res/texture/sprite.png");
