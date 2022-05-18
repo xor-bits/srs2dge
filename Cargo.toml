@@ -17,10 +17,6 @@ srs2dge-link-static = { path = "crates/srs2dge-link-static", version = "0.2" }
 srs2dge-link-dynamic = { path = "crates/srs2dge-link-dynamic", version = "0.2", optional = true }
 
 [dev-dependencies]
-rand = "0.8"
-static_res = "0.1"
-anyhow = "1.0"
-pollster = "0.2"
 instant = "0.1"
 # rapier2d = "0.11"
 

@@ -3,7 +3,7 @@ use self::{
     catcher::Catcher,
     surface::{ISurface, Surface},
 };
-use crate::{label, Frame};
+use crate::{label, DeviceStorage, Frame};
 use colorful::Colorful;
 use std::sync::Arc;
 use wgpu::{
@@ -39,18 +39,17 @@ pub struct Target {
 //
 
 impl Target {
-    pub async fn new(instance: Arc<Instance>, window: Arc<Window>) -> Self {
+    pub async fn new(
+        instance: Arc<Instance>,
+        window: Arc<Window>,
+        device_storage: DeviceStorage,
+    ) -> Self {
         // create a surface that is compatible with both the window and the instance
         let surface = ISurface::new(window, instance.clone());
 
-        // get a GPU
-        let adapter = Self::make_adapter(Some(&surface), &instance).await;
-
-        // print out some info about the selected GPU
-        Self::debug_report(&adapter);
-
-        // create a logical device and a queue for it
-        let (device, queue) = Self::make_device(&adapter).await;
+        // create a device and a queue for it
+        let (adapter, device, queue) =
+            Self::new_with_opt(instance, Some(&surface), device_storage).await;
 
         // complete the surface (ready for rendering)
         let surface = Some(surface.complete(&adapter, device.clone()));
@@ -75,15 +74,8 @@ impl Target {
         }
     }
 
-    pub async fn new_headless(instance: Arc<Instance>) -> Self {
-        // get a GPU
-        let adapter = Self::make_adapter(None, &instance).await;
-
-        // print out some info about the selected GPU
-        Self::debug_report(&adapter);
-
-        // create a logical device and a queue for it
-        let (device, queue) = Self::make_device(&adapter).await;
+    pub async fn new_headless(instance: Arc<Instance>, device_storage: DeviceStorage) -> Self {
+        let (_, device, queue) = Self::new_with_opt(instance, None, device_storage).await;
 
         // create a belt for fast data uploading
         let belt = Belt::new(device.clone());
@@ -103,6 +95,42 @@ impl Target {
             active: false,
             init: true,
         }
+    }
+
+    async fn new_with_opt(
+        instance: Arc<Instance>,
+        surface: Option<&wgpu::Surface>,
+        device_storage: DeviceStorage,
+    ) -> (Arc<Adapter>, Arc<Device>, Arc<Queue>) {
+        // 'borrow' a device and a queue if this surface is compatible with any previous ones
+        // or create new if there were none
+        if let Some(pre_existing) = Self::try_borrow_device(surface, device_storage.clone()) {
+            // borrow
+            pre_existing
+        } else {
+            // create
+            // get a GPU
+            let adapter = Self::make_adapter(surface, &instance).await;
+
+            // print out some info about the selected GPU
+            Self::debug_report(&adapter);
+
+            // create a logical device and a queue for it
+            let (device, queue) = Self::make_device(&adapter).await;
+
+            // push to the device storage
+            if let Ok(mut write) = device_storage.write() {
+                write.push((adapter.clone(), device.clone(), queue.clone()));
+            }
+
+            (adapter, device, queue)
+        }
+    }
+
+    /// check if objects created with `self` target
+    /// can be used with the `other` target
+    pub fn compatible_with(&self, other: &Target) -> bool {
+        Arc::ptr_eq(&self.device, &other.device) && Arc::ptr_eq(&self.queue, &other.queue)
     }
 
     #[must_use]
@@ -128,6 +156,16 @@ impl Target {
         self.belt.set(frame.finish())
     }
 
+    pub fn set_vsync(&mut self, on: bool) {
+        if let Some(s) = self.surface.as_mut() {
+            s.set_vsync(on);
+        }
+    }
+
+    pub fn get_vsync(&self) -> Option<bool> {
+        self.surface.as_ref().map(|s| s.get_vsync())
+    }
+
     pub fn get_window(&self) -> Option<Arc<Window>> {
         self.surface.as_ref().map(|surface| surface.get_window())
     }
@@ -145,6 +183,24 @@ impl Target {
 
     pub fn catch_error<T, F: FnOnce(&Self) -> T>(&self, f: F) -> Result<T, String> {
         Catcher::catch_error(self, f)
+    }
+
+    fn try_borrow_device(
+        compatible_surface: Option<&wgpu::Surface>,
+        device_storage: DeviceStorage,
+    ) -> Option<(Arc<Adapter>, Arc<Device>, Arc<Queue>)> {
+        device_storage
+            .read()
+            .ok()?
+            .iter()
+            .find(|(adapter, _, _)| {
+                if let Some(surface) = compatible_surface {
+                    adapter.is_surface_supported(surface)
+                } else {
+                    true
+                }
+            })
+            .cloned()
     }
 
     async fn make_adapter(

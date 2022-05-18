@@ -6,9 +6,9 @@
 //
 
 use main_game_loop::event::EventLoopTarget;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 use target::Target;
-use wgpu::{util::backend_bits_from_env, Backends, Instance};
+use wgpu::{util::backend_bits_from_env, Adapter, Backends, Device, Instance, Queue};
 use winit::{
     error::OsError,
     window::{Window, WindowBuilder},
@@ -51,8 +51,12 @@ pub mod world;
 
 //
 
+pub type DeviceStorage = Arc<RwLock<Vec<(Arc<Adapter>, Arc<Device>, Arc<Queue>)>>>;
+
 pub struct Engine {
     instance: Arc<Instance>,
+
+    device_storage: DeviceStorage,
 }
 
 //
@@ -67,6 +71,8 @@ impl Default for Engine {
     fn default() -> Self {
         Self {
             instance: Self::make_instance(),
+
+            device_storage: Default::default(),
         }
     }
 }
@@ -90,7 +96,7 @@ impl Engine {
                 .unwrap();
         }
 
-        Target::new(self.instance.clone(), window).await
+        Target::new(self.instance.clone(), window, self.device_storage.clone()).await
     }
 
     pub async fn new_target_element_id(&self, window: Arc<Window>, canvas_div_id: &str) -> Target {
@@ -108,7 +114,7 @@ impl Engine {
                 .unwrap();
         }
 
-        Target::new(self.instance.clone(), window).await
+        Target::new(self.instance.clone(), window, self.device_storage.clone()).await
     }
 
     pub async fn new_target_default(&self, target: &EventLoopTarget) -> Result<Target, OsError> {
@@ -123,7 +129,7 @@ impl Engine {
     }
 
     pub async fn new_target_headless(&self) -> Target {
-        Target::new_headless(self.instance.clone()).await
+        Target::new_headless(self.instance.clone(), self.device_storage.clone()).await
     }
 
     fn make_instance() -> Arc<Instance> {

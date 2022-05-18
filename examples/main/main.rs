@@ -1,14 +1,14 @@
 use std::sync::Arc;
 use winit::{event_loop::ControlFlow, window::WindowBuilder};
 
-use srs2dge::prelude::*;
+use srs2dge::{prelude::*, winit::event::VirtualKeyCode};
 
 //
 
 struct App {
     target: Target,
     ws: WindowState,
-    is: InputState,
+    is: KeyboardState,
 
     update_loop: Option<UpdateLoop>,
     reporter: Reporter,
@@ -69,7 +69,7 @@ impl App {
         let update_loop = UpdateLoop::new(update_rate);
 
         let ws = WindowState::new(&window);
-        let is = InputState::new();
+        let is = KeyboardState::new();
 
         let texture_shader = Texture2DShader::new(&target);
         let text_shader = TextShader::new(&target);
@@ -195,9 +195,15 @@ impl App {
     }
 
     fn update(&mut self) {
-        self.quad.speed -= self.is.get_axis(InputAxis::Look, 0).x
-            * UpdateRate::PerSecond(60).to_interval().as_secs_f32()
-            / 2.0;
+        let mut delta = 0.0;
+        if self.is.pressed(VirtualKeyCode::Left) {
+            delta -= 1.0;
+        }
+        if self.is.pressed(VirtualKeyCode::Right) {
+            delta += 1.0;
+        }
+
+        self.quad.speed -= delta * UpdateRate::PerSecond(60).to_interval().as_secs_f32() / 2.0;
         self.quad.a += self.quad.speed;
     }
 }

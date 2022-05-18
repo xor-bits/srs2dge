@@ -20,6 +20,7 @@ pub struct Surface {
     device: Arc<Device>,
     surface: ISurface,
     format: TextureFormat,
+    present_mode: PresentMode,
 
     width: u32,
     height: u32,
@@ -58,6 +59,7 @@ impl ISurface {
             device,
             surface,
             format,
+            present_mode: PresentMode::Mailbox,
 
             width: 0, // properly configured in just a bit
             height: 0,
@@ -72,6 +74,28 @@ impl ISurface {
 }
 
 impl Surface {
+    pub fn set_vsync(&mut self, on: bool) {
+        let new = if on {
+            PresentMode::Mailbox // fallbacks to Fifo if not available
+        } else {
+            PresentMode::Immediate
+        };
+        let updated = self.present_mode != new;
+        self.present_mode = new;
+
+        if updated {
+            self.configure();
+        }
+    }
+
+    pub fn get_vsync(&self) -> bool {
+        match self.present_mode {
+            PresentMode::Immediate => false,
+            PresentMode::Mailbox => true,
+            PresentMode::Fifo => true,
+        }
+    }
+
     pub fn configure(&mut self) {
         let window = self.surface.window.as_ref();
         let size = window.inner_size();
@@ -87,7 +111,7 @@ impl Surface {
                 format,
                 width,
                 height,
-                present_mode: PresentMode::Mailbox,
+                present_mode: self.present_mode,
             },
         );
     }
