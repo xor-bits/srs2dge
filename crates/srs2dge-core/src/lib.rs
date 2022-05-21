@@ -34,7 +34,6 @@ pub use image;
 
 pub use bytemuck;
 pub use serde;
-pub use specs;
 
 //
 

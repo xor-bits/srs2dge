@@ -1050,9 +1050,9 @@ dependencies = [
 
 [[package]]
 name = "main_game_loop"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "853ae38c7ef2332ef4741c37a3e82f2efb52ff40ae0800154e293e8ccaac6086"
+checksum = "525fb90e2390e9a6ee6e437bb870dd3b1c3f0c1c238b4ca9b4f7ce358e8725ca"
 dependencies = [
  "console_error_panic_hook",
  "console_log",
@@ -1368,9 +1368,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.10.0"
+version = "1.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87f3e037eac156d1775da914196f0f37741a274155e34a0b7e427c35d2a2ecb9"
+checksum = "7b10983b38c53aebdf33f542c6275b0f58a238129d00c4ae0e6fb59738d783ca"
 
 [[package]]
 name = "ordered-float"
@@ -1627,9 +1627,9 @@ dependencies = [
 
 [[package]]
 name = "regex"
-version = "1.5.5"
+version = "1.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a11647b6b25ff05a515cb92c365cec08801e83423a235b51e231e1808747286"
+checksum = "d83f127d94bdbcda4c8cc2e50f6f84f4b611f69c902699ca385a39c3a75f9ff1"
 dependencies = [
  "aho-corasick",
  "memchr",
@@ -1638,9 +1638,9 @@ dependencies = [
 
 [[package]]
 name = "regex-syntax"
-version = "0.6.25"
+version = "0.6.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
+checksum = "49b3de9ec5dc0a3417da371aab17d729997c15010e7fd24ff707773a33bddb64"
 
 [[package]]
 name = "renderdoc-sys"
@@ -1790,8 +1790,20 @@ dependencies = [
  "hashbrown",
  "mopa",
  "rayon",
+ "shred-derive",
  "smallvec",
  "tynm",
+]
+
+[[package]]
+name = "shred-derive"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d5404c36bd155e41a54276ab6aafedad2fb627e5e5849d36ec439c9ddc044a2f"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1847,7 +1859,19 @@ dependencies = [
  "rayon",
  "shred",
  "shrev",
+ "specs-derive",
  "tuple_utils",
+]
+
+[[package]]
+name = "specs-derive"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e23e09360f3d2190fec4222cd9e19d3158d5da948c0d1ea362df617dd103511"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1874,6 +1898,8 @@ name = "srs2dge"
 version = "0.2.0"
 dependencies = [
  "instant",
+ "rand",
+ "specs",
  "srs2dge-link-dynamic",
  "srs2dge-link-static",
 ]
@@ -1895,10 +1921,17 @@ dependencies = [
  "rand",
  "rapid-qoi",
  "serde",
- "specs",
  "web-sys",
  "wgpu",
  "winit",
+]
+
+[[package]]
+name = "srs2dge-ecs"
+version = "0.2.0"
+dependencies = [
+ "specs",
+ "srs2dge-core",
 ]
 
 [[package]]

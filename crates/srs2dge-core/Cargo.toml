@@ -37,7 +37,6 @@ serde = { version = "1.0", features = ["derive"] }
 rapid-qoi = "0.6"
 integer-sqrt = "0.1"
 bytemuck = { version = "1.9", features = ["derive"] }
-specs = "0.17"
 
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

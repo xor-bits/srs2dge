@@ -5,6 +5,8 @@ edition = "2021"
 description = "Simple Rust 2D Game Engine"
 license = "MIT"
 
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
 [features]
 default = ["presets", "gizmos", "res"]
 dynamic = ["srs2dge-link-dynamic"]
@@ -12,13 +14,18 @@ presets = ["srs2dge-link-static/presets"]
 gizmos = ["srs2dge-link-static/gizmos"]
 res = ["srs2dge-link-static/res"]
 
+
 [dependencies]
 srs2dge-link-static = { path = "crates/srs2dge-link-static", version = "0.2" }
 srs2dge-link-dynamic = { path = "crates/srs2dge-link-dynamic", version = "0.2", optional = true }
 
+
 [dev-dependencies]
 instant = "0.1"
+specs = { version = "0.17", features = ["derive"] }
+rand = "0.8"
 # rapier2d = "0.11"
+
 
 [workspace]
 members = ["crates/*"]
