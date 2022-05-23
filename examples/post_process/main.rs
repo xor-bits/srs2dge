@@ -54,13 +54,13 @@ impl App {
         let quad_a = QuadMesh {
             pos: Vec2::new(-0.5, -0.5), // bottom left
             size: Vec2::new(1.0, 1.0),
-            col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+            col: Color::WHITE,
             tex: TexturePosition::default(),
         };
         let quad_b = QuadMesh {
             pos: Vec2::new(0.0, 0.0),
             size: Vec2::new(2.0, 2.0),
-            col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+            col: Color::WHITE,
             tex: TexturePosition::default(),
         };
         let vbo = VertexBuffer::new_with(

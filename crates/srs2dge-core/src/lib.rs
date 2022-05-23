@@ -1,6 +1,7 @@
 #![feature(generic_associated_types)]
 #![feature(type_alias_impl_trait)]
 #![feature(drain_filter)]
+#![feature(const_fn_floating_point_arithmetic)]
 // #![feature(generic_const_exprs)]
 
 //
@@ -39,6 +40,7 @@ pub use serde;
 
 pub mod batch;
 pub mod buffer;
+pub mod color;
 pub mod frame;
 pub mod packer;
 pub mod prelude;
@@ -46,23 +48,18 @@ pub mod shader;
 pub mod target;
 pub mod text;
 pub mod texture;
-pub mod world;
 
 //
 
 pub type DeviceStorage = Arc<RwLock<Vec<(Arc<Adapter>, Arc<Device>, Arc<Queue>)>>>;
+
+//
 
 pub struct Engine {
     instance: Arc<Instance>,
 
     device_storage: DeviceStorage,
 }
-
-//
-
-pub struct If<const B: bool>;
-pub trait True {}
-impl True for If<true> {}
 
 //
 

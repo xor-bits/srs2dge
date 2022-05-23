@@ -1,5 +1,6 @@
 use srs2dge_core::{
-    glam::{Mat4, Vec2, Vec4},
+    color::Color,
+    glam::{Mat4, Vec2},
     prelude::{DefaultVertex, IndexBuffer, Layout, Mesh, RenderPass, UniformBuffer, VertexBuffer},
     target::Target,
     wgpu::{BindGroup, PrimitiveTopology},
@@ -17,13 +18,13 @@ const RES: u32 = 50;
 pub struct GizmosCircle {
     pub middle: Vec2,
     pub radius: f32,
-    pub col: Vec4,
+    pub col: Color,
 }
 
 //
 
 impl GizmosCircle {
-    pub fn new(middle: Vec2, radius: f32, col: Vec4) -> Self {
+    pub fn new(middle: Vec2, radius: f32, col: Color) -> Self {
         Self {
             middle,
             radius,

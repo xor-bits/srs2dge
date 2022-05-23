@@ -61,27 +61,24 @@ impl Runnable for App {
                 Vec2::new(-0.9, -0.9),
                 &self.ws,
                 "Do not draw text like this",
-                Vec4::X + Vec4::W,
+                Color::RED,
             ))
             .unwrap();
 
         // lines
-        self.debug
-            .add_line(GizmosLine::new(a, b, Vec4::X + Vec4::W));
-        self.debug
-            .add_line(GizmosLine::new(b, c, Vec4::Y + Vec4::W));
-        self.debug
-            .add_line(GizmosLine::new(c, d, Vec4::Z + Vec4::W));
+        self.debug.add_line(GizmosLine::new(a, b, Color::RED));
+        self.debug.add_line(GizmosLine::new(b, c, Color::GREEN));
+        self.debug.add_line(GizmosLine::new(c, d, Color::BLUE));
 
         // rings
         self.debug
-            .add_circle(GizmosCircle::new(Vec2::ZERO, r_a, Vec4::ONE));
+            .add_circle(GizmosCircle::new(Vec2::ZERO, r_a, Color::WHITE));
         self.debug
-            .add_circle(GizmosCircle::new(Vec2::ZERO, r_b, Vec4::ONE));
+            .add_circle(GizmosCircle::new(Vec2::ZERO, r_b, Color::WHITE));
         self.debug
-            .add_circle(GizmosCircle::new(Vec2::ZERO, r_c, Vec4::ONE));
+            .add_circle(GizmosCircle::new(Vec2::ZERO, r_c, Color::WHITE));
         self.debug
-            .add_circle(GizmosCircle::new(Vec2::ZERO, r_d, Vec4::ONE));
+            .add_circle(GizmosCircle::new(Vec2::ZERO, r_d, Color::WHITE));
 
         // cursor follower
         (|| {
@@ -99,15 +96,12 @@ impl Runnable for App {
                     .screen_to_world(&self.ws, PhysicalPosition::new(0, 0))?
                     .x;
 
-            self.debug.add_circle(GizmosCircle::new(
-                middle,
-                radius,
-                Vec4::new(1.0, 0.4, 0.0, 1.0),
-            ));
+            self.debug
+                .add_circle(GizmosCircle::new(middle, radius, Color::ORANGE));
             self.debug.add_box(GizmosBox::new(
                 middle,
-                Vec2::new(radius * 1.5, radius * 1.5),
-                Vec4::new(1.0, 0.0, 0.4, 1.0),
+                Vec2::ONE * radius * 1.5,
+                Color::ROSE,
             ));
             Some(())
         })();

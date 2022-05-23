@@ -1,6 +1,8 @@
 use bytemuck::{Pod, Zeroable};
-use glam::{Vec2, Vec4};
+use glam::Vec2;
 use wgpu::{VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode};
+
+use crate::color::Color;
 
 //
 
@@ -9,7 +11,7 @@ use wgpu::{VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode};
 pub struct DefaultVertex {
     pos: Vec2,
     uv: Vec2,
-    col: Vec4,
+    col: Color,
 }
 
 //
@@ -21,7 +23,7 @@ pub trait Vertex: Pod {
 //
 
 impl DefaultVertex {
-    pub fn new(pos: Vec2, col: Vec4, uv: Vec2) -> Self {
+    pub fn new(pos: Vec2, col: Color, uv: Vec2) -> Self {
         Self { pos, uv, col }
     }
 
@@ -41,7 +43,7 @@ impl DefaultVertex {
         self.uv
     }
 
-    pub fn col(&self) -> Vec4 {
+    pub fn col(&self) -> Color {
         self.col
     }
 }

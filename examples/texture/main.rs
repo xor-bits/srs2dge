@@ -36,7 +36,7 @@ impl App {
         let quad = QuadMesh {
             pos: Vec2::new(-1.0, -1.0),
             size: Vec2::new(2.0, 2.0),
-            col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+            col: Color::WHITE,
             tex: TexturePosition::default(),
         };
         let vbo = VertexBuffer::new_with(&target, &quad.vertices().collect::<Box<_>>());

@@ -72,7 +72,7 @@ impl App {
         let quad = QuadMesh {
             pos: Vec2::new(200.0, 200.0),
             size: Vec2::new(150.0, 150.0),
-            col: Vec4::new(1.0, 1.0, 1.0, 1.0),
+            col: Color::WHITE,
             tex: TexturePosition::default(),
         };
         let rust_vbo = VertexBuffer::new_with(&target, &quad.vertices().collect::<Box<_>>());

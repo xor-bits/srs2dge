@@ -1,5 +1,6 @@
 use srs2dge_core::{
-    glam::{Mat4, Vec2, Vec4},
+    color::Color,
+    glam::{Mat4, Vec2},
     prelude::{DefaultVertex, IndexBuffer, Layout, Mesh, RenderPass, UniformBuffer, VertexBuffer},
     target::Target,
     wgpu::{BindGroup, PrimitiveTopology},
@@ -13,13 +14,13 @@ use std::array::IntoIter;
 pub struct GizmosLine {
     pub from: Vec2,
     pub to: Vec2,
-    pub col: Vec4,
+    pub col: Color,
 }
 
 //
 
 impl GizmosLine {
-    pub fn new(from: Vec2, to: Vec2, col: Vec4) -> Self {
+    pub fn new(from: Vec2, to: Vec2, col: Color) -> Self {
         Self { from, to, col }
     }
 }

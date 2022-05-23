@@ -1,4 +1,7 @@
-use crate::prelude::{DefaultVertex, Mesh, TexturePosition};
+use crate::{
+    color::Color,
+    prelude::{DefaultVertex, Mesh, TexturePosition},
+};
 use glam::{Vec2, Vec3, Vec3Swizzles, Vec4, Vec4Swizzles};
 use std::array::IntoIter;
 use wgpu::PrimitiveTopology;
@@ -9,7 +12,7 @@ use wgpu::PrimitiveTopology;
 pub struct QuadMesh {
     pub pos: Vec2,
     pub size: Vec2,
-    pub col: Vec4,
+    pub col: Color,
     pub tex: TexturePosition,
 }
 
@@ -17,7 +20,7 @@ pub struct QuadMesh {
 pub struct IsoQuadMesh {
     pub pos: Vec2,
     pub size: Vec2,
-    pub col: Vec4,
+    pub col: Color,
     // TODO:
     // pub tex: TexturePosition,
 }

@@ -1,6 +1,13 @@
+use components::{Collider, CollisionResolver, CustomPlugin, Player};
+use legion::{component, IntoQuery, Resources};
+use std::ops::Deref;
 use winit::event_loop::ControlFlow;
 
-use srs2dge::{prelude::*, winit::event::VirtualKeyCode};
+use srs2dge::prelude::*;
+
+//
+
+mod components;
 
 //
 
@@ -13,19 +20,14 @@ struct App {
 
     ws: WindowState,
     ks: KeyboardState,
-    ul: Option<UpdateLoop>,
-    rate: f32,
+    gs: GamepadState,
 
     texture_atlas: TextureAtlasMap<u8>,
 
-    batcher: BatchRenderer,
     ubo: UniformBuffer<Mat4>,
     shader: Texture2DShader,
 
-    vel: Vec2,
-    pos: Vec2,
-    player: Idx,
-    floor: Idx,
+    world: World,
 }
 
 //
@@ -37,9 +39,7 @@ impl App {
 
         let ws = WindowState::new(&target.get_window().unwrap());
         let ks = KeyboardState::new();
-        let rate = UpdateRate::PerSecond(60);
-        let ul = Some(UpdateLoop::new(rate));
-        let rate = rate.to_interval().as_secs_f32();
+        let gs = GamepadState::new();
 
         let texture_atlas = TextureAtlasMapBuilder::new()
             .with(
@@ -56,99 +56,94 @@ impl App {
             )
             .build(&target);
 
-        let mut batcher = BatchRenderer::new(&target);
         let ubo = UniformBuffer::new(&target, 1);
         let shader = Texture2DShader::new(&target);
 
-        let player = batcher.push_with(QuadMesh {
-            pos: Vec2::ZERO,
-            size: Vec2::ONE * 0.1,
-            col: Vec4::ONE,
-            tex: texture_atlas.get(&0).unwrap(),
-        });
-
-        let floor = batcher.push_with(QuadMesh {
-            pos: Vec2::new(0.0, -0.5),
-            size: Vec2::new(1.5, 0.2),
-            col: Vec4::ONE,
-            tex: texture_atlas.get(&1).unwrap(),
-        });
+        let mut world = World::new(&target)
+            .with_plugin(DefaultPlugins)
+            .with_plugin(CustomPlugin);
+        world.push((
+            RigidBody2D::default(),
+            Transform2D {
+                translation: Vec2::ZERO,
+                scale: Vec2::ONE * 0.1,
+                ..Default::default()
+            },
+            Sprite {
+                sprite: texture_atlas.get(&0).unwrap(),
+                color: Color::WHITE,
+                ..Default::default()
+            },
+            Player::default(),
+            Collider,
+            CollisionResolver::default(),
+        ));
+        world.push((
+            Transform2D {
+                translation: Vec2::new(0.0, -0.5),
+                scale: Vec2::new(1.5, 0.2),
+                ..Default::default()
+            },
+            Sprite {
+                sprite: texture_atlas.get(&1).unwrap(),
+                color: Color::ORANGE,
+                ..Default::default()
+            },
+            Collider,
+        ));
+        world.push((
+            Transform2D {
+                translation: Vec2::new(0.4, -0.2),
+                scale: Vec2::new(0.3, 0.2),
+                ..Default::default()
+            },
+            Sprite {
+                sprite: texture_atlas.get(&1).unwrap(),
+                color: Color::CYAN,
+                ..Default::default()
+            },
+            Collider,
+        ));
+        world.push((
+            Transform2D {
+                translation: Vec2::new(0.8, 0.0),
+                scale: Vec2::new(0.2, 0.4),
+                ..Default::default()
+            },
+            Sprite {
+                sprite: texture_atlas.get(&1).unwrap(),
+                color: Color::CHARTREUSE,
+                ..Default::default()
+            },
+            Collider,
+        ));
+        world.push((
+            Transform2D {
+                translation: Vec2::new(-0.95, 1.0),
+                scale: Vec2::new(0.2, 3.4),
+                ..Default::default()
+            },
+            Sprite {
+                sprite: texture_atlas.get(&1).unwrap(),
+                color: Color::AZURE,
+                ..Default::default()
+            },
+            Collider,
+        ));
 
         Self {
             target,
 
             ws,
             ks,
-            ul,
-            rate,
+            gs,
 
             texture_atlas,
 
-            batcher,
             ubo,
             shader,
 
-            vel: Vec2::ZERO,
-            pos: Vec2::ZERO,
-            player,
-            floor,
-        }
-    }
-
-    fn update(&mut self) {
-        if self.ks.pressed(VirtualKeyCode::A) {
-            self.vel.x -= 0.1;
-        }
-        if self.ks.pressed(VirtualKeyCode::D) {
-            self.vel.x += 0.1;
-        }
-        if self.ks.just_pressed(VirtualKeyCode::W) | self.ks.just_pressed(VirtualKeyCode::Space) {
-            self.vel.y += 3.0;
-        }
-        self.ks.clear();
-        self.vel += Vec2::new(0.0, -0.1);
-        self.vel *= 0.95;
-        self.pos += self.vel * self.rate;
-
-        let a = self.batcher.get(self.player);
-        let b = self.batcher.get(self.floor);
-        let a_min = self.pos - a.size * 0.5;
-        let a_max = self.pos + a.size * 0.5;
-        let b_min = b.pos - b.size * 0.5;
-        let b_max = b.pos + b.size * 0.5;
-        if Self::aabb(a_min, a_max, b_min, b_max) {
-            let res = Self::aabb_res(a_min, a_max, b_min, b_max);
-            self.pos += res;
-            if res.x.abs() >= f32::EPSILON {
-                self.vel.x = 0.0;
-            }
-            if res.y.abs() >= f32::EPSILON {
-                self.vel.y = 0.0;
-            }
-        }
-    }
-
-    fn aabb(a_min: Vec2, a_max: Vec2, b_min: Vec2, b_max: Vec2) -> bool {
-        (a_min.x <= b_max.x && a_max.x >= b_min.x) && (a_min.y <= b_max.y && a_max.y >= b_min.y)
-    }
-
-    fn aabb_res(a_min: Vec2, a_max: Vec2, b_min: Vec2, b_max: Vec2) -> Vec2 {
-        let xo_1 = a_max.x - b_min.x;
-        let yo_1 = a_max.y - b_min.y;
-        let xo_2 = a_min.x - b_max.x;
-        let yo_2 = a_min.y - b_max.y;
-        let smallest = |v: f32, a: &[f32]| -> bool { a.iter().all(|x| v.abs() < x.abs()) };
-
-        if smallest(xo_1, &[yo_1, xo_2, yo_2]) {
-            Vec2::new(-xo_1, 0.0)
-        } else if smallest(yo_1, &[xo_1, xo_2, yo_2]) {
-            Vec2::new(0.0, -yo_1)
-        } else if smallest(xo_2, &[xo_1, yo_1, yo_2]) {
-            Vec2::new(-xo_2, 0.0)
-        } else if smallest(yo_2, &[xo_1, yo_1, xo_2]) {
-            Vec2::new(0.0, -yo_2)
-        } else {
-            Vec2::ZERO
+            world,
         }
     }
 }
@@ -164,20 +159,25 @@ impl Runnable for App {
     }
 
     fn draw(&mut self) {
-        // updates
-        let mut update = self.ul.take().unwrap();
-        let delta = update.update(|| {
-            self.update();
-        });
-        self.ul = Some(update);
+        let mut resources = Resources::default();
+        resources.insert(self.ks.clone());
+        resources.insert(self.gs.clone());
+        if self.world.run_with(resources, Default::default()) {
+            self.ks.clear();
+            self.gs.clear();
+        }
 
         // frames
         let mut frame = self.target.get_frame();
 
-        let a = self.batcher.get_mut(self.player);
-        a.pos = self.pos + self.vel * self.rate * delta;
+        let player_pos = <&Sprite>::query()
+            .filter(component::<Player>())
+            .iter(self.world.deref())
+            .next()
+            .unwrap()
+            .lerp_transform
+            .translation;
 
-        let player_pos = self.batcher.get(self.player).pos;
         self.ubo.upload(
             &mut self.target,
             &mut frame,
@@ -195,7 +195,10 @@ impl Runnable for App {
             }],
         );
 
-        let (vbo, ibo) = self.batcher.generate(&mut self.target, &mut frame);
+        let (vbo, ibo) = self
+            .world
+            .get_batcher_mut()
+            .generate(&mut self.target, &mut frame);
 
         frame
             .primary_render_pass()

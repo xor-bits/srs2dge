@@ -43,7 +43,7 @@ impl Runnable for App {
         let a = phase_a.sin() * 0.5 + 0.5;
         let b = phase_b.sin() * 0.5 + 0.5;
         let c = phase_c.sin() * 0.5 + 0.5;
-        let c = Vec4::new(a, b, c, 1.0);
+        let c = Color::new(a, b, c, 1.0);
 
         for (i, target) in self.targets.iter_mut().enumerate() {
             let mut frame = target.get_frame();

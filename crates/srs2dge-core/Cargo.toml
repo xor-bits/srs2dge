@@ -19,7 +19,7 @@ colorful = "0.2"
 log = "0.4"
 # graphics
 glam = { version = "0.20", features = ["serde", "bytemuck"] }
-main_game_loop = "0.4"
+main_game_loop = { git = "https://github.com/Overpeek/main_game_loop" }
 naga = { git = "https://github.com/gfx-rs/naga", rev = "1aa91549", features = [
 	"wgsl-in",
 	"validate",

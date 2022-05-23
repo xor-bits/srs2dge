@@ -1,8 +1,6 @@
 use super::{line::GizmosLine, Gizmos};
 use srs2dge_core::{
-    fontsdf::math::Line,
-    glam::{Vec2, Vec4},
-    main_game_loop::prelude::WindowState,
+    color::Color, fontsdf::math::Line, glam::Vec2, main_game_loop::prelude::WindowState,
     winit::dpi::PhysicalPosition,
 };
 
@@ -12,13 +10,13 @@ pub struct GizmosText<'s> {
     origin: Vec2,
     ws: &'s WindowState,
     text: &'s str,
-    col: Vec4,
+    col: Color,
 }
 
 //
 
 impl<'s> GizmosText<'s> {
-    pub fn new(origin: Vec2, ws: &'s WindowState, text: &'s str, col: Vec4) -> Self {
+    pub fn new(origin: Vec2, ws: &'s WindowState, text: &'s str, col: Color) -> Self {
         Self {
             origin,
             ws,

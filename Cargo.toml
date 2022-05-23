@@ -7,12 +7,25 @@ license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[profile.release-wasm]
+inherits = "release"
+lto = true
+codegen-units = 1
+opt-level = 'z'
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+debug = true
+
 [features]
-default = ["presets", "gizmos", "res"]
+default = ["presets", "gizmos", "res", "ecs"]
 dynamic = ["srs2dge-link-dynamic"]
 presets = ["srs2dge-link-static/presets"]
 gizmos = ["srs2dge-link-static/gizmos"]
 res = ["srs2dge-link-static/res"]
+ecs = ["srs2dge-link-static/ecs"]
 
 
 [dependencies]
@@ -22,8 +35,11 @@ srs2dge-link-dynamic = { path = "crates/srs2dge-link-dynamic", version = "0.2", 
 
 [dev-dependencies]
 instant = "0.1"
-specs = { version = "0.17", features = ["derive"] }
 rand = "0.8"
+legion = { version = "0.4", default-features = false, features = [
+	"codegen",
+	"wasm-bindgen",
+] }
 # rapier2d = "0.11"
 
 

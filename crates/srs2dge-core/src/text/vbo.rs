@@ -1,11 +1,12 @@
 use super::{format::FString, pos_iter::CharPositionIter};
 use crate::{
     batch::{quad::QuadMesh, Mesh},
+    color::Color,
     packer::glyph::Glyphs,
     prelude::vertex::DefaultVertex,
     target::Target,
 };
-use glam::{Vec2, Vec4};
+use glam::Vec2;
 use image::RgbaImage;
 
 //
@@ -32,7 +33,7 @@ pub fn text(
             let tex = glyphs
                 .get_indexed(c.index, px as u16, c.format.font)
                 .unwrap();
-            let col = Vec4::new(c.format.color.x, c.format.color.y, c.format.color.z, 1.0);
+            let col = Color::new(c.format.color.x, c.format.color.y, c.format.color.z, 1.0);
 
             // TODO: mesh anchoring
             let size = Vec2::new(c.width as f32, c.height as f32);

@@ -1,13 +1,13 @@
 use self::{compute_pass::ComputePass, render_pass::RenderPass};
 use crate::{
+    color::Color,
     label,
     target::surface::Surface,
     texture::{has_render_attachment, Texture},
 };
-use glam::Vec4;
 use std::sync::Arc;
 use wgpu::{
-    util::StagingBelt, Buffer, BufferAddress, BufferSize, BufferViewMut, Color, CommandEncoder,
+    util::StagingBelt, Buffer, BufferAddress, BufferSize, BufferViewMut, CommandEncoder,
     CommandEncoderDescriptor, ComputePassDescriptor, Device, LoadOp, Operations, Queue,
     RenderPassColorAttachment, RenderPassDescriptor, SurfaceTexture, TextureFormat, TextureView,
     TextureViewDescriptor,
@@ -31,7 +31,7 @@ pub struct Frame {
 
     queue: Arc<Queue>,
 
-    clear_color: Vec4,
+    clear_color: Color,
 
     pub(crate) belt: StagingBelt,
 }
@@ -68,7 +68,7 @@ impl Frame {
 
             queue,
 
-            clear_color: Vec4::new(0.1, 0.1, 0.1, 1.0),
+            clear_color: Color::CLEAR_COLOR,
 
             belt,
         }
@@ -80,7 +80,7 @@ impl Frame {
         self.encoder.as_mut().expect("Frame was dropped")
     }
 
-    pub fn set_clear_color(&mut self, color: Vec4) {
+    pub fn set_clear_color(&mut self, color: Color) {
         self.clear_color = color;
     }
 
@@ -95,12 +95,7 @@ impl Frame {
                     view: &self.main_view,
                     resolve_target: None,
                     ops: Operations {
-                        load: LoadOp::Clear(Color {
-                            r: self.clear_color.x as _,
-                            g: self.clear_color.y as _,
-                            b: self.clear_color.z as _,
-                            a: self.clear_color.w as _,
-                        }),
+                        load: LoadOp::Clear(self.clear_color.into()),
                         store: true,
                     },
                 }],
@@ -131,12 +126,7 @@ impl Frame {
                     view: target,
                     resolve_target: None,
                     ops: Operations {
-                        load: LoadOp::Clear(Color {
-                            r: self.clear_color.x as _,
-                            g: self.clear_color.y as _,
-                            b: self.clear_color.z as _,
-                            a: self.clear_color.w as _,
-                        }),
+                        load: LoadOp::Clear(self.clear_color.into()),
                         store: true,
                     },
                 }],
