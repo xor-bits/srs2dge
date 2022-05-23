@@ -1,4 +1,6 @@
 use bytemuck::{Pod, Zeroable};
+use rand::{distributions::Standard, prelude::Distribution, Rng};
+use serde::{Deserialize, Serialize};
 use std::{
     fmt::{self, Debug, Display},
     num::ParseIntError,
@@ -25,7 +27,7 @@ use std::{
 /// assert_eq!(Color::YELLOW, Color::from_str("#ffff00ff").unwrap());
 /// assert_eq!(Color::YELLOW, Color::from_str("ffff00ff").unwrap());
 /// ```
-#[derive(Debug, Clone, Copy, PartialEq, Zeroable, Pod)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Zeroable, Pod)]
 #[repr(C)]
 pub struct Color {
     pub r: f32,
@@ -50,11 +52,11 @@ impl Default for Color {
 
 impl Color {
     pub const WHITE: Self = Self::new_mono(1.0);
-    pub const LIGHT_GREY: Self = Self::new_mono(0.25);
+    pub const LIGHT_GREY: Self = Self::new_mono(0.75);
     pub const LIGHT_GRAY: Self = Self::GREY;
     pub const GREY: Self = Self::new_mono(0.5);
     pub const GRAY: Self = Self::GREY;
-    pub const DARK_GREY: Self = Self::new_mono(0.75);
+    pub const DARK_GREY: Self = Self::new_mono(0.25);
     pub const DARK_GRAY: Self = Self::GREY;
     pub const BLACK: Self = Self::new_mono(0.0);
 
@@ -119,6 +121,23 @@ impl Color {
             (self.b * 255.0) as u8,
             (self.a * 255.0) as u8,
         ])
+    }
+
+    #[inline]
+    pub fn random<R: Rng + ?Sized>(rng: &mut R) -> Self {
+        Color::new_rgb(rng.gen(), rng.gen(), rng.gen())
+    }
+
+    #[inline]
+    pub fn random_bright<R: Rng + ?Sized>(rng: &mut R) -> Self {
+        let phase_a: f32 = rng.gen_range(0.0..2.0 * std::f32::consts::PI);
+        const PHASE_OFFS: f32 = 2.0 / 3.0 * std::f32::consts::PI;
+        let phase_b = phase_a + PHASE_OFFS;
+        let phase_c = phase_b + PHASE_OFFS;
+        let a = phase_a.sin() * 0.5 + 0.5;
+        let b = phase_b.sin() * 0.5 + 0.5;
+        let c = phase_c.sin() * 0.5 + 0.5;
+        Color::new_rgb(a, b, c)
     }
 }
 
@@ -201,6 +220,12 @@ impl MulAssign<f32> for Color {
 impl DivAssign<f32> for Color {
     fn div_assign(&mut self, rhs: f32) {
         *self = self.div(rhs);
+    }
+}
+
+impl Distribution<Color> for Standard {
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Color {
+        Color::random(rng)
     }
 }
 

@@ -14,6 +14,7 @@ use std::{
 
 //
 
+use serde::{Deserialize, Serialize};
 pub use wgpu::PrimitiveTopology;
 
 //
@@ -55,7 +56,7 @@ pub trait Mesh<V> {
     fn indices(&self, offset: u32) -> Self::IndexIter;
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct Idx(usize);
 
 //

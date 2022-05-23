@@ -8,7 +8,7 @@ then
 fi
 
 
-echo "import init from \"./${EXAMPLE}\";
+echo "import init from \"./${EXAMPLE}.js\";
 init();" > "generated/load.js"
 
 RUSTFLAGS="--cfg=web_sys_unstable_apis" cargo build --target "wasm32-unknown-unknown" --example=$EXAMPLE --profile "release-wasm"

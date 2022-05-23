@@ -1,16 +1,17 @@
 use crate::{plugin::Plugin, time::Time, transform::Transform2D, World};
 use legion::system;
+use serde::{Deserialize, Serialize};
 use srs2dge_core::glam::{Quat, Vec2, Vec3};
 
 //
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct RigidBody2D {
     pub linear_velocity: Vec2,
     pub angular_velocity: f32,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct RigidBody3D {
     pub linear_velocity: Vec3,
     pub angular_velocity: Quat,

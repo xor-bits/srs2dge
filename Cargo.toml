@@ -32,14 +32,16 @@ ecs = ["srs2dge-link-static/ecs"]
 srs2dge-link-static = { path = "crates/srs2dge-link-static", version = "0.2" }
 srs2dge-link-dynamic = { path = "crates/srs2dge-link-dynamic", version = "0.2", optional = true }
 
-
 [dev-dependencies]
 instant = "0.1"
 rand = "0.8"
 legion = { version = "0.4", default-features = false, features = [
 	"codegen",
 	"wasm-bindgen",
+	"serialize",
 ] }
+serde = { version = "1.0", features = ["derive"] }
+ron = "0.7"
 # rapier2d = "0.11"
 
 

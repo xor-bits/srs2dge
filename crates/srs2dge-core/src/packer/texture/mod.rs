@@ -19,7 +19,9 @@ mod map;
 
 //
 
-const USAGE: u32 = TextureUsages::TEXTURE_BINDING.bits() | TextureUsages::COPY_DST.bits();
+const USAGE: u32 = TextureUsages::TEXTURE_BINDING.bits()
+    | TextureUsages::COPY_SRC.bits()
+    | TextureUsages::COPY_DST.bits();
 
 //
 
@@ -159,19 +161,33 @@ impl<'de> Deserialize<'de> for TextureAtlasFile {
     where
         D: Deserializer<'de>,
     {
-        let image = deserializer.deserialize_bytes(V)?;
+        let image = deserializer.deserialize_byte_buf(V)?;
 
         struct V;
 
         impl<'de> Visitor<'de> for V {
-            type Value = &'de [u8];
+            type Value = Vec<u8>;
 
             fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                write!(f, "expected byte array")
+                write!(f, "byte array")
+            }
+
+            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(v.to_owned())
+            }
+
+            fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(v)
             }
         }
 
-        let (qoi, image) = Qoi::decode_alloc(image).map_err(serde::de::Error::custom)?;
+        let (qoi, image) = Qoi::decode_alloc(&image).map_err(serde::de::Error::custom)?;
 
         Ok(Self {
             image: RgbaImage::from_raw(qoi.width, qoi.height, image).unwrap(),

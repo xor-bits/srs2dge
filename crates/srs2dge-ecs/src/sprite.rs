@@ -1,10 +1,11 @@
 use crate::{plugin::Plugin, prelude::Time, rigidbody::RigidBody2D, transform::Transform2D, World};
 use legion::{component, maybe_changed, system};
+use serde::{Deserialize, Serialize};
 use srs2dge_core::prelude::{BatchRenderer, Color, Idx, QuadMesh, TexturePosition};
 
 //
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
 pub struct Sprite {
     pub sprite: TexturePosition,
     pub color: Color,

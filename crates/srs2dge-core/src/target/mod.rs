@@ -239,7 +239,7 @@ impl Target {
                     label: label!(),
                     features: Features::empty(),
                     limits: Limits {
-                        max_texture_dimension_2d: 16384,
+                        // max_texture_dimension_2d: 16384,
                         ..Limits::downlevel_webgl2_defaults()
                     },
                 },

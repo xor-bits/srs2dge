@@ -1,17 +1,18 @@
 use legion::{component, system, world::SubWorld, IntoQuery};
+use serde::{Deserialize, Serialize};
 use srs2dge::{prelude::*, winit::event::VirtualKeyCode};
 
 //
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub struct Player {
     can_jump: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 pub struct Collider;
 
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Default, Serialize, Deserialize)]
 pub struct CollisionResolver(pub Vec2);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
