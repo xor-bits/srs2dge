@@ -53,11 +53,11 @@ impl Default for Color {
 impl Color {
     pub const WHITE: Self = Self::new_mono(1.0);
     pub const LIGHT_GREY: Self = Self::new_mono(0.75);
-    pub const LIGHT_GRAY: Self = Self::GREY;
+    pub const LIGHT_GRAY: Self = Self::LIGHT_GREY; // to satisfy people from US
     pub const GREY: Self = Self::new_mono(0.5);
-    pub const GRAY: Self = Self::GREY;
+    pub const GRAY: Self = Self::GREY; // to satisfy people from US
     pub const DARK_GREY: Self = Self::new_mono(0.25);
-    pub const DARK_GRAY: Self = Self::GREY;
+    pub const DARK_GRAY: Self = Self::DARK_GREY; // to satisfy people from US
     pub const BLACK: Self = Self::new_mono(0.0);
 
     pub const RED: Self = Self::new_rgb(1.0, 0.0, 0.0);
@@ -151,6 +151,10 @@ impl Display for Color {
     }
 }
 
+// -----
+// arith
+// -----
+
 impl Add<f32> for Color {
     type Output = Color;
 
@@ -159,6 +163,18 @@ impl Add<f32> for Color {
         self.g += rhs;
         self.b += rhs;
         self.a += rhs;
+        self
+    }
+}
+
+impl Add for Color {
+    type Output = Color;
+
+    fn add(mut self, rhs: Self) -> Self::Output {
+        self.r += rhs.r;
+        self.g += rhs.g;
+        self.b += rhs.b;
+        self.a += rhs.a;
         self
     }
 }
@@ -175,6 +191,18 @@ impl Sub<f32> for Color {
     }
 }
 
+impl Sub for Color {
+    type Output = Color;
+
+    fn sub(mut self, rhs: Self) -> Self::Output {
+        self.r -= rhs.r;
+        self.g -= rhs.g;
+        self.b -= rhs.b;
+        self.a -= rhs.a;
+        self
+    }
+}
+
 impl Mul<f32> for Color {
     type Output = Color;
 
@@ -183,6 +211,18 @@ impl Mul<f32> for Color {
         self.g *= rhs;
         self.b *= rhs;
         self.a *= rhs;
+        self
+    }
+}
+
+impl Mul for Color {
+    type Output = Color;
+
+    fn mul(mut self, rhs: Self) -> Self::Output {
+        self.r *= rhs.r;
+        self.g *= rhs.g;
+        self.b *= rhs.b;
+        self.a *= rhs.a;
         self
     }
 }
@@ -199,8 +239,26 @@ impl Div<f32> for Color {
     }
 }
 
+impl Div for Color {
+    type Output = Color;
+
+    fn div(mut self, rhs: Self) -> Self::Output {
+        self.r /= rhs.r;
+        self.g /= rhs.g;
+        self.b /= rhs.b;
+        self.a /= rhs.a;
+        self
+    }
+}
+
 impl AddAssign<f32> for Color {
     fn add_assign(&mut self, rhs: f32) {
+        *self = self.add(rhs);
+    }
+}
+
+impl AddAssign for Color {
+    fn add_assign(&mut self, rhs: Self) {
         *self = self.add(rhs);
     }
 }
@@ -211,14 +269,32 @@ impl SubAssign<f32> for Color {
     }
 }
 
+impl SubAssign for Color {
+    fn sub_assign(&mut self, rhs: Self) {
+        *self = self.sub(rhs);
+    }
+}
+
 impl MulAssign<f32> for Color {
     fn mul_assign(&mut self, rhs: f32) {
         *self = self.mul(rhs);
     }
 }
 
+impl MulAssign for Color {
+    fn mul_assign(&mut self, rhs: Self) {
+        *self = self.mul(rhs);
+    }
+}
+
 impl DivAssign<f32> for Color {
     fn div_assign(&mut self, rhs: f32) {
+        *self = self.div(rhs);
+    }
+}
+
+impl DivAssign for Color {
+    fn div_assign(&mut self, rhs: Self) {
         *self = self.div(rhs);
     }
 }

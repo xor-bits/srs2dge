@@ -68,8 +68,8 @@ impl App {
             ]),
             &mut glyphs,
             80.0,
-            50.0,
-            50.0,
+            Vec2::ONE * 50.0,
+            None,
         )
         .unwrap();
         let _ = glyphs.read(&target).await.save("target/text_glyphs.png");

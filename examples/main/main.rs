@@ -141,7 +141,15 @@ impl App {
             font: fonts.roboto,
         });
 
-        let (vbo, ibo) = vbo::text(&target, &t, &mut glyphs, 18.0, 100.0, -50.0).unwrap();
+        let (vbo, ibo) = vbo::text(
+            &target,
+            &t,
+            &mut glyphs,
+            18.0,
+            Vec2::new(100.0, -50.0),
+            None,
+        )
+        .unwrap();
         let (vbo, ibo) = (
             VertexBuffer::new_with(&target, &vbo),
             IndexBuffer::new_with(&target, &ibo),
@@ -227,8 +235,15 @@ impl Runnable for App {
             .font(self.fonts.roboto)
             .color(0.0, 0.0, 0.0)
             .into();
-        let (vertices, indices) =
-            vbo::text(&self.target, &t, &mut self.text.glyphs, 18.0, 500.0, -50.0).unwrap();
+        let (vertices, indices) = vbo::text(
+            &self.target,
+            &t,
+            &mut self.text.glyphs,
+            18.0,
+            Vec2::new(500.0, -50.0),
+            None,
+        )
+        .unwrap();
         self.dyn_text.vbo.upload(
             &mut self.target,
             &mut frame,

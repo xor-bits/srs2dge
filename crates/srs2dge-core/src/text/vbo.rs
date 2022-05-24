@@ -11,13 +11,21 @@ use image::RgbaImage;
 
 //
 
+/// #### `px` is the font size
+///
+/// #### `origin` is the offset
+///
+/// #### anchor
+/// examples:
+///  - default: `Some(Vec2::new(0.0, 0.0))` or `None`
+///  - center text: `Some(Vec2::new(0.5, 0.5))`
 pub fn text(
     target: &Target,
     string: &FString,
     glyphs: &mut Glyphs,
     px: f32,
-    x: f32,
-    y: f32,
+    mut origin: Vec2,
+    anchor: Option<Vec2>,
 ) -> Result<(Vec<DefaultVertex>, Vec<u32>), &'static str> {
     let sdf = glyphs.is_sdf();
 
@@ -26,6 +34,27 @@ pub fn text(
         glyphs.queue(c, px as u16, format.font);
     }
     glyphs.flush(target)?;
+
+    if let Some(anchor) = anchor {
+        let mut iter = CharPositionIter::new(string, glyphs, px, sdf);
+        if let Some(first) = iter.next() {
+            let mut min_x = first.x;
+            let mut min_y = first.y;
+            let mut max_x = first.x + first.width as i32;
+            let mut max_y = first.y + first.height as i32;
+
+            for c in iter {
+                min_x = min_x.min(c.x);
+                min_y = min_y.min(c.y);
+                max_x = max_x.max(c.x + c.width as i32);
+                max_y = max_y.max(c.y + c.height as i32);
+            }
+
+            let w = max_x - min_x;
+            let h = max_y - min_y;
+            origin -= anchor * Vec2::new(w as f32, h as f32);
+        }
+    }
 
     // gen vbo
     let vertices: Vec<_> = CharPositionIter::new(string, glyphs, px, sdf)
@@ -38,7 +67,7 @@ pub fn text(
             // TODO: mesh anchoring
             let size = Vec2::new(c.width as f32, c.height as f32);
             QuadMesh {
-                pos: Vec2::new(c.x as f32 + x, c.y as f32 + y) + 0.5 * size,
+                pos: Vec2::new(c.x as f32, c.y as f32) + origin + 0.5 * size,
                 size,
                 col,
                 tex,

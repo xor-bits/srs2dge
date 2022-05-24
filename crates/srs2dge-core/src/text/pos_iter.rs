@@ -73,30 +73,39 @@ impl<'s> Iterator for CharPositionIter<'s> {
                     self.x_origin = ((self.x_origin as f32 / w).floor() * w + w) as i32;
                     self.last_c = None;
                 }
-                _ => break,
+                _ => {
+                    let index = self.font.lookup_glyph_index(c);
+                    let metrics = self.font.metrics_indexed(index, self.px, false);
+                    let skip_width = metrics.width;
+                    let skip_height = metrics.height;
+                    let metrics = self.font.metrics_indexed(index, self.px, self.sdf);
+                    let x = self.x_origin + metrics.xmin;
+                    let y = self.y_origin + metrics.ymin;
+                    let width = metrics.width as _;
+                    let height = metrics.height as _;
+
+                    self.x_origin += metrics.advance_width as i32
+                        + self
+                            .last_c
+                            .and_then(|last_c| self.font.horizontal_kern(last_c, c, self.px))
+                            .unwrap_or(0.0) as i32;
+                    // self.y_origin -= metrics.advance_height as i32;
+                    self.last_c = Some(c);
+
+                    if skip_width == 0 || skip_height == 0 {
+                        continue;
+                    }
+
+                    return Some(CharPosition {
+                        index,
+                        format,
+                        x,
+                        y,
+                        width,
+                        height,
+                    });
+                }
             }
         }
-
-        let index = self.font.lookup_glyph_index(c);
-        let metrics = self.font.metrics_indexed(index, self.px, self.sdf);
-
-        let rect = CharPosition {
-            index,
-            format,
-            x: self.x_origin + metrics.xmin,
-            y: self.y_origin + metrics.ymin,
-            width: metrics.width as _,
-            height: metrics.height as _,
-        };
-
-        self.x_origin += metrics.advance_width as i32
-            + self
-                .last_c
-                .and_then(|last_c| self.font.horizontal_kern(last_c, c, self.px))
-                .unwrap_or(0.0) as i32;
-        // self.y_origin -= metrics.advance_height as i32;
-        self.last_c = Some(c);
-
-        Some(rect)
     }
 }

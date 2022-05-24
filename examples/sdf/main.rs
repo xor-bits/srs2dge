@@ -59,8 +59,8 @@ impl App {
             ]),
             &mut glyphs,
             80.0, // note this rendered size is a whole a lot bigger than the actual glyph resolution in the memory
-            50.0,
-            50.0,
+            Vec2::ONE * 50.0,
+            None,
         )
         .unwrap();
         let _ = glyphs.read(&target).await.save("target/sdf_glyphs.png");
