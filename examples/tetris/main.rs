@@ -1,8 +1,9 @@
 use logic::{Board, Move};
+use std::sync::Arc;
+#[cfg(not(target_arch = "wasm32"))]
 use std::{
     fs::File,
     io::{Read, Write},
-    sync::Arc,
 };
 use winit::dpi::PhysicalSize;
 

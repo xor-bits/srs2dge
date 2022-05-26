@@ -48,7 +48,7 @@ fn vs_main(vin: VertexInput) -> FragmentInput {
 
 // smoothstep for old wgsl
 // https://en.wikipedia.org/wiki/Smoothstep
-fn smoothstep(edge0: f32, edge1: f32, x: f32) -> f32
+fn smoothstep_2(edge0: f32, edge1: f32, x: f32) -> f32
 {
    if (x < edge0) {
       return 0.0;
@@ -71,10 +71,10 @@ fn fs_main(fin: FragmentInput) -> [[location(0)]] vec4<f32> { // @location(0)
 	let val = textureSample(t_texture, s_texture, fin.uv).x;
 
 	// border
-	let alpha = smoothstep(0.35 - aa, 0.35 + aa, val);
+	let alpha = smoothstep_2(0.35 - aa, 0.35 + aa, val);
 
 	// outline
-	let col = vec3<f32>(smoothstep(0.5 - aa, 0.5 + aa, val));
+	let col = vec3<f32>(smoothstep_2(0.5 - aa, 0.5 + aa, val));
 	return fin.col * vec4<f32>(col, alpha);
 }
 

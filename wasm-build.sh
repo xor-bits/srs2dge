@@ -13,7 +13,7 @@
 # > EXAMPLE='example' ./wasm-build.sh
 # to pick an example
 
-clear
+# clear
 
 if [ -z "${EXAMPLE}" ];
 then

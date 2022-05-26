@@ -68,12 +68,16 @@ impl App {
                 .flat_map(|q| q.vertices())
                 .collect::<Box<_>>(),
         );
+        let mut i = 0;
         let ibo = IndexBuffer::new_with(
             &target,
             &[quad_a, quad_b]
                 .into_iter()
-                .enumerate()
-                .flat_map(|(i, q)| q.indices(i as _))
+                .flat_map(|q| {
+                    let offset = i;
+                    i += q.index_step();
+                    q.indices(offset)
+                })
                 .collect::<Box<_>>(),
         );
         let ubo = UniformBuffer::new(&target, 1);
@@ -81,9 +85,9 @@ impl App {
 
         let identity_ubo = UniformBuffer::new_single(&target, Mat4::IDENTITY);
         let custom_frag = ShaderModule::new_wgsl_source(&target, POST_PROCESSOR.into())
-            .expect("Custom module compilation failed");
+            .unwrap_or_else(|err| panic!("Custom module compilation failed: {err}"));
         let custom_shader = Texture2DShader::new_custom_frag(&target, &custom_frag, "main")
-            .expect("Custom module incompatible");
+            .unwrap_or_else(|err| panic!("Custom module incompatible: {err}"));
 
         Self {
             target,
@@ -146,7 +150,7 @@ impl Runnable for App {
             .bind_ibo(&self.ibo)
             .bind_group(&self.shader.bind_group((&self.ubo, &self.texture)))
             .bind_shader(&self.shader)
-            .draw_indexed(0..4, 0, 0..1);
+            .draw_indexed(0..5, 0, 0..1);
 
         frame
             .primary_render_pass()
@@ -158,7 +162,7 @@ impl Runnable for App {
                     .bind_group((&self.identity_ubo, &self.secondary_target)),
             )
             .bind_shader(&self.custom_shader)
-            .draw_indexed(5..9, 0, 0..1);
+            .draw_indexed(4..9, 0, 0..1);
 
         self.target.finish_frame(frame);
     }

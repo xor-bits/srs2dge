@@ -72,7 +72,7 @@ impl App {
             None,
         )
         .unwrap();
-        let _ = glyphs.read(&target).await.save("target/text_glyphs.png");
+        // let _ = glyphs.read(&target).await.save("target/text_glyphs.png");
         let vbo = VertexBuffer::new_with(&target, &v);
         let ibo = IndexBuffer::new_with(&target, &i);
         let ubo = UniformBuffer::new(&target, 1);

@@ -60,7 +60,7 @@ impl App {
             None,
         )
         .unwrap();
-        let _ = glyphs.read(&target).await.save("target/sdf_glyphs.png");
+        // let _ = glyphs.read(&target).await.save("target/sdf_glyphs.png");
         let text_vbo = VertexBuffer::new_with(&target, &v);
         let text_ibo = IndexBuffer::new_with(&target, &i);
         let ubo = UniformBuffer::new(&target, 1);

@@ -61,7 +61,7 @@ pub struct GizmosBoxVertexIter {
     col: Color,
     middle: Vec2,
     radius: Vec2,
-    i: i32,
+    i: u32,
 }
 
 impl Iterator for GizmosBoxVertexIter {

@@ -65,14 +65,14 @@ pub struct GizmosCircleVertexIter {
     col: Color,
     middle: Vec2,
     radius: Vec2,
-    i: i32,
+    i: u32,
 }
 
 impl Iterator for GizmosCircleVertexIter {
     type Item = DefaultVertex;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.i >= 4 {
+        if self.i >= RES {
             return None;
         }
 
@@ -100,11 +100,11 @@ impl Iterator for GizmosCircleIndexIter {
         let i = self.i;
         self.i += 1;
 
-        if i == 4 {
+        if i == RES {
             Some(self.offset)
-        } else if i == 5 {
+        } else if i == RES + 1 {
             Some(!0)
-        } else if i >= 6 {
+        } else if i >= RES + 2 {
             None
         } else {
             Some(i + self.offset)

@@ -88,7 +88,7 @@ impl Runnable for App {
             let middle = Gizmos::screen_to_world(mvp, &self.ws, self.ws.cursor_pos)?;
 
             // crude 10px radius
-            let radius = Gizmos::screen_to_world(mvp, &self.ws, PhysicalPosition::new(10, 0))?;
+            let radius = Gizmos::screen_to_world(mvp, &self.ws, PhysicalPosition::new(10, 10))?;
             let radius =
                 radius - Gizmos::screen_to_world(mvp, &self.ws, PhysicalPosition::new(0, 0))?;
 

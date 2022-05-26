@@ -11,19 +11,20 @@ echo "<!DOCTYPE html>
 <head>
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<script type="module" src="./load.js"></script>
 </head>
 
 <body>
 	<h1>Demos</h1>
 	<ul>" > "generated/all.html"
 	
-clear
+# clear
+
+RUSTFLAGS="--cfg=web_sys_unstable_apis" cargo build --target "wasm32-unknown-unknown" --examples --profile "release-wasm"
 
 for x in examples/*;
 do
 	EXAMPLE=${x#"examples/"}
-	OUTDIR="generated/${EXAMPLE}" EXAMPLE=${EXAMPLE} ./wasm-build.sh
+	OUTDIR="generated/${EXAMPLE}" EXAMPLE=${EXAMPLE} ./wasm-build.sh &
 	echo "		<li><a href='/${EXAMPLE}/index.html'>${EXAMPLE}</a></li>" >> "generated/all.html"
 done
 
@@ -32,3 +33,5 @@ echo "
 </body>
 
 </html>" >> "generated/all.html"
+
+wait
