@@ -4,6 +4,8 @@ version = "0.2.0"
 edition = "2021"
 description = "Simple Rust 2D Game Engine"
 license = "MIT"
+repository = "https://github.com/Overpeek/srs2dge"
+documentation = "https://docs.rs/srs2dge"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
