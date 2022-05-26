@@ -11,6 +11,15 @@
 
 ### Live demo at: https://gpu.ovpk.net
 
-### To debug with RenderDoc:
 
-Set environmental variable `WGPU_BACKEND` to `vk`
+
+## Demo images
+
+#### examples/tetris
+<img src="/.github/tetris.png"/>
+
+#### examples/platformer
+<img src="/.github/platformer.png"/>
+
+#### examples/main
+<img src="/.github/main.png"/>
