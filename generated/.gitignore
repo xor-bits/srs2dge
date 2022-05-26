@@ -1,6 +1,3 @@
-
-/snippets/
-/*.js
-/*.d.ts
-/*_bg.wasm
-/*_bg.wasm.d.ts
+*
+!.gitignore
+!index.html

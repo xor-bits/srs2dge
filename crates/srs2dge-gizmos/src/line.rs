@@ -11,6 +11,7 @@ use std::array::IntoIter;
 
 //
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GizmosLine {
     pub from: Vec2,
     pub to: Vec2,
@@ -28,9 +29,6 @@ impl GizmosLine {
 impl Mesh<DefaultVertex> for GizmosLine {
     const PRIM: PrimitiveTopology = PrimitiveTopology::LineList;
 
-    const VERTICES: usize = 2;
-    const INDICES: usize = 2;
-
     type VertexIter = IntoIter<DefaultVertex, 2>;
     type IndexIter = IntoIter<u32, 2>;
 
@@ -43,8 +41,11 @@ impl Mesh<DefaultVertex> for GizmosLine {
     }
 
     fn indices(&self, offset: u32) -> Self::IndexIter {
-        let offset = offset * Self::VERTICES as u32;
         IntoIterator::into_iter([offset, offset + 1])
+    }
+
+    fn index_step(&self) -> u32 {
+        2
     }
 }
 
@@ -86,11 +87,15 @@ impl GizmosLines {
     pub fn prepare(&mut self, target: &mut Target, frame: &mut Frame) {
         let vbo_data: Vec<DefaultVertex> =
             self.lines.iter().flat_map(|line| line.vertices()).collect();
+        let mut i = 0;
         let ibo_data: Vec<u32> = self
             .lines
             .drain(..)
-            .enumerate()
-            .flat_map(|(i, line)| line.indices(i as _))
+            .flat_map(|line| {
+                let offset = i;
+                i += line.index_step();
+                line.indices(offset)
+            })
             .collect();
 
         if self.vbo.capacity() < vbo_data.len() {

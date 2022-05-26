@@ -28,13 +28,14 @@ pub use naga;
 pub use wgpu;
 pub use winit;
 
-#[cfg(feature = "fontloader")]
-pub use font_loader;
-pub use fontsdf;
 pub use image;
+pub use rapid_qoi;
 
 pub use bytemuck;
+pub use rand;
 pub use serde;
+
+pub use integer_sqrt;
 
 //
 
@@ -46,7 +47,6 @@ pub mod packer;
 pub mod prelude;
 pub mod shader;
 pub mod target;
-pub mod text;
 pub mod texture;
 
 //
@@ -129,14 +129,26 @@ impl Engine {
     }
 
     fn make_instance() -> Arc<Instance> {
-        // renderdoc
-        // let default = Backends::VULKAN;
+        // detect renderdoc
+        #[cfg(not(target_arch = "wasm32"))]
+        let renderdoc = std::env::vars().map(|(name, _)| name).any(|name| {
+            matches!(
+                name.as_str(),
+                "ENABLE_VULKAN_RENDERDOC_CAPTURE"
+                    | "RENDERDOC_CAPFILE"
+                    | "RENDERDOC_CAPOPTS"
+                    | "RENDERDOC_DEBUG_LOG_FILE"
+            )
+        });
+        #[cfg(target_arch = "wasm32")]
+        let renderdoc = false;
 
-        // any
-        let default = Backends::all();
-
-        // webgl
-        // let default = Backends::GL;
+        // force default to vulkan if renderdoc was detected
+        let default = if renderdoc {
+            Backends::VULKAN
+        } else {
+            Backends::all()
+        };
 
         Arc::new(Instance::new(backend_bits_from_env().unwrap_or(default)))
     }

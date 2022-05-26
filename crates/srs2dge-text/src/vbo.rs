@@ -1,13 +1,9 @@
 use super::{format::FString, pos_iter::CharPositionIter};
-use crate::{
-    batch::{quad::QuadMesh, Mesh},
-    color::Color,
-    packer::glyph::Glyphs,
-    prelude::vertex::DefaultVertex,
-    target::Target,
+use crate::glyphs::Glyphs;
+use srs2dge_core::{
+    batch::Mesh, buffer::DefaultVertex, color::Color, glam::Vec2, image::RgbaImage,
+    prelude::QuadMesh, target::Target,
 };
-use glam::Vec2;
-use image::RgbaImage;
 
 //
 
@@ -82,10 +78,14 @@ pub fn text(
         .flat_map(|mesh| mesh.vertices())
         .collect();
 
+    let mut i = 0;
     let indices = indices
         .into_iter()
-        .enumerate()
-        .flat_map(|(i, mesh)| mesh.indices(i as u32))
+        .flat_map(|mesh| {
+            let offset = i;
+            i += mesh.index_step();
+            mesh.indices(offset)
+        })
         .collect();
 
     Ok((vertices, indices))

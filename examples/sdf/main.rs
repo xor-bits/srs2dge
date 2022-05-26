@@ -1,7 +1,4 @@
-use srs2dge::{
-    image,
-    winit::{dpi::PhysicalSize, event_loop::ControlFlow, window::WindowBuilder},
-};
+use srs2dge::{image, winit::dpi::PhysicalSize};
 use std::sync::Arc;
 
 use srs2dge::prelude::*;

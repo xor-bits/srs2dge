@@ -11,6 +11,7 @@ use std::{f32::consts::PI, ops::Rem};
 
 //
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GizmosBox {
     pub middle: Vec2,
     pub radius: Vec2,
@@ -32,9 +33,6 @@ impl GizmosBox {
 impl Mesh<DefaultVertex> for GizmosBox {
     const PRIM: PrimitiveTopology = PrimitiveTopology::LineStrip;
 
-    const VERTICES: usize = 4;
-    const INDICES: usize = 6;
-
     type VertexIter = impl Iterator<Item = DefaultVertex>;
     type IndexIter = impl Iterator<Item = u32>;
 
@@ -52,8 +50,11 @@ impl Mesh<DefaultVertex> for GizmosBox {
     }
 
     fn indices(&self, offset: u32) -> Self::IndexIter {
-        let offset = offset * Self::VERTICES as u32;
         (0..4).chain([0]).map(move |i| i + offset).chain([!0])
+    }
+
+    fn index_step(&self) -> u32 {
+        4
     }
 }
 
@@ -105,11 +106,15 @@ impl GizmosBoxes {
     pub fn prepare(&mut self, target: &mut Target, frame: &mut Frame) {
         let vbo_data: Vec<DefaultVertex> =
             self.boxes.iter().flat_map(|line| line.vertices()).collect();
+        let mut i = 0;
         let ibo_data: Vec<u32> = self
             .boxes
             .drain(..)
-            .enumerate()
-            .flat_map(|(i, line)| line.indices(i as _))
+            .flat_map(|line| {
+                let offset = i;
+                i += line.index_step();
+                line.indices(offset)
+            })
             .collect();
 
         if self.vbo.capacity() < vbo_data.len() {

@@ -30,9 +30,6 @@ pub struct IsoQuadMesh {
 impl Mesh<DefaultVertex> for QuadMesh {
     const PRIM: PrimitiveTopology = PrimitiveTopology::TriangleStrip;
 
-    const VERTICES: usize = 4;
-    const INDICES: usize = 5;
-
     type VertexIter = IntoIter<DefaultVertex, 4>;
     type IndexIter = IntoIter<u32, 5>;
 
@@ -56,25 +53,16 @@ impl Mesh<DefaultVertex> for QuadMesh {
     }
 
     fn indices(&self, offset: u32) -> Self::IndexIter {
-        let offset = offset * Self::VERTICES as u32;
         IntoIterator::into_iter([offset, offset + 1, offset + 2, offset + 3, !0])
-        // webgpu doesn't seem to support primitive restart
-        /* IntoIterator::into_iter([
-            offset,
-            offset + 1,
-            offset + 2,
-            offset + 2,
-            offset + 1,
-            offset + 3,
-        ]) */
+    }
+
+    fn index_step(&self) -> u32 {
+        4
     }
 }
 
 impl Mesh<DefaultVertex> for IsoQuadMesh {
     const PRIM: PrimitiveTopology = PrimitiveTopology::TriangleStrip;
-
-    const VERTICES: usize = 4;
-    const INDICES: usize = 5;
 
     type VertexIter = IntoIter<DefaultVertex, 4>;
     type IndexIter = IntoIter<u32, 5>;
@@ -90,16 +78,10 @@ impl Mesh<DefaultVertex> for IsoQuadMesh {
     }
 
     fn indices(&self, offset: u32) -> Self::IndexIter {
-        let offset = offset * 4;
         IntoIterator::into_iter([offset, offset + 1, offset + 2, offset + 3, !0])
-        // webgpu doesn't seem to support primitive restart
-        /* IntoIterator::into_iter([
-            offset,
-            offset + 1,
-            offset + 2,
-            offset + 2,
-            offset + 1,
-            offset + 3,
-        ]) */
+    }
+
+    fn index_step(&self) -> u32 {
+        4
     }
 }

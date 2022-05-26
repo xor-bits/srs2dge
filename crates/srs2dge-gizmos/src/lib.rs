@@ -21,7 +21,6 @@ use self::{
     text::GizmosText,
 };
 use srs2dge_core::{
-    fontsdf::Font,
     glam::{Mat4, Vec2, Vec4, Vec4Swizzles},
     main_game_loop::prelude::WindowState,
     prelude::{RenderPass, UniformBuffer},
@@ -29,6 +28,7 @@ use srs2dge_core::{
     winit::dpi::{PhysicalPosition, Pixel},
     Frame,
 };
+use srs2dge_text::fontsdf::Font;
 
 //
 
@@ -140,10 +140,15 @@ impl Gizmos {
 
     /// A slow way to convert screen space coordinates
     /// to world space coordinates
-    pub fn screen_to_world<T>(&self, ws: &WindowState, pos: PhysicalPosition<T>) -> Option<Vec2>
+    pub fn screen_to_world<T>(mvp: Mat4, ws: &WindowState, pos: PhysicalPosition<T>) -> Option<Vec2>
     where
         T: Pixel,
     {
+        if mvp.determinant() == 0.0 {
+            return None;
+        };
+        let inverse_mvp = mvp.inverse();
+
         let screen_pos = pos.cast::<f32>();
         let render_area_pos = Vec4::new(
             screen_pos.x / ws.size.width as f32 * 2.0 - 1.0,
@@ -151,7 +156,7 @@ impl Gizmos {
             0.0,
             1.0,
         );
-        let world_pos = self.inverse_mvp(ws)? * render_area_pos;
+        let world_pos = inverse_mvp * render_area_pos;
         Some(world_pos.xy())
     }
 

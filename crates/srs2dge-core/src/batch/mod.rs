@@ -7,6 +7,7 @@ use crate::{
     target::Target,
     Frame,
 };
+use serde::{Deserialize, Serialize};
 use std::{
     collections::{BinaryHeap, HashSet},
     marker::PhantomData,
@@ -14,7 +15,6 @@ use std::{
 
 //
 
-use serde::{Deserialize, Serialize};
 pub use wgpu::PrimitiveTopology;
 
 //
@@ -33,11 +33,12 @@ where
     vbo: VertexBuffer<V>,
     ibo: IndexBuffer<u32>,
     ibo_regen: bool,
+    ibo_len: u32,
 
     max: usize,
     modified: HashSet<usize>,
     free: BinaryHeap<usize>,
-    used: Vec<M>,
+    used: Vec<Option<M>>,
 
     _p: PhantomData<M>,
 }
@@ -45,15 +46,12 @@ where
 pub trait Mesh<V> {
     const PRIM: PrimitiveTopology;
 
-    const VERTICES: usize;
-    const INDICES: usize;
-
     type VertexIter: Iterator<Item = V>;
     type IndexIter: Iterator<Item = u32>;
 
     fn vertices(&self) -> Self::VertexIter;
-    // offset in Mesh elements not Vert elements
     fn indices(&self, offset: u32) -> Self::IndexIter;
+    fn index_step(&self) -> u32;
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
@@ -68,11 +66,12 @@ where
 {
     pub fn new(target: &Target) -> Self {
         Self {
-            vbo: VertexBuffer::new(target, 2 * M::VERTICES),
-            ibo: IndexBuffer::new(target, 2 * M::INDICES),
+            vbo: VertexBuffer::new(target, 0),
+            ibo: IndexBuffer::new(target, 0),
             ibo_regen: false,
+            ibo_len: 0,
 
-            max: 2,
+            max: 0,
             modified: Default::default(),
             free: Default::default(),
             used: Default::default(),
@@ -84,11 +83,11 @@ where
     pub fn push_with(&mut self, mesh: M) -> Idx {
         self.ibo_regen = true;
         let spot = if let Some(spot) = self.free.pop() {
-            self.used[spot] = mesh;
+            self.used[spot] = Some(mesh);
             spot
         } else {
             let spot = self.used.len();
-            self.used.push(mesh);
+            self.used.push(Some(mesh));
             spot
         };
         self.max = self.max.max(spot);
@@ -103,35 +102,50 @@ where
         self.push_with(Default::default())
     }
 
-    pub fn leak(_: Idx) {}
-
     pub fn drop(&mut self, idx: Idx) {
         self.ibo_regen = true;
-        self.modified.remove(&idx.0);
+        if let Some(m) = self.used.get_mut(idx.0) {
+            *m = None;
+        }
+        self.modified.insert(idx.0);
         self.free.push(idx.0);
     }
 
-    pub fn get(&self, idx: Idx) -> &'_ M {
-        &self.used[idx.0]
+    pub fn get(&self, idx: Idx) -> Option<&M> {
+        if let Some(Some(mesh)) = self.used.get(idx.0) {
+            Some(mesh)
+        } else {
+            None
+        }
     }
 
-    pub fn get_mut(&mut self, idx: Idx) -> &'_ mut M {
-        self.modified.insert(idx.0);
-        &mut self.used[idx.0]
+    pub fn get_mut(&mut self, idx: Idx) -> Option<&mut M> {
+        if let Some(Some(mesh)) = self.used.get_mut(idx.0) {
+            self.modified.insert(idx.0);
+            Some(mesh)
+        } else {
+            None
+        }
     }
 
     pub fn generate(
         &mut self,
         target: &mut Target,
         frame: &mut Frame,
-    ) -> (&'_ VertexBuffer<V>, &'_ IndexBuffer<u32>) {
+    ) -> (&'_ VertexBuffer<V>, &'_ IndexBuffer<u32>, u32) {
         if self.ibo_regen {
+            let mut i = 0;
             let new_data: Vec<u32> = self
                 .used
                 .iter()
-                .enumerate()
-                .flat_map(|(i, m)| m.indices(i as u32))
+                .filter_map(|m| m.as_ref())
+                .flat_map(|m| {
+                    let offset = i;
+                    i += m.index_step();
+                    m.indices(offset)
+                })
                 .collect();
+            self.ibo_len = new_data.len() as _;
 
             // TODO: Copy old data instead of regenerating it
             if self.ibo.capacity() >= new_data.len() {
@@ -142,7 +156,12 @@ where
         }
 
         if !self.modified.is_empty() {
-            let new_data: Vec<V> = self.used.iter().flat_map(|s| s.vertices()).collect();
+            let new_data: Vec<V> = self
+                .used
+                .iter()
+                .filter_map(|m| m.as_ref())
+                .flat_map(|s| s.vertices())
+                .collect();
 
             if self.vbo.capacity() >= new_data.len() {
                 self.vbo.upload(target, frame, &new_data);
@@ -167,6 +186,6 @@ where
             } */
         }
 
-        (&self.vbo, &self.ibo)
+        (&self.vbo, &self.ibo, self.ibo_len)
     }
 }

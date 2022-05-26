@@ -178,15 +178,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd16c4719339c4530435d38e511904438d07cce7950afa3718a84ac36c10e89e"
 
 [[package]]
-name = "cmake"
-version = "0.1.48"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e8ad8cef104ac57b68b89df3208164d228503abbdce70f6880ffa3d970e7443a"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "cocoa"
 version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -347,18 +338,6 @@ checksum = "3a68b68b3446082644c91ac778bf50cd4104bfb002b5a6a7c44cca5a2c70788b"
 dependencies = [
  "bitflags",
  "core-foundation 0.9.3",
- "foreign-types",
- "libc",
-]
-
-[[package]]
-name = "core-text"
-version = "19.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "99d74ada66e07c1cefa18f8abfba765b486f250de2e4a999e5727fc0dd4b4a25"
-dependencies = [
- "core-foundation 0.9.3",
- "core-graphics 0.22.3",
  "foreign-types",
  "libc",
 ]
@@ -540,16 +519,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "expat-sys"
-version = "2.1.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "658f19728920138342f68408b7cf7644d90d4784353d8ebc32e7e8663dbe45fa"
-dependencies = [
- "cmake",
- "pkg-config",
-]
-
-[[package]]
 name = "exr"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -603,19 +572,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f9eec918d3f24069decb9af1554cad7c880e2da24a9afd88aca000531ab82c1"
 
 [[package]]
-name = "font-loader"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c49d6b4c11dca1a1dd931a34a9f397e2da91abe3de4110505f3530a80e560b52"
-dependencies = [
- "core-foundation 0.9.3",
- "core-text",
- "libc",
- "servo-fontconfig",
- "winapi",
-]
-
-[[package]]
 name = "fontdue"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -651,17 +607,6 @@ name = "foreign-types-shared"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
-
-[[package]]
-name = "freetype-sys"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a37d4011c0cc628dfa766fcc195454f4b068d7afdc2adfd28861191d866e731a"
-dependencies = [
- "cmake",
- "libc",
- "pkg-config",
-]
 
 [[package]]
 name = "futures-core"
@@ -716,7 +661,7 @@ dependencies = [
  "fnv",
  "gilrs-core",
  "log",
- "uuid 1.0.0",
+ "uuid 1.1.0",
  "vec_map",
 ]
 
@@ -734,7 +679,7 @@ dependencies = [
  "log",
  "nix 0.24.1",
  "rusty-xinput",
- "uuid 1.0.0",
+ "uuid 1.1.0",
  "vec_map",
  "wasm-bindgen",
  "web-sys",
@@ -1068,7 +1013,7 @@ dependencies = [
 [[package]]
 name = "main_game_loop"
 version = "0.4.4"
-source = "git+https://github.com/Overpeek/main_game_loop#c2bc1ed804aa6a11d7dca32a22da59be80e4faa5"
+source = "git+https://github.com/Overpeek/main_game_loop#cc632ceca5af1120a7d063a64e7900ba248ee71e"
 dependencies = [
  "console_error_panic_hook",
  "console_log",
@@ -1726,27 +1671,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "servo-fontconfig"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7e3e22fe5fd73d04ebf0daa049d3efe3eae55369ce38ab16d07ddd9ac5c217c"
-dependencies = [
- "libc",
- "servo-fontconfig-sys",
-]
-
-[[package]]
-name = "servo-fontconfig-sys"
-version = "5.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e36b879db9892dfa40f95da1c38a835d41634b825fbd8c4c418093d53c24b388"
-dependencies = [
- "expat-sys",
- "freetype-sys",
- "pkg-config",
-]
-
-[[package]]
 name = "slotmap"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1806,6 +1730,7 @@ dependencies = [
  "instant",
  "legion",
  "rand",
+ "rand_chacha",
  "ron",
  "serde",
  "srs2dge-link-dynamic",
@@ -1818,8 +1743,6 @@ version = "0.2.0"
 dependencies = [
  "bytemuck",
  "colorful",
- "font-loader",
- "fontsdf",
  "glam",
  "image",
  "integer-sqrt",
@@ -1849,6 +1772,7 @@ version = "0.2.0"
 dependencies = [
  "srs2dge-core",
  "srs2dge-presets",
+ "srs2dge-text",
 ]
 
 [[package]]
@@ -1867,6 +1791,7 @@ dependencies = [
  "srs2dge-gizmos",
  "srs2dge-presets",
  "srs2dge-res",
+ "srs2dge-text",
 ]
 
 [[package]]
@@ -1881,6 +1806,14 @@ dependencies = [
 name = "srs2dge-res"
 version = "0.2.0"
 dependencies = [
+ "srs2dge-core",
+]
+
+[[package]]
+name = "srs2dge-text"
+version = "0.2.0"
+dependencies = [
+ "fontsdf",
  "srs2dge-core",
 ]
 
@@ -1995,9 +1928,9 @@ dependencies = [
 
 [[package]]
 name = "uuid"
-version = "1.0.0"
+version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cfcd319456c4d6ea10087ed423473267e1a071f3bc0aa89f80d60997843c6f0"
+checksum = "93bbc61e655a4833cf400d0d15bf3649313422fa7572886ad6dab16d79886365"
 
 [[package]]
 name = "vec_map"

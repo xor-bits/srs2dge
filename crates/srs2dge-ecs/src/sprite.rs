@@ -57,13 +57,13 @@ fn set_pos_body(
 fn set_sprite(sprite: &mut Sprite, #[resource] batcher: &mut BatchRenderer) {
     // println!("set sprite");
     if let Some(idx) = sprite.idx {
-        let mesh = batcher.get(idx);
+        let mesh = batcher.get(idx).unwrap();
         if mesh.pos != sprite.lerp_transform.translation
             || mesh.size != sprite.lerp_transform.scale
             || mesh.col != sprite.color
             || mesh.tex != sprite.sprite
         {
-            let mesh = batcher.get_mut(idx);
+            let mesh = batcher.get_mut(idx).unwrap();
             mesh.pos = sprite.lerp_transform.translation;
             mesh.size = sprite.lerp_transform.scale;
             mesh.col = sprite.color;

@@ -1,7 +1,6 @@
 use std::sync::Arc;
-use winit::{event_loop::ControlFlow, window::WindowBuilder};
 
-use srs2dge::{prelude::*, winit::event::VirtualKeyCode};
+use srs2dge::prelude::*;
 
 //
 

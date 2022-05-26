@@ -16,14 +16,15 @@ opt-level = 'z'
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[profile.release]
-debug = true
+#[profile.release]
+#debug = true
 
 [features]
-default = ["presets", "gizmos", "res", "ecs"]
+default = ["presets", "gizmos", "text", "res", "ecs"]
 dynamic = ["srs2dge-link-dynamic"]
 presets = ["srs2dge-link-static/presets"]
 gizmos = ["srs2dge-link-static/gizmos"]
+text = ["srs2dge-link-static/text"]
 res = ["srs2dge-link-static/res"]
 ecs = ["srs2dge-link-static/ecs"]
 
@@ -35,6 +36,7 @@ srs2dge-link-dynamic = { path = "crates/srs2dge-link-dynamic", version = "0.2", 
 [dev-dependencies]
 instant = "0.1"
 rand = "0.8"
+rand_chacha = "0.3"
 legion = { version = "0.4", default-features = false, features = [
 	"codegen",
 	"wasm-bindgen",

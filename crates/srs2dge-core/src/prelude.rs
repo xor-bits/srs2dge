@@ -1,4 +1,10 @@
 pub use crate::{
     batch::prelude::*, buffer::prelude::*, color::*, frame::prelude::*, packer::prelude::*,
-    shader::prelude::*, target::prelude::*, text::prelude::*, texture::prelude::*, *,
+    shader::prelude::*, target::prelude::*, texture::prelude::*, *,
+};
+
+pub use winit::{
+    event::VirtualKeyCode,
+    event_loop::ControlFlow,
+    window::{Window, WindowBuilder},
 };

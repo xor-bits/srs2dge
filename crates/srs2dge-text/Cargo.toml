@@ -1,13 +1,13 @@
 [package]
-name = "srs2dge-gizmos"
+name = "srs2dge-text"
 version = "0.2.0"
 edition = "2021"
-description = "Simple Rust 2D Game Engine"
+description = "srs2dge static resources"
 license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 srs2dge-core = { path = "../srs2dge-core", version = "0.2" }
-srs2dge-presets = { path = "../srs2dge-presets", version = "0.2" }
-srs2dge-text = { path = "../srs2dge-text", version = "0.2" }
+# font-loader = { version = "0.11", optional = true }
+fontsdf = "0.4"

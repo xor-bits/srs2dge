@@ -1,8 +1,7 @@
 use components::{Collider, CollisionResolver, CustomPlugin, Player};
-use legion::{component, serialize::Canon, IntoQuery, Resources};
+use legion::{component, serialize::Canon, IntoQuery};
 use serde::de::DeserializeSeed;
 use std::ops::{Deref, DerefMut};
-use winit::event_loop::ControlFlow;
 
 use srs2dge::prelude::*;
 
@@ -89,6 +88,7 @@ impl Runnable for App {
     fn event(&mut self, event: Event, _: &EventLoopTarget, control: &mut ControlFlow) {
         self.ws.event(&event);
         self.ks.event(&event);
+        self.gs.event(&event);
 
         if self.ws.should_close {
             *control = ControlFlow::Exit;
@@ -96,10 +96,10 @@ impl Runnable for App {
     }
 
     fn draw(&mut self) {
-        let mut resources = Resources::default();
+        let resources = self.world.resources();
         resources.insert(self.ks.clone());
         resources.insert(self.gs.clone());
-        if self.world.run_with(resources, Default::default()) {
+        if self.world.run() {
             self.ks.clear();
             self.gs.clear();
         }
@@ -132,7 +132,7 @@ impl Runnable for App {
             }],
         );
 
-        let (vbo, ibo) = self
+        let (vbo, ibo, i) = self
             .world
             .get_batcher_mut()
             .generate(&mut self.target, &mut frame);
@@ -143,7 +143,7 @@ impl Runnable for App {
             .bind_ibo(ibo)
             .bind_group(&self.shader.bind_group((&self.ubo, &self.texture_atlas)))
             .bind_shader(&self.shader)
-            .draw_indexed(0..ibo.capacity() as _, 0, 0..1);
+            .draw_indexed(0..i, 0, 0..1);
 
         self.target.finish_frame(frame);
     }

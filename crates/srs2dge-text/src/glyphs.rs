@@ -1,14 +1,12 @@
-use crate::{
-    prelude::{Packer, Rect, Target, TexturePosition},
-    texture::Texture,
-};
 use fontsdf::Font;
-use image::GrayImage;
+use srs2dge_core::{
+    image::GrayImage,
+    prelude::{Packer, Rect, TexturePosition},
+    target::Target,
+    texture::Texture,
+    wgpu::TextureUsages,
+};
 use std::{collections::HashMap, ops::Deref};
-use wgpu::TextureUsages;
-
-#[cfg(feature = "font_loader")]
-use font_loader::system_fonts::{self, FontProperty};
 
 //
 
@@ -107,16 +105,6 @@ impl Glyphs {
     /// this handle is used to format text
     pub fn add_font_bytes(&mut self, font: &[u8]) -> Result<usize, &'static str> {
         Ok(self.add_font(Font::from_bytes(font)?))
-    }
-
-    /// Add a font to this glyph map
-    ///
-    /// returns a handle to it
-    ///
-    /// this handle is used to format text
-    #[cfg(feature = "font_loader")]
-    pub fn add_font_property(&mut self, font: FontProperty) -> Result<usize, &'static str> {
-        self.add_font_bytes(&system_fonts::get(&font).ok_or("Font not found")?.0[..])
     }
 
     /// Queues a glyph to be available

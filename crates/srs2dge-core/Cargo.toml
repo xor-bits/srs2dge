@@ -11,7 +11,6 @@ license = "MIT"
 default = []
 glsl = ["wgpu/glsl", "naga/glsl-in"]
 spirv = ["wgpu/spirv", "naga/spv-in"]
-fontloader = ["font-loader"]
 
 [dependencies]
 # logging
@@ -29,15 +28,14 @@ wgpu = { git = "https://github.com/gfx-rs/wgpu", rev = "af259aa1", features = [
 ] }
 winit = "0.26"
 # resources
-font-loader = { version = "0.11", optional = true }
-fontsdf = "0.4"
 image = "0.24"
+rapid-qoi = "0.6"
 # data
+bytemuck = { version = "1.9", features = ["derive"] }
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
-rapid-qoi = "0.6"
+# opt
 integer-sqrt = "0.1"
-bytemuck = { version = "1.9", features = ["derive"] }
 
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

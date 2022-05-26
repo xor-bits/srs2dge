@@ -1,5 +1,3 @@
-use winit::event_loop::ControlFlow;
-
 use srs2dge::prelude::*;
 
 //

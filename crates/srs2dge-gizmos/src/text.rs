@@ -1,11 +1,12 @@
 use super::{line::GizmosLine, Gizmos};
 use srs2dge_core::{
-    color::Color, fontsdf::math::Line, glam::Vec2, main_game_loop::prelude::WindowState,
-    winit::dpi::PhysicalPosition,
+    color::Color, glam::Vec2, main_game_loop::prelude::WindowState, winit::dpi::PhysicalPosition,
 };
+use srs2dge_text::fontsdf::math::Line;
 
 //
 
+#[derive(Debug, Clone, Copy)]
 pub struct GizmosText<'s> {
     origin: Vec2,
     ws: &'s WindowState,
@@ -28,13 +29,12 @@ impl<'s> GizmosText<'s> {
     pub fn lines(self, base: &mut Gizmos) -> Result<(), &'static str> {
         let font = base.font.as_ref().ok_or("No font set")?;
 
-        let px = base
-            .screen_to_world(self.ws, PhysicalPosition::new(28, 0))
+        let mvp = base.mvp(self.ws);
+        let px = Gizmos::screen_to_world(mvp, self.ws, PhysicalPosition::new(28, 0))
             .ok_or("Invalid projection")?
             .x;
         let px = px
-            - base
-                .screen_to_world(self.ws, PhysicalPosition::new(0, 0))
+            - Gizmos::screen_to_world(mvp, self.ws, PhysicalPosition::new(0, 0))
                 .ok_or("Invalid projection")?
                 .x;
         let sf = font.scale_factor(px);

@@ -1,5 +1,5 @@
 use super::format::{FString, Format};
-use crate::packer::glyph::Glyphs;
+use crate::glyphs::Glyphs;
 use fontsdf::Font;
 
 //

@@ -130,8 +130,8 @@ impl Board {
                 for y in (1..=y).rev() {
                     for x in 0..10 {
                         self.board[y][x].state = self.board[y - 1][x].state;
-                        batcher.get_mut(self.board[y][x].idx).col =
-                            batcher.get(self.board[y - 1][x].idx).col;
+                        batcher.get_mut(self.board[y][x].idx).unwrap().col =
+                            batcher.get(self.board[y - 1][x].idx).unwrap().col;
                     }
                 }
             }
@@ -153,7 +153,10 @@ impl Board {
         let mut copy = *self;
         while !copy.move_tetromino(Move::Down) {}
         for (x, y) in copy.tetromino.iter() {
-            batcher.get_mut(self.board[y as usize][x as usize].idx).size = Vec2::ONE / 11.0;
+            batcher
+                .get_mut(self.board[y as usize][x as usize].idx)
+                .unwrap()
+                .size = Vec2::ONE / 11.0;
         }
     }
 
@@ -165,8 +168,8 @@ impl Board {
         self.clear_tetromino(batcher);
         for y in 0..20 {
             for x in 0..10 {
-                if batcher.get(self.board[y][x].idx).size.x <= 0.1 {
-                    batcher.get_mut(self.board[y][x].idx).size = Vec2::ONE / 10.0;
+                if batcher.get(self.board[y][x].idx).unwrap().size.x <= 0.1 {
+                    batcher.get_mut(self.board[y][x].idx).unwrap().size = Vec2::ONE / 10.0;
                 }
             }
         }
@@ -204,7 +207,7 @@ impl Board {
             if self.game_over {
                 return;
             }
-            batcher.get_mut(self.background).col = self.tetromino.color();
+            batcher.get_mut(self.background).unwrap().col = self.tetromino.color();
         }
 
         self.draw(batcher);
@@ -231,11 +234,11 @@ impl Tile {
 
     pub fn reset(&mut self, batcher: &mut BatchRenderer) {
         self.state = TileState::Empty;
-        batcher.get_mut(self.idx).col = Color::BLACK;
+        batcher.get_mut(self.idx).unwrap().col = Color::BLACK;
     }
 
     pub fn tetromino(&mut self, batcher: &mut BatchRenderer, color: Color) {
         self.state = TileState::Moving;
-        batcher.get_mut(self.idx).col = color;
+        batcher.get_mut(self.idx).unwrap().col = color;
     }
 }

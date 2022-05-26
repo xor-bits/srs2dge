@@ -1,5 +1,7 @@
-use glam::Vec3;
+use srs2dge_core::glam::Vec3;
 use std::{borrow::Borrow, collections::BTreeMap, iter::FromIterator, ops::AddAssign};
+
+//
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NewSetting<T>
@@ -46,11 +48,15 @@ where
     }
 }
 
+//
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Format {
     pub color: Vec3,
     pub font: usize,
 }
+
+//
 
 impl Default for Format {
     fn default() -> Self {
@@ -61,11 +67,15 @@ impl Default for Format {
     }
 }
 
+//
+
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct NewFormat {
     pub color: NewSetting<Vec3>,
     pub font: NewSetting<usize>,
 }
+
+//
 
 impl NewFormat {
     #[must_use]
@@ -99,11 +109,15 @@ impl NewFormat {
     }
 }
 
+//
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FormatPair<T> {
     pub format: NewFormat,
     pub other: T,
 }
+
+//
 
 impl<T> FormatPair<T> {
     #[must_use]
@@ -119,6 +133,8 @@ impl<T> FormatPair<T> {
     }
 }
 
+//
+
 pub trait Formatted
 where
     Self: Sized,
@@ -127,6 +143,8 @@ where
     fn default(&self) -> FormatPair<&'_ str>;
     fn formatted(&self, format: NewFormat) -> FormatPair<&'_ str>;
 }
+
+//
 
 impl Formatted for &str {
     fn leave(&self) -> FormatPair<&'_ str> {
@@ -144,6 +162,8 @@ impl Formatted for &str {
         }
     }
 }
+
+//
 
 impl Formatted for String {
     fn leave(&self) -> FormatPair<&'_ str> {
@@ -172,6 +192,8 @@ pub struct FString {
     default_format: Format,
 }
 
+//
+
 impl<'s, S> FromIterator<FormatPair<S>> for FString
 where
     S: Into<&'s str> + 's,
@@ -192,6 +214,8 @@ where
         }
     }
 }
+
+//
 
 impl FString {
     pub fn new() -> Self {

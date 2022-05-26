@@ -1,10 +1,5 @@
 #![feature(type_name_of_val)]
 
-use std::{
-    collections::BTreeMap,
-    ops::{Deref, DerefMut},
-};
-
 use legion::{
     systems::{Builder, ParallelRunnable},
     Resources, Schedule,
@@ -19,10 +14,14 @@ use srs2dge_core::{
     },
     target::Target,
 };
+use std::{
+    collections::BTreeMap,
+    ops::{Deref, DerefMut},
+};
 
 //
 
-pub extern crate legion;
+pub use legion;
 
 //
 
@@ -47,6 +46,8 @@ pub struct World {
     update_loop: UpdateLoop,
     update_rate: UpdateRate,
 
+    resources: Resources,
+
     update_reporter: Reporter,
     frame_reporter: Reporter,
 
@@ -67,6 +68,8 @@ impl World {
         let update_rate = UpdateRate::PerSecond(60);
         let update_loop = UpdateLoop::new(update_rate);
 
+        let resources = Resources::default();
+
         Self {
             world,
 
@@ -74,6 +77,8 @@ impl World {
 
             update_loop,
             update_rate,
+
+            resources,
 
             update_reporter: Reporter::new(),
             frame_reporter: Reporter::new(),
@@ -116,6 +121,12 @@ impl World {
             .push(Box::new(move |builder| builder.add_system(system())));
     }
 
+    /// Internally used indices:
+    ///  - ..100 : **FREE**
+    ///  - 100 : `RigidBody2D`
+    ///  - 101..200 : **FREE**
+    ///  - 200 : `Sprite`
+    ///  - 201.. : **FREE**
     pub fn insert_internal_update_system<
         R: ParallelRunnable + 'static,
         S: FnMut() -> R + 'static,
@@ -128,6 +139,10 @@ impl World {
         parallel_systems.push(Box::new(move |builder| builder.add_system(system())));
     }
 
+    /// Internally used indices:
+    ///  - ..200 : **FREE**
+    ///  - 200..202 : `Sprite`
+    ///  - 202.. : **FREE**
     pub fn insert_internal_frame_system<
         R: ParallelRunnable + 'static,
         S: FnMut() -> R + 'static,
@@ -148,15 +163,19 @@ impl World {
         self.batcher.as_mut().unwrap()
     }
 
+    pub fn resources(&mut self) -> &mut Resources {
+        &mut self.resources
+    }
+
     /// returns a bool that is true if update systems ran
-    pub fn run_with(&mut self, update_resources: Resources, frame_resources: Resources) -> bool {
+    pub fn run(&mut self) -> bool {
         let old_update_rate = self.update_rate;
 
         // update(s)
-        let (delta_seconds, updated) = self.update(update_resources);
+        let (delta_seconds, updated) = self.update();
 
         // frame
-        self.frame(delta_seconds, frame_resources);
+        self.frame(delta_seconds);
 
         // update rate modified
         if self.update_rate != old_update_rate {
@@ -166,16 +185,11 @@ impl World {
         updated
     }
 
-    /// returns a bool that is true if update systems ran
-    pub fn run(&mut self) -> bool {
-        self.run_with(Resources::default(), Resources::default())
-    }
-
     pub fn reporters(&mut self) -> (&mut Reporter, &mut Reporter) {
         (&mut self.update_reporter, &mut self.frame_reporter)
     }
 
-    fn update(&mut self, update_resources: Resources) -> (f32, bool) {
+    fn update(&mut self) -> (f32, bool) {
         let delta_mult = self.update_rate.to_interval().as_secs_f32();
         let time = Time { delta_mult };
 
@@ -194,26 +208,24 @@ impl World {
             builder.flush();
         }
 
-        let mut resources = Resources::default();
-        resources.insert(self.update_rate);
-        resources.insert(time);
-        resources.merge(update_resources);
+        self.resources.insert(self.update_rate);
+        self.resources.insert(time);
 
         let mut schedule = builder.build();
         let mut updated = false;
         let delta = self.update_loop.update(|| {
             updated = true;
             let timer = self.update_reporter.begin();
-            schedule.execute(&mut self.world, &mut resources);
+            schedule.execute(&mut self.world, &mut self.resources);
             self.update_reporter.end(timer);
         });
 
-        self.update_rate = resources.remove().unwrap();
+        self.update_rate = self.resources.remove().unwrap();
 
         (delta * delta_mult, updated)
     }
 
-    fn frame(&mut self, delta_mult: f32, frame_resources: Resources) {
+    fn frame(&mut self, delta_mult: f32) {
         let timer = self.frame_reporter.begin();
         let mut builder = Schedule::builder();
 
@@ -230,16 +242,16 @@ impl World {
             builder.flush();
         }
 
-        let mut resources = Resources::default();
-        resources.merge(frame_resources);
-        resources.insert(self.update_rate);
-        resources.insert(self.batcher.take().unwrap());
-        resources.insert(Time { delta_mult });
+        self.resources.insert(self.update_rate);
+        self.resources.insert(self.batcher.take().unwrap());
+        self.resources.insert(Time { delta_mult });
 
-        builder.build().execute(&mut self.world, &mut resources);
+        builder
+            .build()
+            .execute(&mut self.world, &mut self.resources);
 
-        self.batcher = Some(resources.remove().unwrap());
-        self.update_rate = resources.remove().unwrap();
+        self.batcher = Some(self.resources.remove().unwrap());
+        self.update_rate = self.resources.remove().unwrap();
         self.frame_reporter.end(timer);
     }
 }

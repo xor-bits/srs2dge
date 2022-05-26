@@ -2,10 +2,11 @@ use logic::{Board, Move};
 use std::{
     fs::File,
     io::{Read, Write},
+    sync::Arc,
 };
-use winit::event_loop::ControlFlow;
+use winit::dpi::PhysicalSize;
 
-use srs2dge::{prelude::*, winit::event::VirtualKeyCode};
+use srs2dge::prelude::*;
 
 //
 
@@ -18,7 +19,8 @@ struct App {
     target: Target,
 
     ws: WindowState,
-    kb: KeyboardState,
+    ks: KeyboardState,
+    gs: GamepadState,
     ul: Option<UpdateLoop>,
 
     batcher: BatchRenderer,
@@ -42,10 +44,19 @@ struct App {
 impl App {
     async fn init(target: &EventLoopTarget) -> Self {
         let engine = Engine::new();
-        let target = engine.new_target_default(target).await.unwrap();
+        let target = engine
+            .new_target(Arc::new(
+                WindowBuilder::new()
+                    .with_visible(false)
+                    .with_inner_size(PhysicalSize::new(300, 600))
+                    .build(target)
+                    .unwrap(),
+            ))
+            .await;
 
         let ws = WindowState::new(&target.get_window().unwrap());
-        let kb = KeyboardState::new();
+        let ks = KeyboardState::new();
+        let gs = GamepadState::new();
         let ul = Some(UpdateLoop::new(UpdateRate::PerMinute(60)));
 
         let mut batcher = BatchRenderer::new(&target);
@@ -62,6 +73,9 @@ impl App {
 
         let board = Board::new(&mut batcher, &mut rand::thread_rng());
 
+        #[cfg(target_arch = "wasm32")]
+        let highscore = 0;
+        #[cfg(not(target_arch = "wasm32"))]
         let highscore = (|| -> Result<usize, ()> {
             let mut highscore_file = File::options()
                 .read(true)
@@ -77,7 +91,8 @@ impl App {
             target,
 
             ws,
-            kb,
+            ks,
+            gs,
             ul,
 
             batcher,
@@ -101,11 +116,13 @@ impl App {
 impl Runnable for App {
     fn event(&mut self, event: Event, _: &EventLoopTarget, control: &mut ControlFlow) {
         self.ws.event(&event);
-        self.kb.event(&event);
+        self.ks.event(&event);
+        self.gs.event(&event);
 
         if self.ws.should_close {
             *control = ControlFlow::Exit;
 
+            #[cfg(not(target_arch = "wasm32"))]
             if let Err(err) = (|| -> Result<_, String> {
                 let mut highscore_file = File::options()
                     .create(true)
@@ -127,36 +144,50 @@ impl Runnable for App {
 
     fn draw(&mut self) {
         // manual moves
-        if self.kb.just_pressed(VirtualKeyCode::Left) || self.kb.just_pressed(VirtualKeyCode::A) {
+        if self.ks.just_pressed(VirtualKeyCode::Left)
+            || self.ks.just_pressed(VirtualKeyCode::A)
+            || self.gs.just_pressed_first(GamepadButton::DPadLeft) == Some(true)
+        {
             self.board.update(&mut self.batcher, Move::Left);
         }
-        if self.kb.just_pressed(VirtualKeyCode::Right) || self.kb.just_pressed(VirtualKeyCode::D) {
+        if self.ks.just_pressed(VirtualKeyCode::Right)
+            || self.ks.just_pressed(VirtualKeyCode::D)
+            || self.gs.just_pressed_first(GamepadButton::DPadRight) == Some(true)
+        {
             self.board.update(&mut self.batcher, Move::Right);
         }
-        if self.kb.just_pressed(VirtualKeyCode::Q) {
+        if self.ks.just_pressed(VirtualKeyCode::Q) {
             self.board.update(&mut self.batcher, Move::RotateCCW);
         }
-        if self.kb.just_pressed(VirtualKeyCode::W)
-            || self.kb.just_pressed(VirtualKeyCode::E)
-            || self.kb.just_pressed(VirtualKeyCode::Up)
+        if self.ks.just_pressed(VirtualKeyCode::W)
+            || self.ks.just_pressed(VirtualKeyCode::E)
+            || self.ks.just_pressed(VirtualKeyCode::Up)
+            || self.gs.just_pressed_first(GamepadButton::DPadUp) == Some(true)
         {
             self.board.update(&mut self.batcher, Move::RotateCW);
         }
-        if self.kb.just_pressed(VirtualKeyCode::Down) || self.kb.just_pressed(VirtualKeyCode::S) {
+        if self.ks.just_pressed(VirtualKeyCode::Down)
+            || self.ks.just_pressed(VirtualKeyCode::S)
+            || self.gs.just_pressed_first(GamepadButton::DPadDown) == Some(true)
+        {
             self.board.update(&mut self.batcher, Move::Down);
         }
-        if self.kb.just_pressed(VirtualKeyCode::Space)
-            || self.kb.just_pressed(VirtualKeyCode::Return)
+        if self.ks.just_pressed(VirtualKeyCode::Space)
+            || self.ks.just_pressed(VirtualKeyCode::Return)
+            || self.gs.just_pressed_first(GamepadButton::South) == Some(true)
         {
             self.board.update(&mut self.batcher, Move::Drop);
         }
-        if self.game_over && self.kb.just_pressed(VirtualKeyCode::R) {
+        if self.game_over && self.ks.just_pressed(VirtualKeyCode::R)
+            || self.gs.just_pressed_first(GamepadButton::North) == Some(true)
+        {
             let mut rng = rand::thread_rng();
             self.board = Board::new(&mut self.batcher, &mut rng);
             self.score = 999;
             self.game_over = false;
         }
-        self.kb.clear();
+        self.ks.clear();
+        self.gs.clear();
 
         // tick moves
         let mut ul = self.ul.take().unwrap();
@@ -184,7 +215,7 @@ impl Runnable for App {
                     &self.target,
                     &s,
                     &mut self.glyphs,
-                    64.0,
+                    48.0,
                     Vec2::new(0.0, -200.0),
                     Some(Vec2::new(0.5, 0.0)),
                 )
@@ -198,7 +229,7 @@ impl Runnable for App {
                     &self.target,
                     &s,
                     &mut self.glyphs,
-                    32.0,
+                    24.0,
                     Vec2::new(0.0, -264.0),
                     Some(Vec2::new(0.5, 0.0)),
                 )
@@ -212,7 +243,7 @@ impl Runnable for App {
                     &self.target,
                     &s,
                     &mut self.glyphs,
-                    32.0,
+                    24.0,
                     Vec2::new(0.0, -296.0),
                     Some(Vec2::new(0.5, 0.0)),
                 )
@@ -220,12 +251,12 @@ impl Runnable for App {
                 self.vbos.push(VertexBuffer::new_with(&self.target, &v));
                 self.ibos.push(IndexBuffer::new_with(&self.target, &i));
 
-                let s = FString::from_iter(["Press R to restart".default()]);
+                let s = FString::from_iter(["Press R/Δ/Y to restart".default()]);
                 let (v, i) = vbo::text(
                     &self.target,
                     &s,
                     &mut self.glyphs,
-                    24.0,
+                    18.0,
                     Vec2::new(0.0, -324.0),
                     Some(Vec2::new(0.5, 0.0)),
                 )
@@ -266,10 +297,10 @@ impl Runnable for App {
             &mut self.target,
             &mut frame,
             &[Mat4::orthographic_lh(
-                -1.2 * self.ws.aspect,
-                1.2 * self.ws.aspect,
-                1.2,
-                -1.2,
+                -1.0 * self.ws.aspect,
+                1.0 * self.ws.aspect,
+                1.0,
+                -1.0,
                 -10.0,
                 10.0,
             )],
@@ -287,7 +318,7 @@ impl Runnable for App {
             )],
         );
 
-        let (vbo, ibo) = self.batcher.generate(&mut self.target, &mut frame);
+        let (vbo, ibo, i) = self.batcher.generate(&mut self.target, &mut frame);
 
         let bg_a = self.shader.bind_group(&self.world_ubo);
         let bg_b = self
@@ -299,7 +330,7 @@ impl Runnable for App {
             .bind_ibo(ibo)
             .bind_group(&bg_a)
             .bind_shader(&self.shader)
-            .draw_indexed(0..ibo.capacity() as _, 0, 0..1)
+            .draw_indexed(0..i, 0, 0..1)
             .done();
 
         for (vbo, ibo) in self.vbos.iter().zip(self.ibos.iter()) {

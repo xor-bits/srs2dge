@@ -1,5 +1,5 @@
 use instant::Instant;
-use winit::{dpi::PhysicalPosition, event::WindowEvent, event_loop::ControlFlow};
+use winit::{dpi::PhysicalPosition, event::WindowEvent};
 
 use srs2dge::prelude::*;
 
@@ -58,7 +58,7 @@ impl Runnable for App {
 
         self.debug
             .add_text(GizmosText::new(
-                Vec2::new(-0.9, -0.9),
+                Vec2::new(-0.3, -0.9),
                 &self.ws,
                 "Do not draw text like this",
                 Color::RED,
@@ -82,19 +82,15 @@ impl Runnable for App {
 
         // cursor follower
         (|| {
+            let mvp = self.debug.mvp(&self.ws);
+
             // position at cursor
-            let middle = self.debug.screen_to_world(&self.ws, self.ws.cursor_pos)?;
+            let middle = Gizmos::screen_to_world(mvp, &self.ws, self.ws.cursor_pos)?;
 
             // crude 10px radius
-            let radius = self
-                .debug
-                .screen_to_world(&self.ws, PhysicalPosition::new(10, 0))?
-                .x;
-            let radius = radius
-                - self
-                    .debug
-                    .screen_to_world(&self.ws, PhysicalPosition::new(0, 0))?
-                    .x;
+            let radius = Gizmos::screen_to_world(mvp, &self.ws, PhysicalPosition::new(10, 0))?.x;
+            let radius =
+                radius - Gizmos::screen_to_world(mvp, &self.ws, PhysicalPosition::new(0, 0))?.x;
 
             self.debug
                 .add_circle(GizmosCircle::new(middle, radius, Color::ORANGE));

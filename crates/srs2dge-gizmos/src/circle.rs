@@ -15,6 +15,7 @@ const RES: u32 = 50;
 
 //
 
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GizmosCircle {
     pub middle: Vec2,
     pub radius: f32,
@@ -36,9 +37,6 @@ impl GizmosCircle {
 impl Mesh<DefaultVertex> for GizmosCircle {
     const PRIM: PrimitiveTopology = PrimitiveTopology::LineStrip;
 
-    const VERTICES: usize = RES as usize;
-    const INDICES: usize = RES as usize + 2;
-
     type VertexIter = impl Iterator<Item = DefaultVertex>;
     type IndexIter = impl Iterator<Item = u32>;
 
@@ -58,8 +56,11 @@ impl Mesh<DefaultVertex> for GizmosCircle {
     }
 
     fn indices(&self, offset: u32) -> Self::IndexIter {
-        let offset = offset * Self::VERTICES as u32;
         (0..RES).chain([0]).map(move |i| i + offset).chain([!0])
+    }
+
+    fn index_step(&self) -> u32 {
+        RES
     }
 }
 
@@ -103,11 +104,15 @@ impl GizmosCircles {
             .iter()
             .flat_map(|line| line.vertices())
             .collect();
+        let mut i = 0;
         let ibo_data: Vec<u32> = self
             .circles
             .drain(..)
-            .enumerate()
-            .flat_map(|(i, line)| line.indices(i as _))
+            .flat_map(|line| {
+                let offset = i;
+                i += line.index_step();
+                line.indices(offset)
+            })
             .collect();
 
         if self.vbo.capacity() < vbo_data.len() {

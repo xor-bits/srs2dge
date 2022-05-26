@@ -14,6 +14,11 @@ pub mod gizmos {
     pub use srs2dge_gizmos::prelude::*;
 }
 
+#[cfg(feature = "text")]
+pub mod text {
+    pub use srs2dge_text::prelude::*;
+}
+
 #[cfg(feature = "res")]
 pub mod res {
     pub use srs2dge_res::*;

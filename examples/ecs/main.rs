@@ -1,6 +1,5 @@
 use legion::system;
 use rand::Rng;
-use winit::event_loop::ControlFlow;
 
 use srs2dge::prelude::*;
 
@@ -135,7 +134,7 @@ impl Runnable for App {
             )],
         );
 
-        let (vbo, ibo) = self
+        let (vbo, ibo, i) = self
             .world
             .get_batcher_mut()
             .generate(&mut self.target, &mut frame);
@@ -146,7 +145,7 @@ impl Runnable for App {
             .bind_ibo(ibo)
             .bind_group(&self.shader.bind_group((&self.ubo, &self.texture)))
             .bind_shader(&self.shader)
-            .draw_indexed(0..ibo.capacity() as _, 0, 0..1);
+            .draw_indexed(0..i, 0, 0..1);
 
         self.target.finish_frame(frame);
         self.frame_report.end(timer);
