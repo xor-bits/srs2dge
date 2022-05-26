@@ -1013,7 +1013,8 @@ dependencies = [
 [[package]]
 name = "main_game_loop"
 version = "0.4.4"
-source = "git+https://github.com/Overpeek/main_game_loop#cc632ceca5af1120a7d063a64e7900ba248ee71e"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c448bffd295d1631c9db11464299f94fef9a970a56c85620a8690cd3863b4dfe"
 dependencies = [
  "console_error_panic_hook",
  "console_log",
@@ -1452,9 +1453,9 @@ dependencies = [
 
 [[package]]
 name = "profiling"
-version = "1.0.5"
+version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9145ac0af1d93c638c98c40cf7d25665f427b2a44ad0a99b1dccf3e2f25bb987"
+checksum = "2f61dcf0b917cd75d4521d7343d1ffff3d1583054133c9b5cbea3375c703c40d"
 
 [[package]]
 name = "quote"
