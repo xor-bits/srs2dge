@@ -104,7 +104,8 @@ impl Color {
     }
 
     #[inline]
-    pub const fn into_u32(self) -> u32 {
+    // TODO: const
+    pub fn into_u32(self) -> u32 {
         u32::from_be_bytes([
             0,
             (self.r * 255.0) as u8,
@@ -114,7 +115,8 @@ impl Color {
     }
 
     #[inline]
-    pub const fn into_u32_alpha(self) -> u32 {
+    // TODO: const
+    pub fn into_u32_alpha(self) -> u32 {
         u32::from_be_bytes([
             (self.r * 255.0) as u8,
             (self.g * 255.0) as u8,

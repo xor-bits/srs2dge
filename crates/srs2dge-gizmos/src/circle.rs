@@ -18,14 +18,14 @@ const RES: u32 = 50;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct GizmosCircle {
     pub middle: Vec2,
-    pub radius: f32,
+    pub radius: Vec2,
     pub col: Color,
 }
 
 //
 
 impl GizmosCircle {
-    pub fn new(middle: Vec2, radius: f32, col: Color) -> Self {
+    pub fn new(middle: Vec2, radius: Vec2, col: Color) -> Self {
         Self {
             middle,
             radius,
@@ -37,30 +37,78 @@ impl GizmosCircle {
 impl Mesh<DefaultVertex> for GizmosCircle {
     const PRIM: PrimitiveTopology = PrimitiveTopology::LineStrip;
 
-    type VertexIter = impl Iterator<Item = DefaultVertex>;
-    type IndexIter = impl Iterator<Item = u32>;
+    // TODO : #![feature(type_alias_impl_trait)]
+    type VertexIter = GizmosCircleVertexIter;
+    type IndexIter = GizmosCircleIndexIter;
 
     fn vertices(&self) -> Self::VertexIter {
-        let col = self.col;
-        let middle = self.middle;
-        let radius = self.radius;
-        (0..RES)
-            .map(|i| i as f32 / RES as f32 * 2.0 * PI)
-            .map(move |v| {
-                DefaultVertex::new(
-                    middle + radius * Vec2::new(v.cos(), v.sin()),
-                    col,
-                    Vec2::ZERO,
-                )
-            })
+        GizmosCircleVertexIter {
+            col: self.col,
+            middle: self.middle,
+            radius: self.radius,
+            i: 0,
+        }
     }
 
     fn indices(&self, offset: u32) -> Self::IndexIter {
-        (0..RES).chain([0]).map(move |i| i + offset).chain([!0])
+        GizmosCircleIndexIter { i: 0, offset }
     }
 
     fn index_step(&self) -> u32 {
         RES
+    }
+}
+
+//
+
+pub struct GizmosCircleVertexIter {
+    col: Color,
+    middle: Vec2,
+    radius: Vec2,
+    i: i32,
+}
+
+impl Iterator for GizmosCircleVertexIter {
+    type Item = DefaultVertex;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.i >= 4 {
+            return None;
+        }
+
+        let i = self.i;
+        self.i += 1;
+        let v = i as f32 / RES as f32 * 2.0 * PI;
+
+        Some(DefaultVertex::new(
+            self.middle + self.radius * Vec2::new(v.cos(), v.sin()),
+            self.col,
+            Vec2::ZERO,
+        ))
+    }
+}
+
+pub struct GizmosCircleIndexIter {
+    i: u32,
+    offset: u32,
+}
+
+impl Iterator for GizmosCircleIndexIter {
+    type Item = u32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let i = self.i;
+        self.i += 1;
+
+        if i == 4 {
+            Some(self.offset)
+        } else if i == 5 {
+            Some(!0)
+        } else if i >= 6 {
+            None
+        } else {
+            Some(i + self.offset)
+        }
     }
 }
 

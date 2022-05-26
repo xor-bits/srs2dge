@@ -33,24 +33,21 @@ impl GizmosBox {
 impl Mesh<DefaultVertex> for GizmosBox {
     const PRIM: PrimitiveTopology = PrimitiveTopology::LineStrip;
 
-    type VertexIter = impl Iterator<Item = DefaultVertex>;
-    type IndexIter = impl Iterator<Item = u32>;
+    // TODO : #![feature(type_alias_impl_trait)]
+    type VertexIter = GizmosBoxVertexIter;
+    type IndexIter = GizmosBoxIndexIter;
 
     fn vertices(&self) -> Self::VertexIter {
-        let col = self.col;
-        let middle = self.middle;
-        let radius = self.radius;
-        (0..4).map(|i| i as f32 / 4.0 * 2.0 * PI).map(move |v| {
-            DefaultVertex::new(
-                middle + radius * Vec2::new(square_cos(v), square_sin(v)),
-                col,
-                Vec2::ZERO,
-            )
-        })
+        GizmosBoxVertexIter {
+            col: self.col,
+            middle: self.middle,
+            radius: self.radius,
+            i: 0,
+        }
     }
 
     fn indices(&self, offset: u32) -> Self::IndexIter {
-        (0..4).chain([0]).map(move |i| i + offset).chain([!0])
+        GizmosBoxIndexIter { i: 0, offset }
     }
 
     fn index_step(&self) -> u32 {
@@ -59,6 +56,57 @@ impl Mesh<DefaultVertex> for GizmosBox {
 }
 
 //
+
+pub struct GizmosBoxVertexIter {
+    col: Color,
+    middle: Vec2,
+    radius: Vec2,
+    i: i32,
+}
+
+impl Iterator for GizmosBoxVertexIter {
+    type Item = DefaultVertex;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.i >= 4 {
+            return None;
+        }
+
+        let i = self.i;
+        self.i += 1;
+        let v = i as f32 / 4.0 * 2.0 * PI;
+
+        Some(DefaultVertex::new(
+            self.middle + self.radius * Vec2::new(square_cos(v), square_sin(v)),
+            self.col,
+            Vec2::ZERO,
+        ))
+    }
+}
+
+pub struct GizmosBoxIndexIter {
+    i: u32,
+    offset: u32,
+}
+
+impl Iterator for GizmosBoxIndexIter {
+    type Item = u32;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let i = self.i;
+        self.i += 1;
+
+        if i == 4 {
+            Some(self.offset)
+        } else if i == 5 {
+            Some(!0)
+        } else if i >= 6 {
+            None
+        } else {
+            Some(i + self.offset)
+        }
+    }
+}
 
 // https://www.desmos.com/calculator/ceexqanvmb
 fn square_cos(f: f32) -> f32 {

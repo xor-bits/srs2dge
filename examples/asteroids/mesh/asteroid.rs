@@ -30,8 +30,9 @@ impl Default for AsteroidMesh {
 impl Mesh<DefaultVertex> for AsteroidMesh {
     const PRIM: PrimitiveTopology = PrimitiveTopology::LineStrip;
 
-    type VertexIter = impl Iterator<Item = DefaultVertex>;
-    type IndexIter = impl Iterator<Item = u32>;
+    // TODO : #![feature(type_alias_impl_trait)]
+    type VertexIter = Box<dyn Iterator<Item = DefaultVertex>>;
+    type IndexIter = Box<dyn Iterator<Item = u32>>;
 
     fn vertices(&self) -> Self::VertexIter {
         let col = Color::WHITE;
@@ -40,19 +41,22 @@ impl Mesh<DefaultVertex> for AsteroidMesh {
         let rotation = self.lerp_transform.rotation;
         let mut rng = ChaCha8Rng::seed_from_u64(self.seed);
 
-        (0..RES)
-            .map(move |i| i as f32 / RES as f32 * 2.0 * PI + rotation)
-            .map(move |v| {
-                DefaultVertex::new(
-                    translation + rng.gen_range(0.6..1.0) * radius * Vec2::new(v.cos(), v.sin()),
-                    col,
-                    Vec2::ZERO,
-                )
-            })
+        Box::new(
+            (0..RES)
+                .map(move |i| i as f32 / RES as f32 * 2.0 * PI + rotation)
+                .map(move |v| {
+                    DefaultVertex::new(
+                        translation
+                            + rng.gen_range(0.6..1.0) * radius * Vec2::new(v.cos(), v.sin()),
+                        col,
+                        Vec2::ZERO,
+                    )
+                }),
+        )
     }
 
     fn indices(&self, offset: u32) -> Self::IndexIter {
-        (0..RES).chain([0]).map(move |i| i + offset).chain([!0])
+        Box::new((0..RES).chain([0]).map(move |i| i + offset).chain([!0]))
     }
 
     fn index_step(&self) -> u32 {

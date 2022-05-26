@@ -1,5 +1,3 @@
-#![feature(type_alias_impl_trait)]
-
 //! Immediate mode rendering
 //!
 //! Easy/quick but slow rendering

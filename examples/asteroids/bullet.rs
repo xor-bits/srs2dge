@@ -32,7 +32,7 @@ fn bullet_mesh(
 ) {
     if let Some(MultiMesh::Bullet(mesh)) = batcher.get_mut(bullet.idx) {
         mesh.middle = transform.translation;
-        mesh.radius = transform.scale.x;
+        mesh.radius = transform.scale;
     }
 }
 

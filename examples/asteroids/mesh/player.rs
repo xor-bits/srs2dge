@@ -1,3 +1,5 @@
+use std::array::IntoIter;
+
 use srs2dge::prelude::*;
 
 //
@@ -12,8 +14,9 @@ pub struct PlayerMesh {
 impl Mesh<DefaultVertex> for PlayerMesh {
     const PRIM: PrimitiveTopology = PrimitiveTopology::LineStrip;
 
-    type VertexIter = impl Iterator<Item = DefaultVertex>;
-    type IndexIter = impl Iterator<Item = DefaultIndex>;
+    // TODO : #![feature(type_alias_impl_trait)]
+    type VertexIter = IntoIter<DefaultVertex, 4>;
+    type IndexIter = IntoIter<DefaultIndex, 6>;
 
     fn vertices(&self) -> Self::VertexIter {
         let mat = Mat2::from_scale_angle(self.lerp_transform.scale, self.lerp_transform.rotation);

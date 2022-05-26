@@ -1,7 +1,3 @@
-#![feature(type_alias_impl_trait)]
-
-//
-
 use asteroid::AsteroidPlugin;
 use bullet::BulletPlugin;
 use collider::ColliderPlugin;

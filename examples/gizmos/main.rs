@@ -46,10 +46,10 @@ impl Runnable for App {
     fn draw(&mut self) {
         let t = self.timer.elapsed().as_secs_f32();
 
-        let r_a = 0.5;
-        let r_b = 0.33;
-        let r_c = 0.3;
-        let r_d = 0.1;
+        let r_a = Vec2::ONE * 0.5;
+        let r_b = Vec2::ONE * 0.33;
+        let r_c = Vec2::ONE * 0.3;
+        let r_d = Vec2::ONE * 0.1;
 
         let a = Vec2::new(t.cos(), t.sin()) * r_a;
         let b = Vec2::new((t * 0.4).cos(), (t * 0.4).sin()) * r_b;
@@ -88,9 +88,9 @@ impl Runnable for App {
             let middle = Gizmos::screen_to_world(mvp, &self.ws, self.ws.cursor_pos)?;
 
             // crude 10px radius
-            let radius = Gizmos::screen_to_world(mvp, &self.ws, PhysicalPosition::new(10, 0))?.x;
+            let radius = Gizmos::screen_to_world(mvp, &self.ws, PhysicalPosition::new(10, 0))?;
             let radius =
-                radius - Gizmos::screen_to_world(mvp, &self.ws, PhysicalPosition::new(0, 0))?.x;
+                radius - Gizmos::screen_to_world(mvp, &self.ws, PhysicalPosition::new(0, 0))?;
 
             self.debug
                 .add_circle(GizmosCircle::new(middle, radius, Color::ORANGE));

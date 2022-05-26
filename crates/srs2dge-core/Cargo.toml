@@ -19,13 +19,15 @@ log = "0.4"
 # graphics
 glam = { version = "0.20", features = ["serde", "bytemuck"] }
 main_game_loop = { git = "https://github.com/Overpeek/main_game_loop" }
-naga = { git = "https://github.com/gfx-rs/naga", rev = "1aa91549", features = [
-	"wgsl-in",
-	"validate",
-] }
-wgpu = { git = "https://github.com/gfx-rs/wgpu", rev = "af259aa1", features = [
-	"webgl",
-] }
+naga = { version = "0.8", features = ["wgsl-in", "validate"] }
+wgpu = { version = "0.12", features = ["webgl"] }
+# naga = { git = "https://github.com/gfx-rs/naga", rev = "1aa91549", features = [
+# 	"wgsl-in",
+# 	"validate",
+# ] }
+# wgpu = { git = "https://github.com/gfx-rs/wgpu", rev = "af259aa1", features = [
+# 	"webgl",
+# ] }
 winit = "0.26"
 # resources
 image = "0.24"

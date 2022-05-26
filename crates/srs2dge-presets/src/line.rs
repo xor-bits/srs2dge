@@ -66,11 +66,11 @@ where
     }
 }
 
-impl<I> Layout for LineShader<I>
+impl<'a, I> Layout<'a> for LineShader<I>
 where
     I: Index,
 {
-    type Bindings<'a> = &'a UniformBuffer<Mat4>;
+    type Bindings = &'a UniformBuffer<Mat4>;
 
     fn bind_group_layout(device: &Device) -> BindGroupLayout {
         device.create_bind_group_layout(&BindGroupLayoutDescriptor {
@@ -88,7 +88,7 @@ where
         })
     }
 
-    fn bind_group(&self, bindings: Self::Bindings<'_>) -> BindGroup {
+    fn bind_group(&self, bindings: Self::Bindings) -> BindGroup {
         self.device.create_bind_group(&BindGroupDescriptor {
             label: label!(),
             layout: &self.layout,

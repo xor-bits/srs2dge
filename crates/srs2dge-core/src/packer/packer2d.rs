@@ -297,14 +297,14 @@ impl Packer {
             return false;
         }
 
-        row.free_spaces
-            .drain_filter(|col| Self::aabb_1d(col.x, rect.x, col.width, rect.width));
-        // let mut tmp = Default::default();
-        // mem::swap(&mut tmp, &mut row.free_spaces);
-        // row.free_spaces = tmp
-        // .into_iter()
-        // .partition(|col| Self::aabb_1d(col.x, rect.x, col.width, rect.width))
-        // .1;
+        // row.free_spaces
+        //     .drain_filter(|col| Self::aabb_1d(col.x, rect.x, col.width, rect.width));
+        let mut tmp = Default::default();
+        std::mem::swap(&mut tmp, &mut row.free_spaces);
+        row.free_spaces = tmp
+            .into_iter()
+            .partition(|col| Self::aabb_1d(col.x, rect.x, col.width, rect.width))
+            .1;
 
         if row.free_spaces.is_empty() {
             true

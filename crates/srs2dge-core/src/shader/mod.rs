@@ -25,11 +25,11 @@ where
 
 //
 
-pub trait Layout {
-    type Bindings<'a>;
+pub trait Layout<'a> {
+    type Bindings;
 
     fn bind_group_layout(device: &Device) -> BindGroupLayout;
-    fn bind_group(&self, bindings: Self::Bindings<'_>) -> BindGroup;
+    fn bind_group(&self, bindings: Self::Bindings) -> BindGroup;
 }
 
 //

@@ -153,7 +153,7 @@ fn player_shoot(
             Bullet {
                 idx: batcher.push_with(MultiMesh::Bullet(GizmosCircle::new(
                     Vec2::default(),
-                    0.0,
+                    Vec2::ZERO,
                     Color::WHITE,
                 ))),
             },

@@ -1,7 +1,3 @@
-#![feature(generic_associated_types)]
-
-//
-
 pub use colored_2d::*;
 pub use line::*;
 pub use sdf::*;

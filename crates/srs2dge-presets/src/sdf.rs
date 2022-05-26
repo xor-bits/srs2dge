@@ -80,11 +80,11 @@ where
     }
 }
 
-impl<I> Layout for SdfShader<I>
+impl<'a, I> Layout<'a> for SdfShader<I>
 where
     I: Index,
 {
-    type Bindings<'a> = (&'a UniformBuffer<Mat4>, &'a TextureView);
+    type Bindings = (&'a UniformBuffer<Mat4>, &'a TextureView);
 
     fn bind_group_layout(device: &Device) -> BindGroupLayout {
         device.create_bind_group_layout(&BindGroupLayoutDescriptor {
@@ -120,7 +120,7 @@ where
         })
     }
 
-    fn bind_group(&self, (uniform, texture): Self::Bindings<'_>) -> BindGroup {
+    fn bind_group(&self, (uniform, texture): Self::Bindings) -> BindGroup {
         self.device.create_bind_group(&BindGroupDescriptor {
             label: label!(),
             layout: &self.layout,
