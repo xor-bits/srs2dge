@@ -1,4 +1,4 @@
-use crate::{label, target::Target, Frame};
+use crate::prelude::{label, Frame, Target};
 use bytemuck::Pod;
 use std::{marker::PhantomData, mem, num::NonZeroU64, ops::RangeBounds};
 use wgpu::{

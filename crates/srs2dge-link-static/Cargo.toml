@@ -9,18 +9,23 @@ license = "MIT"
 
 [features]
 default = []
-presets = ["srs2dge-presets"]
-gizmos = ["srs2dge-gizmos"]
-text = ["srs2dge-text"]
-res = ["srs2dge-res"]
+
 ecs = ["srs2dge-ecs"]
+gizmos = ["srs2dge-gizmos"]
+gui = ["srs2dge-gui"]
+presets = ["srs2dge-presets"]
+res = ["srs2dge-res"]
+text = ["srs2dge-text"]
+
 glsl = ["srs2dge-core/glsl"]
 spirv = ["srs2dge-core/spirv"]
 
+
 [dependencies]
 srs2dge-core = { path = "../srs2dge-core", version = "0.2" }
-srs2dge-presets = { path = "../srs2dge-presets", version = "0.2", optional = true }
-srs2dge-gizmos = { path = "../srs2dge-gizmos", version = "0.2", optional = true }
-srs2dge-text = { path = "../srs2dge-text", version = "0.2", optional = true }
-srs2dge-res = { path = "../srs2dge-res", version = "0.2", optional = true }
 srs2dge-ecs = { path = "../srs2dge-ecs", version = "0.2", optional = true }
+srs2dge-gizmos = { path = "../srs2dge-gizmos", version = "0.2", optional = true }
+srs2dge-gui = { path = "../srs2dge-gui", version = "0.2", optional = true }
+srs2dge-presets = { path = "../srs2dge-presets", version = "0.2", optional = true }
+srs2dge-res = { path = "../srs2dge-res", version = "0.2", optional = true }
+srs2dge-text = { path = "../srs2dge-text", version = "0.2", optional = true }

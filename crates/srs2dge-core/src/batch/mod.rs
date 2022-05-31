@@ -1,12 +1,5 @@
 use self::quad::QuadMesh;
-use crate::{
-    buffer::{
-        vertex::{DefaultVertex, Vertex},
-        IndexBuffer, VertexBuffer,
-    },
-    target::Target,
-    Frame,
-};
+use crate::prelude::{DefaultVertex, Frame, IndexBuffer, Target, Vertex, VertexBuffer};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BinaryHeap, HashSet},
@@ -35,7 +28,6 @@ where
     ibo_regen: bool,
     ibo_len: u32,
 
-    max: usize,
     modified: HashSet<usize>,
     free: BinaryHeap<usize>,
     used: Vec<Option<M>>,
@@ -71,13 +63,20 @@ where
             ibo_regen: false,
             ibo_len: 0,
 
-            max: 0,
             modified: Default::default(),
             free: Default::default(),
             used: Default::default(),
 
             _p: Default::default(),
         }
+    }
+
+    pub fn clear(&mut self) {
+        self.ibo_regen = true;
+        self.ibo_len = 0;
+        self.modified.clear();
+        self.free.clear();
+        self.used.clear();
     }
 
     pub fn push_with(&mut self, mesh: M) -> Idx {
@@ -90,7 +89,6 @@ where
             self.used.push(Some(mesh));
             spot
         };
-        self.max = self.max.max(spot);
         self.modified.insert(spot);
         Idx(spot)
     }

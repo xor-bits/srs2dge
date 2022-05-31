@@ -17,8 +17,6 @@ use winit::{
 
 //
 
-pub use frame::Frame;
-
 pub use colorful;
 pub use log;
 

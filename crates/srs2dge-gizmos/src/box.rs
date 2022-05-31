@@ -1,10 +1,11 @@
 use srs2dge_core::{
     color::Color,
     glam::{Mat4, Vec2},
-    prelude::{DefaultVertex, IndexBuffer, Layout, Mesh, RenderPass, UniformBuffer, VertexBuffer},
+    prelude::{
+        DefaultVertex, Frame, IndexBuffer, Layout, Mesh, RenderPass, UniformBuffer, VertexBuffer,
+    },
     target::Target,
     wgpu::{BindGroup, PrimitiveTopology},
-    Frame,
 };
 use srs2dge_presets::LineShader;
 use std::{f32::consts::PI, ops::Rem};

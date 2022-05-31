@@ -1754,6 +1754,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "srs2dge-gui"
+version = "0.2.0"
+dependencies = [
+ "srs2dge-core",
+ "srs2dge-presets",
+ "srs2dge-text",
+]
+
+[[package]]
 name = "srs2dge-link-dynamic"
 version = "0.2.0"
 dependencies = [
@@ -1767,6 +1776,7 @@ dependencies = [
  "srs2dge-core",
  "srs2dge-ecs",
  "srs2dge-gizmos",
+ "srs2dge-gui",
  "srs2dge-presets",
  "srs2dge-res",
  "srs2dge-text",

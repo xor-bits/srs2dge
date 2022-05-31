@@ -22,13 +22,16 @@ crate-type = ["cdylib", "rlib"]
 #debug = true
 
 [features]
-default = ["presets", "gizmos", "text", "res", "ecs"]
+default = ["ecs", "gizmos", "gui", "presets", "res", "text"]
+
 dynamic = ["srs2dge-link-dynamic"]
-presets = ["srs2dge-link-static/presets"]
-gizmos = ["srs2dge-link-static/gizmos"]
-text = ["srs2dge-link-static/text"]
-res = ["srs2dge-link-static/res"]
+
 ecs = ["srs2dge-link-static/ecs"]
+gizmos = ["srs2dge-link-static/gizmos"]
+gui = ["srs2dge-link-static/gui"]
+presets = ["srs2dge-link-static/presets"]
+res = ["srs2dge-link-static/res"]
+text = ["srs2dge-link-static/text"]
 
 
 [dependencies]

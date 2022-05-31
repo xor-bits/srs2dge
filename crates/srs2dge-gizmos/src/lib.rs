@@ -21,10 +21,9 @@ use self::{
 use srs2dge_core::{
     glam::{Mat4, Vec2, Vec4, Vec4Swizzles},
     main_game_loop::prelude::WindowState,
-    prelude::{RenderPass, UniformBuffer},
+    prelude::{Frame, RenderPass, UniformBuffer},
     target::Target,
     winit::dpi::{PhysicalPosition, Pixel},
-    Frame,
 };
 use srs2dge_text::fontsdf::Font;
 

@@ -3,7 +3,7 @@ use self::{
     catcher::Catcher,
     surface::{ISurface, Surface},
 };
-use crate::{label, DeviceStorage, Frame};
+use crate::{label, prelude::Frame, DeviceStorage};
 use colorful::Colorful;
 use std::sync::Arc;
 use wgpu::{
