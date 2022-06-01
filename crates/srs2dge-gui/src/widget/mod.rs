@@ -4,6 +4,7 @@ use std::fmt::Debug;
 
 //
 
+pub mod button;
 pub mod empty;
 pub mod fill;
 pub mod grid;
@@ -122,6 +123,16 @@ pub fn inherit_offset(base: WidgetBase, _: Vec2) -> Vec2 {
 #[inline]
 pub fn align(base: WidgetBase, size: Vec2, side: Vec2) -> Vec2 {
     base.offset + (base.size - size) * side
+}
+
+#[inline]
+pub fn border_size(base: WidgetBase, px: f32) -> Vec2 {
+    (base.size - Vec2::ONE * 2.0 * px).max(Vec2::ZERO)
+}
+
+#[inline]
+pub fn border_offset(base: WidgetBase, px: f32) -> Vec2 {
+    base.offset + Vec2::ONE * px
 }
 
 //

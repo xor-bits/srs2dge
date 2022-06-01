@@ -144,12 +144,28 @@ impl Engine {
 
         // force default to vulkan if renderdoc was detected
         let default = if renderdoc {
+            log::warn!("RenderDoc environment detected. Forcing Vulkan");
             Backends::VULKAN
         } else {
             Backends::all()
         };
 
-        Arc::new(Instance::new(backend_bits_from_env().unwrap_or(default)))
+        // backend_bits_from_env:
+        // "vulkan" | "vk"          => Backends::VULKAN,
+        // "dx12"   | "d3d12"       => Backends::DX12,
+        // "dx11"   | "d3d11"       => Backends::DX11,
+        // "metal"  | "mtl"         => Backends::METAL,
+        // "opengl" | "gles" | "gl" => Backends::GL,
+        // "webgpu"                 => Backends::BROWSER_WEBGPU,
+        let backend = match backend_bits_from_env() {
+            Some(backend) => {
+                log::info!("Using overwritten backend: {backend:?}");
+                backend
+            }
+            None => default,
+        };
+
+        Arc::new(Instance::new(backend))
     }
 }
 

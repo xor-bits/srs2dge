@@ -126,11 +126,10 @@ impl Surface {
         loop {
             match self.surface.get_current_texture() {
                 // got texture
-                Ok(
-                    texture @ SurfaceTexture {
-                        suboptimal: false, ..
-                    },
-                ) => return texture,
+                Ok(texture) => {
+                    // log::debug!("Success");
+                    return texture;
+                }
 
                 // the only unrecoverable error: out of memory
                 Err(SurfaceError::OutOfMemory) => panic!("Out of memory"),
@@ -147,12 +146,8 @@ impl Surface {
                 }
 
                 // recreate the swapchain
-                x @ (Ok(SurfaceTexture {
-                    suboptimal: true, ..
-                })
-                | Err(SurfaceError::Outdated)) => {
-                    log::debug!("Outdated | Suboptimal");
-                    drop(x);
+                Err(SurfaceError::Outdated) => {
+                    log::debug!("Outdated");
                     self.configure();
                 }
             }

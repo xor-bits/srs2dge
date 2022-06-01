@@ -211,9 +211,9 @@ impl Target {
             instance
                 .request_adapter(&RequestAdapterOptionsBase {
                     power_preference: power_preference_from_env()
-                        .unwrap_or(PowerPreference::HighPerformance),
-                    force_fallback_adapter: false,
+                        .unwrap_or(PowerPreference::/* LowPower */ HighPerformance),
                     compatible_surface,
+                    ..Default::default()
                 })
                 .await
                 .expect("No suitable GPUs"),

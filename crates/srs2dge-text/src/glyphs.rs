@@ -27,6 +27,7 @@ struct Glyph {
     font: usize,
 }
 
+#[derive(Debug)]
 pub struct Glyphs {
     texture: Texture<USAGE>,
     packer: Packer,

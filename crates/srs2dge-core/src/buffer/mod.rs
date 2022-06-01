@@ -63,6 +63,10 @@ where
     }
 
     pub fn upload(&self, target: &mut Target, frame: &mut Frame, new_data: &[T]) {
+        if new_data.is_empty() {
+            return;
+        }
+
         let mut mapping = frame.write_buffer(
             &self.buffer,
             0,

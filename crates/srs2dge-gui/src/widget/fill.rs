@@ -1,10 +1,12 @@
 use super::{Widget, WidgetBase, WidgetBaseBuilder};
-use crate::{impl_base_widget, impl_base_widget_builder_methods, Gui};
-use srs2dge_core::{
-    color::Color,
-    glam::Vec2,
-    prelude::{QuadMesh, TexturePosition},
+use crate::{
+    gui::{
+        geom::{GuiGeom, GuiQuad},
+        Gui,
+    },
+    impl_base_widget, impl_base_widget_builder_methods,
 };
+use srs2dge_core::{color::Color, glam::Vec2, prelude::TexturePosition};
 
 //
 
@@ -65,12 +67,12 @@ impl<'g> Wb<'g> {
         let base = base.build();
 
         if let Some(gui) = gui {
-            gui.batcher.push_with(QuadMesh {
-                pos: base.offset + 0.5 * base.size,
+            gui.texture_batcher.push_with(GuiGeom::Quad(GuiQuad {
+                pos: base.offset,
                 size: base.size,
                 col,
                 tex,
-            });
+            }));
         }
 
         W { base }

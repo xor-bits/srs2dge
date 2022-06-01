@@ -1,4 +1,8 @@
-use srs2dge::prelude::*;
+use srs2dge::{
+    gui::gui::{generated::DrawGeneratedGui, Gui},
+    prelude::*,
+    winit::event::WindowEvent,
+};
 
 //
 
@@ -6,6 +10,7 @@ struct App {
     target: Target,
 
     gui: Gui,
+    col: Color,
 
     texture: TextureAtlasMap<u8>,
 }
@@ -30,6 +35,7 @@ impl App {
             target,
 
             gui,
+            col: Color::AZURE,
 
             texture,
         }
@@ -38,7 +44,12 @@ impl App {
 
 impl Runnable for App {
     fn event(&mut self, event: Event, _: &EventLoopTarget, control: &mut ControlFlow) {
-        self.gui.event(&event);
+        let event = match event.to_static() {
+            Some(some) => some,
+            None => return,
+        };
+
+        self.gui.event(event);
 
         if self.gui.window_state().should_close {
             *control = ControlFlow::Exit;
@@ -49,17 +60,23 @@ impl Runnable for App {
         let mut frame = self.target.get_frame();
 
         let root = self.gui.root();
-        const BORDER: f32 = 8.0;
 
-        let v_split = |base: WidgetBase| {
-            (base.size * Vec2::new(0.5, 1.0) - BORDER * Vec2::ONE * 2.0).max(Vec2::ZERO)
-        };
+        const BORDER: f32 = 4.0;
+        let mut split = Grid::builder()
+            .with_parent(&root)
+            .with_size(|base| border_size(base, BORDER))
+            .with_offset(|base, _| border_offset(base, BORDER))
+            .with_columns(2)
+            .with_rows(1)
+            // .with_size(|base| border_size(base, 8.0))
+            // .with_offset(offset)
+            .build();
 
         let left = Fill::builder()
-            .with_parent(&root)
-            .with_size(v_split)
-            .with_offset(|base, _| base.offset + BORDER * Vec2::ONE)
-            .with_color(Color::AZURE)
+            .with_base(split.next().unwrap())
+            .with_size(|base| border_size(base, BORDER))
+            .with_offset(|base, _| border_offset(base, BORDER))
+            .with_color(self.col)
             .with_texture(self.texture.get(&0).unwrap())
             .with_gui(&mut self.gui)
             .build();
@@ -90,20 +107,36 @@ impl Runnable for App {
             .build();
 
         let right = Grid::builder()
-            .with_parent(&root)
-            .with_size(v_split)
-            .with_offset(|base, size| base.offset + base.size - size - BORDER * Vec2::ONE)
+            .with_base(split.next().unwrap())
+            .with_size(|base| border_size(base, BORDER))
+            .with_offset(|base, _| border_offset(base, BORDER))
             .build();
 
         for (i, base) in right.enumerate() {
+            let col = Color::new_mono((i as f32 / 8.0).powf(2.2));
+            let button = if self.gui.hovered(base) {
+                Button::builder()
+                    .with_size(|base| border_size(base, 2.0))
+                    .with_offset(|base, _| border_offset(base, 2.0))
+            } else {
+                Button::builder()
+                    .with_size(|base| border_size(base, 4.0))
+                    .with_offset(|base, _| border_offset(base, 4.0))
+            }
+            .with_base(base)
+            .with_gui(&mut self.gui)
+            .build();
+
             Fill::builder()
-                .with_base(base)
-                .with_size(|base| (base.size - Vec2::ONE * 4.0).max(Vec2::ZERO))
-                .with_offset(|base, _| base.offset + Vec2::ONE)
-                .with_color(Color::new_mono((i as f32 / 9.0).powf(2.2)))
+                .with_parent(&button)
+                .with_color(col)
                 .with_texture(self.texture.get(&0).unwrap())
                 .with_gui(&mut self.gui)
                 .build();
+
+            if button.clicked() {
+                self.col = col;
+            }
         }
 
         let gui = self

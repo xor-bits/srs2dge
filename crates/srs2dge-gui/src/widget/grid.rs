@@ -47,7 +47,7 @@ impl Iterator for W {
 
     fn next(&mut self) -> Option<Self::Item> {
         let x = self.i % self.cols;
-        let y = self.i / self.rows;
+        let y = self.i / self.cols;
 
         if y == self.rows {
             // wrapped around

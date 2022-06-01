@@ -35,7 +35,7 @@ where
     _p: PhantomData<M>,
 }
 
-pub trait Mesh<V> {
+pub trait Mesh<V = DefaultVertex> {
     const PRIM: PrimitiveTopology;
 
     type VertexIter: Iterator<Item = V>;
