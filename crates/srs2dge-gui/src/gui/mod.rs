@@ -22,6 +22,7 @@ use std::collections::HashMap;
 
 pub mod generated;
 pub mod geom;
+pub mod prelude;
 pub mod renderer;
 
 //

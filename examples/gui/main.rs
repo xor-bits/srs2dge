@@ -1,8 +1,4 @@
-use srs2dge::{
-    gui::gui::{generated::DrawGeneratedGui, Gui},
-    prelude::*,
-    winit::event::WindowEvent,
-};
+use srs2dge::prelude::*;
 
 //
 
