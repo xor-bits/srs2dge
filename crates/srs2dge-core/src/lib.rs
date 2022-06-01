@@ -46,6 +46,7 @@ pub mod prelude;
 pub mod shader;
 pub mod target;
 pub mod texture;
+pub mod util;
 
 //
 

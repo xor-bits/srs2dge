@@ -1,42 +1,83 @@
-use super::{Widget, WidgetBase};
-use crate::Gui;
-use srs2dge_core::{color::Color, glam::Vec2, prelude::QuadMesh};
+use super::{Widget, WidgetBase, WidgetBaseBuilder};
+use crate::{impl_base_widget, impl_base_widget_builder_methods, Gui};
+use srs2dge_core::{
+    color::Color,
+    glam::Vec2,
+    prelude::{QuadMesh, TexturePosition},
+};
 
 //
 
+type W = Fill;
+type Wb<'g> = FillBuilder<'g>;
+
+//
+
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Fill {
     base: WidgetBase,
 }
 
+#[derive(Debug, Default)]
+pub struct FillBuilder<'g> {
+    base: WidgetBaseBuilder,
+    col: Color,
+    tex: TexturePosition,
+    gui: Option<&'g mut Gui>,
+}
+
 //
 
-impl Widget for Fill {
-    fn base(&self) -> WidgetBase {
-        self.base
+impl W {
+    pub fn builder<'g>() -> Wb<'g> {
+        Wb::default()
     }
 }
 
-impl Fill {
-    pub fn new<FSize, FOffset>(
-        parent: &dyn Widget,
-        size: FSize,
-        offset: FOffset,
-        col: Color,
-        gui: &mut Gui,
-    ) -> Self
-    where
-        FSize: FnOnce(WidgetBase) -> Vec2,
-        FOffset: FnOnce(WidgetBase, Vec2) -> Vec2,
-    {
-        let base = WidgetBase::new(parent, size, offset);
+impl<'g> Wb<'g> {
+    pub fn new() -> Self {
+        Self::default()
+    }
 
-        gui.batcher.push_with(QuadMesh {
-            pos: base.offset + 0.5 * base.size,
-            size: base.size,
+    pub fn with_texture(mut self, tex: TexturePosition) -> Self {
+        self.tex = tex;
+        self
+    }
+
+    pub fn with_color(mut self, col: Color) -> Self {
+        self.col = col;
+        self
+    }
+
+    pub fn with_gui(mut self, gui: &'g mut Gui) -> Self {
+        self.gui = Some(gui);
+        self
+    }
+
+    pub fn build(self) -> W {
+        let Self {
+            base,
             col,
-            tex: Default::default(),
-        });
+            tex,
+            gui,
+        } = self;
 
-        Self { base }
+        let base = base.build();
+
+        if let Some(gui) = gui {
+            gui.batcher.push_with(QuadMesh {
+                pos: base.offset + 0.5 * base.size,
+                size: base.size,
+                col,
+                tex,
+            });
+        }
+
+        W { base }
     }
 }
+
+//
+
+impl_base_widget! { base W }
+impl_base_widget_builder_methods! { base Wb <'g> }

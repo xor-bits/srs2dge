@@ -12,6 +12,7 @@ pub mod prelude;
 
 //
 
+#[derive(Debug)]
 pub struct Shader<V, I>
 where
     V: Vertex,

@@ -130,7 +130,6 @@ impl Color {
         Color::new_rgb(rng.gen(), rng.gen(), rng.gen())
     }
 
-    #[inline]
     pub fn random_bright<R: Rng + ?Sized>(rng: &mut R) -> Self {
         let phase_a: f32 = rng.gen_range(0.0..2.0 * std::f32::consts::PI);
         const PHASE_OFFS: f32 = 2.0 / 3.0 * std::f32::consts::PI;
@@ -140,6 +139,14 @@ impl Color {
         let b = phase_b.sin() * 0.5 + 0.5;
         let c = phase_c.sin() * 0.5 + 0.5;
         Color::new_rgb(a, b, c)
+    }
+
+    #[inline]
+    pub fn powf(mut self, n: f32) -> Self {
+        self.r = self.r.powf(n);
+        self.g = self.g.powf(n);
+        self.b = self.b.powf(n);
+        self
     }
 }
 

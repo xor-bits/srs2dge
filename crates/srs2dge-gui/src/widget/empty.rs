@@ -1,28 +1,47 @@
-use super::{Widget, WidgetBase};
+use super::{Widget, WidgetBase, WidgetBaseBuilder};
+use crate::{impl_base_widget, impl_base_widget_builder_methods};
 use srs2dge_core::glam::Vec2;
 
 //
 
+type W = Empty;
+type Wb = EmptyBuilder;
+
+//
+
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub struct Empty {
     base: WidgetBase,
 }
 
+#[derive(Debug, Default)]
+pub struct EmptyBuilder {
+    base: WidgetBaseBuilder,
+}
+
 //
 
-impl Widget for Empty {
-    fn base(&self) -> WidgetBase {
-        self.base
+impl W {
+    pub fn builder() -> Wb {
+        Wb::default()
     }
 }
 
-impl Empty {
-    pub fn new<FSize, FOffset>(parent: &dyn Widget, size: FSize, offset: FOffset) -> Self
-    where
-        FSize: FnOnce(WidgetBase) -> Vec2,
-        FOffset: FnOnce(WidgetBase, Vec2) -> Vec2,
-    {
-        Self {
-            base: WidgetBase::new(parent, size, offset),
-        }
+impl Wb {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn build(self) -> W {
+        let Self { base } = self;
+
+        let base = base.build();
+
+        W { base }
     }
 }
+
+//
+
+impl_base_widget! { base W }
+impl_base_widget_builder_methods! { base Wb }

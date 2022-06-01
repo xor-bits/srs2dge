@@ -10,4 +10,5 @@ license = "MIT"
 [dependencies]
 srs2dge-core = { path = "../srs2dge-core", version = "0.2" }
 srs2dge-presets = { path = "../srs2dge-presets", version = "0.2" }
+srs2dge-res = { path = "../srs2dge-res", version = "0.2" }
 srs2dge-text = { path = "../srs2dge-text", version = "0.2" }

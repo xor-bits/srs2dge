@@ -24,6 +24,7 @@ type Internal<I> = Shader<DefaultVertex, I>;
 
 //
 
+#[derive(Debug)]
 pub struct Texture2DShader<I = DefaultIndex>
 where
     I: Index,

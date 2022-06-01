@@ -22,6 +22,7 @@ type Internal<I> = Shader<DefaultVertex, I>;
 
 //
 
+#[derive(Debug)]
 pub struct Colored2DShader<I = DefaultIndex>
 where
     I: Index,

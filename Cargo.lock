@@ -1759,6 +1759,7 @@ version = "0.2.0"
 dependencies = [
  "srs2dge-core",
  "srs2dge-presets",
+ "srs2dge-res",
  "srs2dge-text",
 ]
 

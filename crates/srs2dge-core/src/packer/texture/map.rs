@@ -2,7 +2,7 @@ use crate::prelude::{
     PositionedRect, Rect, Target, TextureAtlas, TextureAtlasBuilder, TextureAtlasFile,
     TexturePosition,
 };
-use image::RgbaImage;
+use image::{load_from_memory, ImageResult, RgbaImage};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::{BinaryHeap, HashMap},
@@ -96,6 +96,10 @@ impl<K> TextureAtlasMapBuilder<K> {
         self
     }
 
+    pub fn with_bytes(self, key: K, image_bytes: &[u8]) -> ImageResult<Self> {
+        Ok(self.with(key, load_from_memory(image_bytes)?.to_rgba8()))
+    }
+
     pub fn insert(&mut self, key: K, image: RgbaImage) {
         self.images.push(SortBySize { key, image });
     }
@@ -140,6 +144,10 @@ impl<K> TextureAtlasMap<K>
 where
     K: Eq + Hash + Clone,
 {
+    pub fn builder() -> TextureAtlasMapBuilder<K> {
+        TextureAtlasMapBuilder::new()
+    }
+
     pub async fn convert(&self, target: &Target) -> TextureAtlasMapFile<K> {
         let inner = self.inner.convert(target).await;
         let map = self.map.clone();
