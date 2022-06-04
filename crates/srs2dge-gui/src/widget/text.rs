@@ -9,25 +9,23 @@ use crate::{
     },
     impl_base_widget, impl_base_widget_builder_methods,
 };
-use srs2dge_core::{color::Color, glam::Vec2, prelude::TexturePosition};
+use srs2dge_core::glam::Vec2;
 
 //
 
-type W = Fill;
-type Wb<'g> = FillBuilder<'g>;
+type W = Text;
+type Wb<'g> = TextBuilder<'g>;
 
 //
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct Fill {
+pub struct Text {
     base: WidgetBase,
 }
 
-#[derive(Debug, Default)]
-pub struct FillBuilder<'g> {
+#[derive(Debug)]
+pub struct TextBuilder<'g> {
     base: WidgetBaseBuilder,
-    col: Color,
-    tex: TexturePosition,
     gui: Option<&'g mut Gui>,
 }
 
@@ -39,18 +37,29 @@ impl W {
     }
 }
 
+impl<'g> Default for Wb<'g> {
+    fn default() -> Self {
+        Self {
+            base: Default::default(),
+            px: 18.0,
+            text: Default::default(), // FString::from_string("Text Label"),
+            gui: Default::default(),
+        }
+    }
+}
+
 impl<'g> Wb<'g> {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn with_texture(mut self, tex: TexturePosition) -> Self {
-        self.tex = tex;
+    pub fn with_px(mut self, px: f32) -> Self {
+        self.px = px;
         self
     }
 
-    pub fn with_color(mut self, col: Color) -> Self {
-        self.col = col;
+    pub fn with_text(mut self, text: FString) -> Self {
+        self.text = text;
         self
     }
 
@@ -62,20 +71,21 @@ impl<'g> Wb<'g> {
     pub fn build(self) -> W {
         let Self {
             base,
-            col,
-            tex,
+            px,
+            text,
             gui,
         } = self;
 
         let base = base.build();
 
         if let Some(gui) = gui {
-            gui.texture_batcher.push_with(GuiGeom::Quad(GuiQuad {
-                pos: base.offset,
-                size: base.size,
-                col,
-                tex,
-            }));
+            let iter = CharPositionIter::new(&text, gui.glyphs(), px, true);
+
+            for x in iter {
+                x.x;
+            }
+
+            text.chars();
         }
 
         W { base }

@@ -11,3 +11,4 @@ license = "MIT"
 srs2dge-core = { path = "../srs2dge-core", version = "0.2" }
 # font-loader = { version = "0.11", optional = true }
 fontsdf = "0.4"
+fontdue = "0.7"

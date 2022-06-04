@@ -25,13 +25,13 @@ struct App {
     ul: Option<UpdateLoop>,
 
     batcher: BatchRenderer,
-    world_ubo: UniformBuffer<Mat4>,
+    world_ubo: UniformBuffer,
     shader: Colored2DShader,
 
     glyphs: Glyphs,
-    vbos: Vec<VertexBuffer>,
-    ibos: Vec<IndexBuffer>,
-    screen_ubo: UniformBuffer<Mat4>,
+    vbos: VertexBuffer,
+    ibos: IndexBuffer,
+    screen_ubo: UniformBuffer<SdfUniform>,
     text_shader: SdfShader,
 
     board: Board,
@@ -64,13 +64,18 @@ impl App {
         let world_ubo = UniformBuffer::new(&target, 1);
         let shader = Colored2DShader::new(&target);
 
-        let glyphs =
-            Glyphs::new_bytes(&target, Rect::new(1024, 1024), Some(32), res::font::FIRA).unwrap();
+        let glyphs = Glyphs::new_with_fallback_bytes(
+            &target,
+            Rect::new(1024, 1024),
+            Some(32),
+            res::font::FIRA,
+        )
+        .unwrap();
         let screen_ubo = UniformBuffer::new(&target, 1);
         let text_shader = SdfShader::new(&target);
 
-        let vbos = vec![VertexBuffer::new(&target, 0)];
-        let ibos = vec![IndexBuffer::new(&target, 0)];
+        let vbos = VertexBuffer::new(&target, 0);
+        let ibos = IndexBuffer::new(&target, 0);
 
         let board = Board::new(&mut batcher, &mut rand::thread_rng());
 
@@ -157,13 +162,18 @@ impl Runnable for App {
         {
             self.board.update(&mut self.batcher, Move::Right);
         }
-        if self.ks.just_pressed(VirtualKeyCode::Q) {
+        if self.ks.just_pressed(VirtualKeyCode::Q)
+            || self.gs.just_pressed_first(GamepadButton::LeftTrigger) == Some(true)
+            || self.gs.just_pressed_first(GamepadButton::LeftTrigger2) == Some(true)
+        {
             self.board.update(&mut self.batcher, Move::RotateCCW);
         }
         if self.ks.just_pressed(VirtualKeyCode::W)
             || self.ks.just_pressed(VirtualKeyCode::E)
             || self.ks.just_pressed(VirtualKeyCode::Up)
             || self.gs.just_pressed_first(GamepadButton::DPadUp) == Some(true)
+            || self.gs.just_pressed_first(GamepadButton::RightTrigger) == Some(true)
+            || self.gs.just_pressed_first(GamepadButton::RightTrigger2) == Some(true)
         {
             self.board.update(&mut self.batcher, Move::RotateCW);
         }
@@ -208,62 +218,33 @@ impl Runnable for App {
 
                 // TODO: automatic centering for multiple lines
 
-                self.vbos.clear();
-                self.ibos.clear();
-
-                let s = FString::from_iter(["Game Over".default()]);
+                let text = FormatString::from_iter([
+                    "Game Over".into(),
+                    24.0.into(),
+                    format!("\nScore: {score}").into(),
+                    format!("\nHighscore: {highscore}").into(),
+                    18.0.into(),
+                    "\nPress R/Δ/Y to restart".into(),
+                ])
+                .with_init(Format {
+                    color: Color::WHITE,
+                    font: 0,
+                    px: 48.0,
+                });
                 let (v, i) = vbo::text(
                     &self.target,
-                    &s,
+                    text.chars(),
                     &mut self.glyphs,
-                    48.0,
-                    Vec2::new(0.0, -200.0),
-                    Some(Vec2::new(0.5, 0.0)),
+                    TextConfig {
+                        x_origin: 5,
+                        y_origin: -5,
+                        y_origin_line: YOrigin::Ascender,
+                        ..Default::default()
+                    },
                 )
                 .unwrap();
-                self.vbos.push(VertexBuffer::new_with(&self.target, &v));
-                self.ibos.push(IndexBuffer::new_with(&self.target, &i));
-
-                let text = format!("Score: {score}");
-                let s = FString::from_iter([text.default()]);
-                let (v, i) = vbo::text(
-                    &self.target,
-                    &s,
-                    &mut self.glyphs,
-                    24.0,
-                    Vec2::new(0.0, -264.0),
-                    Some(Vec2::new(0.5, 0.0)),
-                )
-                .unwrap();
-                self.vbos.push(VertexBuffer::new_with(&self.target, &v));
-                self.ibos.push(IndexBuffer::new_with(&self.target, &i));
-
-                let text = format!("Highscore: {highscore}");
-                let s = FString::from_iter([text.default()]);
-                let (v, i) = vbo::text(
-                    &self.target,
-                    &s,
-                    &mut self.glyphs,
-                    24.0,
-                    Vec2::new(0.0, -296.0),
-                    Some(Vec2::new(0.5, 0.0)),
-                )
-                .unwrap();
-                self.vbos.push(VertexBuffer::new_with(&self.target, &v));
-                self.ibos.push(IndexBuffer::new_with(&self.target, &i));
-
-                let s = FString::from_iter(["Press R/Δ/Y to restart".default()]);
-                let (v, i) = vbo::text(
-                    &self.target,
-                    &s,
-                    &mut self.glyphs,
-                    18.0,
-                    Vec2::new(0.0, -324.0),
-                    Some(Vec2::new(0.5, 0.0)),
-                )
-                .unwrap();
-                self.vbos.push(VertexBuffer::new_with(&self.target, &v));
-                self.ibos.push(IndexBuffer::new_with(&self.target, &i));
+                self.vbos = VertexBuffer::new_with(&self.target, &v);
+                self.ibos = IndexBuffer::new_with(&self.target, &i);
             }
         } else {
             let score = self.board.score();
@@ -272,22 +253,28 @@ impl Runnable for App {
                 self.score = score;
                 // increase speed
                 self.ul = Some(UpdateLoop::new(UpdateRate::PerMinute(
-                    60 + (self.score / 20) as u32,
+                    60 + (self.score / 50) as u32,
                 )));
 
-                let text = format!("Score: {score}");
-                let s = FString::from_iter([text.default()]);
+                let text = FormatString::from(format!("Score: {score}")).with_init(Format {
+                    color: Color::WHITE,
+                    font: 0,
+                    px: 32.0,
+                });
                 let (v, i) = vbo::text(
                     &self.target,
-                    &s,
+                    text.chars(),
                     &mut self.glyphs,
-                    32.0,
-                    Vec2::new(0.0, -32.0),
-                    Some(Vec2::new(0.5, 0.0)),
+                    TextConfig {
+                        x_origin: 5,
+                        y_origin: -5,
+                        y_origin_line: YOrigin::Ascender,
+                        ..Default::default()
+                    },
                 )
                 .unwrap();
-                self.vbos = vec![VertexBuffer::new_with(&self.target, &v)];
-                self.ibos = vec![IndexBuffer::new_with(&self.target, &i)];
+                self.vbos = VertexBuffer::new_with(&self.target, &v);
+                self.ibos = IndexBuffer::new_with(&self.target, &i);
             }
         }
 
@@ -309,42 +296,34 @@ impl Runnable for App {
         self.screen_ubo.upload(
             &mut self.target,
             &mut frame,
-            &[Mat4::orthographic_lh(
-                -(self.ws.size.width as f32) * 0.5,
-                self.ws.size.width as f32 * 0.5,
+            &[SdfUniform::new_defaults(Mat4::orthographic_lh(
+                0.0,
+                self.ws.size.width as f32,
                 -(self.ws.size.height as f32) * 1.0,
                 0.0, /* self.ws.size.height as f32 * 0.5 */
                 -10.0,
                 10.0,
-            )],
+            ))],
         );
 
         let (vbo, ibo, i) = self.batcher.generate(&mut self.target, &mut frame);
 
-        let bg_a = self.shader.bind_group(&self.world_ubo);
-        let bg_b = self
-            .text_shader
-            .bind_group((&self.screen_ubo, &self.glyphs));
-        let mut pass = frame
+        frame
             .primary_render_pass()
             .bind_vbo(vbo)
             .bind_ibo(ibo)
-            .bind_group(&bg_a)
+            .bind_group(&self.shader.bind_group(&self.world_ubo))
             .bind_shader(&self.shader)
             .draw_indexed(0..i, 0, 0..1)
-            .done();
-
-        for (vbo, ibo) in self.vbos.iter().zip(self.ibos.iter()) {
-            pass = pass
-                .bind_vbo(vbo)
-                .bind_ibo(ibo)
-                .bind_group(&bg_b)
-                .bind_shader(&self.text_shader)
-                .draw_indexed(0..ibo.capacity() as _, 0, 0..1)
-                .done()
-        }
-
-        drop(pass);
+            .bind_vbo(&self.vbos)
+            .bind_ibo(&self.ibos)
+            .bind_group(
+                &self
+                    .text_shader
+                    .bind_group((&self.screen_ubo, &self.glyphs)),
+            )
+            .bind_shader(&self.text_shader)
+            .draw_indexed(0..self.ibos.capacity() as _, 0, 0..1);
 
         self.target.finish_frame(frame);
     }

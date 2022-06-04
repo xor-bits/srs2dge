@@ -1,9 +1,13 @@
-use crate::prelude::{label, Frame, Target};
+use crate::{
+    packer::prelude::Reference,
+    prelude::{label, Frame, Target},
+    unwrap_or_return,
+};
 use bytemuck::Pod;
 use std::{marker::PhantomData, mem, num::NonZeroU64, ops::RangeBounds};
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
-    BufferAddress, BufferDescriptor, BufferUsages,
+    BufferAddress, BufferDescriptor, BufferUsages, BufferViewMut,
 };
 
 //
@@ -62,20 +66,64 @@ where
         Self::with_buffer(buffer, 1)
     }
 
-    pub fn upload(&self, target: &mut Target, frame: &mut Frame, new_data: &[T]) {
-        if new_data.is_empty() {
-            return;
-        }
+    pub fn upload_single(&self, target: &mut Target, frame: &mut Frame, new_data: &T) {
+        self.upload(target, frame, std::slice::from_ref(new_data))
+    }
 
-        let mut mapping = frame.write_buffer(
-            &self.buffer,
-            0,
-            NonZeroU64::new(Self::size_of(self.elements) as _).unwrap(),
-            &target.device,
-        );
+    pub fn upload(&self, target: &mut Target, frame: &mut Frame, new_data: &[T]) {
+        self.upload_at(target, frame, 0, new_data);
+    }
+
+    pub fn upload_at(&self, target: &mut Target, frame: &mut Frame, offset: u64, new_data: &[T]) {
+        let mut map = unwrap_or_return!(self.map(target, frame, offset, new_data.len() as _));
 
         let new_data = bytemuck::cast_slice(new_data);
-        mapping[..new_data.len()].copy_from_slice(new_data);
+        map[..].copy_from_slice(new_data);
+    }
+
+    pub fn upload_iter<I, R>(
+        &self,
+        target: &mut Target,
+        frame: &mut Frame,
+        offset: u64,
+        count: u64,
+        new_data: I,
+    ) where
+        I: IntoIterator<Item = R>,
+        R: Reference<T>,
+    {
+        let mut map = unwrap_or_return!(self.map(target, frame, offset, count));
+
+        // copy
+        let mut map = &mut map[..];
+        for from in new_data.into_iter() {
+            let x = bytemuck::bytes_of(from.reference());
+            let (copy, split) = map.split_at_mut(x.len());
+            copy.copy_from_slice(x);
+            map = split;
+
+            if map.is_empty() {
+                break;
+            }
+        }
+    }
+
+    fn map<'f>(
+        &self,
+        target: &mut Target,
+        frame: &'f mut Frame,
+        offset: u64,
+        count: u64,
+    ) -> Option<BufferViewMut<'f>> {
+        // check count
+        if count == 0 {
+            None
+        } else {
+            let offset = Self::size_of(offset as _) as _;
+            let size = NonZeroU64::new(Self::size_of(count as _) as _).unwrap();
+            // map
+            Some(frame.write_buffer(&self.buffer, offset, size, &target.device))
+        }
     }
 }
 

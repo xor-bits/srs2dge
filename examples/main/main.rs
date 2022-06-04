@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use srs2dge::prelude::*;
+use srs2dge::{prelude::*, text::config::TextConfig};
 
 //
 
@@ -60,7 +60,8 @@ impl App {
                 .build(target)
                 .unwrap(),
         );
-        let target = engine.new_target(window.clone()).await;
+        let mut target = engine.new_target(window.clone()).await;
+        target.set_vsync(false);
 
         let reporter = Reporter::new();
 
@@ -112,41 +113,76 @@ impl App {
         };
 
         let mut glyphs =
-            Glyphs::new_bytes(&target, Rect::new(128, 128), None, res::font::ROBOTO).unwrap();
+            Glyphs::new_with_fallback_bytes(&target, Rect::new(512, 512), None, res::font::ROBOTO)
+                .unwrap();
 
         let fonts = FontIds {
             roboto: 0,
-            fira: glyphs.add_font_bytes(res::font::FIRA).unwrap(),
+            fira: glyphs.fonts_mut().add_font_bytes(res::font::FIRA).unwrap(),
         };
 
-        let mut t = FString::from_iter([
-            "∫|∫x dx + 'test text j'\u{FF1B}\\/\"\n\\VAW//\n\treadability\n\t\tline height\n\t\t\tnewline\n54is9\taligned\n\n".default(),
-            "yy̆y\n".default(),
-            "\u{FF1B}\n".default(),
-            "fn ".default().color(1.0, 0.5, 0.0).font(fonts.fira),
-            "main".leave().color(0.1, 0.1, 1.0),
-            "() {\n\t".leave().color(1.0, 1.0, 1.0),
-            "println!".leave().color(0.1, 0.1, 1.0),
-            "(".leave().color(1.0, 1.0, 1.0),
-            "\"Hello World!\"".leave().color(0.1, 1.0, 0.1),
-            ");\n}\n\n".leave().color(1.0, 1.0, 1.0),
-            "\tTAB\n".default(),
-            "\t\tWIDTH\n".default(),
-            "----IS\n".default(),
-            "--------4\n".default()
-        ]);
-        t.set_default_format(Format {
-            color: Vec3::new(1.0, 1.0, 1.0),
-            font: fonts.roboto,
-        });
+        // lines are not required to be on their own
+        // `with` calls, it just makes it look nicer
+        let text = FormatString::builder()
+            // default config
+            .with(Color::WHITE)
+            .with(fonts.roboto)
+            .with(18.0)
+            // text
+            .with("All of ASCII:\n")
+            .with((0..64_u8).map(char::from).collect::<String>())
+            .with("\n")
+            .with((64..128_u8).map(char::from).collect::<String>())
+            .with("\n")
+            .with((128..192_u8).map(char::from).collect::<String>())
+            .with("\n")
+            .with((192..=255_u8).map(char::from).collect::<String>())
+            .with("\n")
+            .with("Random Unicode: \u{0416} \u{0409}\n")
+            .with("|\t|\t|\t|\t|\t|\ttabs\n")
+            .with("may be|\t|\t|\tworking\n")
+            // code text
+            .with(Color::ORANGE)
+            .with(fonts.fira)
+            .with("fn ")
+            .with(Color::new(0.1, 0.1, 1.0, 1.0))
+            .with("main")
+            .with(Color::WHITE)
+            .with("() {\n\t")
+            .with(Color::new(0.1, 0.1, 1.0, 1.0))
+            .with("println!")
+            .with(Color::WHITE)
+            .with("(")
+            .with(Color::new(0.1, 1.0, 0.1, 1.0))
+            .with(r#""Hello World!""#)
+            .with(Color::WHITE)
+            .with(");\n}\n\n")
+            // text
+            .with(Color::WHITE)
+            .with(fonts.roboto)
+            .with("\tTAB\n")
+            .with("\t\tWIDTH\n")
+            .with("    IS\n")
+            .with("        4 spaces\n")
+            .with(Color::WHITE)
+            .with(fonts.fira)
+            .with("It\n")
+            .with("\tis\n")
+            .with("\t\tmore\n")
+            .with("\t\t\tclear\n")
+            .with("\t\t\t\twith\n")
+            .with("\t\t\t\t\tmonospace\n")
+            .with("\t\t\t\t\t\tfonts\n");
 
         let (vbo, ibo) = vbo::text(
             &target,
-            &t,
+            text.chars(),
             &mut glyphs,
-            18.0,
-            Vec2::new(100.0, -50.0),
-            None,
+            TextConfig {
+                x_origin: 50,
+                y_origin: -50,
+                ..Default::default()
+            },
         )
         .unwrap();
         let (vbo, ibo) = (
@@ -229,18 +265,28 @@ impl Runnable for App {
         let mut frame = self.target.get_frame();
 
         let (frametime, fps) = self.reporter.last_string();
-        let t = format!("AVG frametime: {}\nAVG FPS: {}", frametime, fps)
-            .default()
-            .font(self.fonts.roboto)
-            .color(0.0, 0.0, 0.0)
-            .into();
+        // another way to make format strings
+        let text =
+            /* FormatString::from_iter([
+                format!("AVG frametime: {}\nAVG FPS: {}", frametime, fps).into()
+            ]) */
+            // or in this case just this:
+            FormatString::from(format!("AVG frametime: {}\nAVG FPS: {}", frametime, fps))
+            .with_init(Format {
+                color: Color::WHITE,
+                font: self.fonts.roboto,
+                px: 18.0,
+            });
         let (vertices, indices) = vbo::text(
             &self.target,
-            &t,
+            text.chars(),
             &mut self.text.glyphs,
-            18.0,
-            Vec2::new(500.0, -50.0),
-            None,
+            TextConfig {
+                x_origin: 500,
+                y_origin: -50,
+                x_origin_point: XOrigin::Right,
+                ..Default::default()
+            },
         )
         .unwrap();
         self.dyn_text.vbo.upload(
@@ -305,7 +351,7 @@ impl Runnable for App {
                     .bind_group((&self.text.ubo, &self.text.glyphs)),
             )
             .bind_shader(&self.text_shader)
-            .draw_indexed(0..self.dyn_text.ibo.capacity() as _, 0, 0..1);
+            .draw_indexed(0..indices.len() as _, 0, 0..1);
 
         self.target.finish_frame(frame);
         self.reporter.end(timer);

@@ -1,3 +1,4 @@
+use self::fonts::Fonts;
 use fontsdf::Font;
 use srs2dge_core::{
     image::GrayImage,
@@ -10,7 +11,8 @@ use std::{collections::HashMap, ops::Deref};
 
 //
 
-type GlyphHash = usize;
+pub mod fonts;
+pub mod prelude;
 
 //
 
@@ -32,8 +34,8 @@ pub struct Glyphs {
     texture: Texture<USAGE>,
     packer: Packer,
 
-    fonts: Vec<Font>,
-    glyphs: HashMap<Glyph, (GlyphHash, TexturePosition)>,
+    fonts: Fonts,
+    glyphs: HashMap<Glyph, (usize, TexturePosition)>,
     sdf: Option<u16>,
 
     queue: Vec<Glyph>,
@@ -51,25 +53,19 @@ impl Glyphs {
     /// `sdf` enables or disables the optional SDF
     /// renderer mode. SDF rendering requires the
     /// `SdfShader` instead of `TextShader`.
-    pub fn new(target: &Target, dim: Rect, sdf: Option<u16>, default_font: Font) -> Self {
-        let texture = Texture::new_grey(target, dim);
-        let packer = Packer::new(dim);
-
-        let fonts = vec![default_font];
-        let glyphs = Default::default();
-        let queue = Default::default();
-
+    pub fn new(target: &Target, dim: Rect, sdf: Option<u16>, fonts: Fonts) -> Self {
         Self {
-            texture,
-            packer,
+            texture: Texture::new_grey(target, dim),
+            packer: Packer::new(dim),
 
             fonts,
-            glyphs,
+            glyphs: Default::default(),
             sdf,
 
-            queue,
+            queue: Default::default(),
         }
     }
+
     /// Creates a dynamic glyph atlas map thingy.
     ///
     /// It uploads used glyphs to its texture
@@ -79,33 +75,45 @@ impl Glyphs {
     /// `sdf` enables or disables the optional SDF
     /// renderer mode. SDF rendering requires the
     /// `SdfShader` instead of `TextShader`.
-    pub fn new_bytes(
+    pub fn new_with_fallback(target: &Target, dim: Rect, sdf: Option<u16>, fallback: Font) -> Self {
+        Self::new(target, dim, sdf, Fonts::new(fallback))
+    }
+
+    /// Creates a dynamic glyph atlas map thingy.
+    ///
+    /// It uploads used glyphs to its texture
+    /// and _**in the future**, it will replace less
+    /// used glyphs when no room is available_.
+    ///
+    /// `sdf` enables or disables the optional SDF
+    /// renderer mode. SDF rendering requires the
+    /// `SdfShader` instead of `TextShader`.
+    pub fn new_with_fallback_bytes(
         target: &Target,
         dim: Rect,
         sdf: Option<u16>,
-        default_font: &[u8],
+        fallback_bytes: &[u8],
     ) -> Result<Self, &'static str> {
-        Ok(Self::new(target, dim, sdf, Font::from_bytes(default_font)?))
+        Ok(Self::new(
+            target,
+            dim,
+            sdf,
+            Fonts::new_bytes(fallback_bytes)?,
+        ))
     }
 
-    /// Add a font to this glyph map
+    /// Inner font map for this glyph map
     ///
-    /// returns a handle to it
-    ///
-    /// this handle is used to format text
-    pub fn add_font(&mut self, font: Font) -> usize {
-        let id = self.fonts.len();
-        self.fonts.push(font);
-        id
+    /// Used for retrieving fonts
+    pub fn fonts(&self) -> &Fonts {
+        &self.fonts
     }
 
-    /// Add a font to this glyph map
+    /// Inner font map for this glyph map
     ///
-    /// returns a handle to it
-    ///
-    /// this handle is used to format text
-    pub fn add_font_bytes(&mut self, font: &[u8]) -> Result<usize, &'static str> {
-        Ok(self.add_font(Font::from_bytes(font)?))
+    /// Used for adding and retrieving fonts
+    pub fn fonts_mut(&mut self) -> &mut Fonts {
+        &mut self.fonts
     }
 
     /// Queues a glyph to be available
@@ -120,7 +128,7 @@ impl Glyphs {
         };
 
         self.queue.push(Glyph {
-            index: self.fonts[font].lookup_glyph_index(c),
+            index: self.fonts.get_font(font).lookup_glyph_index(c),
             scale,
             font,
         });
@@ -137,7 +145,7 @@ impl Glyphs {
                 continue;
             }
 
-            let (metrics, data) = self.fonts[queued.font].rasterize_indexed(
+            let (metrics, data) = self.fonts.get_font(queued.font).rasterize_indexed(
                 queued.index,
                 queued.scale as _,
                 self.is_sdf(),
@@ -182,7 +190,7 @@ impl Glyphs {
         };
 
         self.get_glyph(&Glyph {
-            index: self.fonts[font].lookup_glyph_index(c),
+            index: self.fonts.get_font(font).lookup_glyph_index(c),
             scale,
             font,
         })
@@ -203,10 +211,6 @@ impl Glyphs {
         };
 
         self.get_glyph(&Glyph { index, scale, font })
-    }
-
-    pub fn get_font(&self, font: usize) -> Option<&'_ Font> {
-        self.fonts.get(font)
     }
 
     pub fn is_sdf(&self) -> bool {

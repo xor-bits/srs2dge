@@ -43,12 +43,36 @@ struct App {
 
 impl App {
     async fn init(target: &EventLoopTarget) -> Self {
+        // setup text
+        let text = FormatString::from_iter([
+            Color::RED.into(),
+            "red ".into(),
+            Color::GREEN.into(),
+            "green ".into(),
+            Color::BLUE.into(),
+            "blue".into(),
+        ])
+        .with_init(Format {
+            px: 80.0,
+            ..Default::default()
+        });
+        let config = TextConfig {
+            x_origin: 0,
+            y_origin: 0,
+            y_origin_line: YOrigin::Descender,
+            ..Default::default()
+        };
+        let fonts = Fonts::new_bytes(res::font::ROBOTO).unwrap();
+        let bb = TextChars::new(text.chars(), &fonts, config).bounding_box_typo();
+        log::debug!("{bb:?}");
+
+        // engine
         let engine = Engine::new();
         let target = engine
             .new_target(Arc::new(
                 WindowBuilder::new()
                     .with_visible(false)
-                    .with_inner_size(PhysicalSize::new(560, 150))
+                    .with_inner_size(PhysicalSize::new(bb.width, bb.height))
                     .build(target)
                     .unwrap(),
             ))
@@ -57,22 +81,10 @@ impl App {
         let ws = WindowState::new(&target.get_window().unwrap());
 
         let mut glyphs =
-            Glyphs::new_bytes(&target, Rect::new(128, 156), None, res::font::ROBOTO).unwrap();
+            Glyphs::new_with_fallback_bytes(&target, Rect::new(128, 156), None, res::font::ROBOTO)
+                .unwrap();
 
-        let (v, i) = text(
-            &target,
-            &FString::from_iter([
-                "red".default().color(1.0, 0.0, 0.0),
-                "green".default().color(0.0, 1.0, 0.0),
-                "blue".default().color(0.0, 0.0, 1.0),
-            ]),
-            &mut glyphs,
-            80.0,
-            Vec2::ONE * 50.0,
-            None,
-        )
-        .unwrap();
-        // let _ = glyphs.read(&target).await.save("target/text_glyphs.png");
+        let (v, i) = vbo::text(&target, text.chars(), &mut glyphs, config).unwrap();
         let vbo = VertexBuffer::new_with(&target, &v);
         let ibo = IndexBuffer::new_with(&target, &i);
         let ubo = UniformBuffer::new(&target, 1);
@@ -120,11 +132,6 @@ impl Runnable for App {
 
         frame
             .primary_render_pass()
-            // .bind_vbo(&self.vbo)
-            // .bind_ibo(&self.ibo)
-            // .bind_group(&self.text_shader.bind_group((&self.ubo, &self.glyphs)))
-            // .bind_shader(&self.text_shader)
-            // .draw_indexed(0..self.ibo.capacity() as _, 0, 0..1)
             .bind_vbo(&self.vbo)
             .bind_ibo(&self.ibo)
             .bind_group(&self.shader.bind_group((&self.ubo, &self.glyphs)))

@@ -1,3 +1,4 @@
+use bytemuck::{Pod, Zeroable};
 use srs2dge_core::{
     buffer::{DefaultIndex, DefaultVertex, Index, UniformBuffer},
     glam::Mat4,
@@ -23,6 +24,55 @@ use std::{
 type Internal<I> = Shader<DefaultVertex, I>;
 
 //
+
+#[derive(Debug, Clone, Copy, PartialEq, Zeroable, Pod)]
+#[repr(C, align(16))]
+pub struct SdfUniform {
+    pub mvp: [[f32; 4]; 4],
+    pub weight: f32,
+    pub anti_alias: f32,
+    pub border: f32,
+    pub _pad: f32,
+}
+
+impl Default for SdfUniform {
+    fn default() -> Self {
+        Self {
+            mvp: Mat4::IDENTITY.to_cols_array_2d(),
+            weight: 0.0,
+            anti_alias: 0.01,
+            border: 0.15,
+            _pad: 0.0,
+        }
+    }
+}
+
+impl SdfUniform {
+    pub fn new(mvp: Mat4, weight: f32, anti_alias: f32, border: f32) -> Self {
+        Self {
+            mvp: mvp.to_cols_array_2d(),
+            weight,
+            anti_alias,
+            border,
+            _pad: 0.0,
+        }
+    }
+
+    pub fn new_defaults(mvp: Mat4) -> Self {
+        Self {
+            mvp: mvp.to_cols_array_2d(),
+            ..Default::default()
+        }
+    }
+
+    pub fn get_mvp(&self) -> Mat4 {
+        Mat4::from_cols_array_2d(&self.mvp)
+    }
+
+    pub fn set_mvp(&mut self, mvp: Mat4) {
+        self.mvp = mvp.to_cols_array_2d();
+    }
+}
 
 #[derive(Debug)]
 pub struct SdfShader<I = DefaultIndex>
@@ -85,7 +135,7 @@ impl<'a, I> Layout<'a> for SdfShader<I>
 where
     I: Index,
 {
-    type Bindings = (&'a UniformBuffer<Mat4>, &'a TextureView);
+    type Bindings = (&'a UniformBuffer<SdfUniform>, &'a TextureView);
 
     fn bind_group_layout(device: &Device) -> BindGroupLayout {
         device.create_bind_group_layout(&BindGroupLayoutDescriptor {
@@ -93,7 +143,7 @@ where
             entries: &[
                 BindGroupLayoutEntry {
                     binding: 0,
-                    visibility: ShaderStages::VERTEX,
+                    visibility: ShaderStages::VERTEX | ShaderStages::FRAGMENT,
                     ty: BindingType::Buffer {
                         ty: BufferBindingType::Uniform,
                         has_dynamic_offset: false,

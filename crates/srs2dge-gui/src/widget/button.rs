@@ -1,4 +1,7 @@
-use super::{Widget, WidgetBase, WidgetBaseBuilder};
+use super::{
+    base::{WidgetBase, WidgetBaseBuilder},
+    Widget,
+};
 use crate::{gui::Gui, impl_base_widget, impl_base_widget_builder_methods};
 use srs2dge_core::glam::Vec2;
 
