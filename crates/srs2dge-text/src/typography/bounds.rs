@@ -2,7 +2,7 @@ use super::prelude::TextChars;
 
 //
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TextBoundingBox {
     pub x: i32,
     pub y: i32,
@@ -10,7 +10,7 @@ pub struct TextBoundingBox {
     pub height: u32,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TextBoundingBoxTypo {
     /// left to right for [`TextDirection::Right`]
     /// top to bottom [`TextDirection::Down`]
