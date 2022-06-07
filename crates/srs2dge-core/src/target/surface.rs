@@ -8,6 +8,8 @@ use wgpu::{
 };
 use winit::window::Window;
 
+use crate::util::present_mode_from_env;
+
 //
 
 pub struct ISurface {
@@ -59,7 +61,7 @@ impl ISurface {
             device,
             surface,
             format,
-            present_mode: PresentMode::Mailbox,
+            present_mode: present_mode_from_env().unwrap_or(PresentMode::Mailbox),
 
             width: 0, // properly configured in just a bit
             height: 0,

@@ -61,7 +61,6 @@ impl App {
                 .unwrap(),
         );
         let mut target = engine.new_target(window.clone()).await;
-        target.set_vsync(false);
 
         let reporter = Reporter::new();
 
