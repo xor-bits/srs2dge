@@ -125,9 +125,20 @@ impl Runnable for App {
                 .with_texture(self.texture.get(&0).unwrap())
                 .build(&mut self.gui);
 
+            let text_col = if (col.r + col.g + col.b) / 3.0 >= 0.35 {
+                Color::BLACK
+            } else {
+                Color::WHITE
+            };
+
             Text::builder()
                 .with_parent(&fill)
-                .with_text("{col}")
+                .with_text(
+                    FormatString::builder()
+                        .with(text_col)
+                        .with(format!("{col:#}")),
+                )
+                .with_offset(|base, size| base.offset + size * 0.5)
                 .build(&mut self.gui, &self.target);
 
             if button.clicked() {

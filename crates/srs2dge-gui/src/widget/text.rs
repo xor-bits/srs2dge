@@ -9,10 +9,8 @@ use crate::{
     },
     impl_base_widget, impl_base_widget_builder_methods,
 };
-use srs2dge_core::{color::Color, glam::Vec2, target::Target};
-use srs2dge_text::prelude::{
-    FormatChar, FormatString, TextAlign, TextChar, TextChars, TextConfig, XOrigin, YOrigin,
-};
+use srs2dge_core::{glam::Vec2, target::Target};
+use srs2dge_text::prelude::{FormatChar, FormatString, TextAlign, TextChar, TextChars, TextConfig};
 
 //
 
@@ -47,10 +45,7 @@ impl<'s> Default for Wb<'s> {
             base: Default::default(),
             text: Default::default(),
             config: TextConfig {
-                align: TextAlign {
-                    x: XOrigin::Middle,
-                    y: YOrigin::Middle,
-                },
+                align: TextAlign::centered(),
                 ..Default::default()
             },
         }
@@ -108,7 +103,7 @@ impl<'s> Wb<'s> {
             gui.text_batcher.push_with(GuiGeom::Quad(GuiQuad {
                 pos: Vec2::new(x as _, y as _) + base.offset.floor(),
                 size: Vec2::new(width as _, height as _),
-                col: Color::WHITE,
+                col: format.color,
                 tex,
             }));
         }
