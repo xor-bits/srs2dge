@@ -1,6 +1,6 @@
 use super::geom::GuiGeom;
 use srs2dge_core::{
-    batch::Mesh,
+    batch::mesh::Mesh,
     buffer::{IndexBuffer, VertexBuffer},
     prelude::Frame,
     target::Target,

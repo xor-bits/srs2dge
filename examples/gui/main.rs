@@ -74,8 +74,7 @@ impl Runnable for App {
             .with_offset(|base, _| border_offset(base, BORDER))
             .with_color(self.col)
             .with_texture(self.texture.get(&0).unwrap())
-            .with_gui(&mut self.gui)
-            .build();
+            .build(&mut self.gui);
 
         let size = |base: WidgetBase| {
             (base.size * 0.5) // half the size of parent
@@ -91,16 +90,14 @@ impl Runnable for App {
             .with_offset(|base, size| align(base, size, Vec2::new(0.5, 1.0))) // x center, y top
             .with_color(Color::WHITE)
             .with_texture(self.texture.get(&1).unwrap())
-            .with_gui(&mut self.gui)
-            .build();
+            .build(&mut self.gui);
         let _bottom = Fill::builder()
             .with_parent(&left)
             .with_size(size)
             .with_offset(|base, size| align(base, size, Vec2::new(0.5, 0.0))) // x center, y bottom
             .with_color(Color::CHARTREUSE)
             .with_texture(self.texture.get(&0).unwrap())
-            .with_gui(&mut self.gui)
-            .build();
+            .build(&mut self.gui);
 
         let right = Grid::builder()
             .with_base(split.next().unwrap())
@@ -120,15 +117,18 @@ impl Runnable for App {
                     .with_offset(|base, _| border_offset(base, 4.0))
             }
             .with_base(base)
-            .with_gui(&mut self.gui)
-            .build();
+            .build(&mut self.gui);
 
-            Fill::builder()
+            let fill = Fill::builder()
                 .with_parent(&button)
                 .with_color(col)
                 .with_texture(self.texture.get(&0).unwrap())
-                .with_gui(&mut self.gui)
-                .build();
+                .build(&mut self.gui);
+
+            Text::builder()
+                .with_parent(&fill)
+                .with_text("{col}")
+                .build(&mut self.gui, &self.target);
 
             if button.clicked() {
                 self.col = col;

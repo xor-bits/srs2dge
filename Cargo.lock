@@ -1786,6 +1786,8 @@ version = "0.2.0"
 dependencies = [
  "fontdue",
  "fontsdf",
+ "itertools",
+ "once_cell",
  "srs2dge-core",
 ]
 

@@ -57,13 +57,11 @@ impl App {
             ..Default::default()
         });
         let config = TextConfig {
-            x_origin: 0,
-            y_origin: 0,
-            y_origin_line: YOrigin::Descender,
+            align: TextAlign::bottom_left(),
             ..Default::default()
         };
         let fonts = Fonts::new_bytes(res::font::ROBOTO).unwrap();
-        let bb = TextChars::new(text.chars(), &fonts, config).bounding_box_typo();
+        let bb = TextChars::new(text.chars(), &fonts, config).bounding_box();
         log::debug!("{bb:?}");
 
         // engine
@@ -84,7 +82,9 @@ impl App {
             Glyphs::new_with_fallback_bytes(&target, Rect::new(128, 156), None, res::font::ROBOTO)
                 .unwrap();
 
-        let (v, i) = vbo::text(&target, text.chars(), &mut glyphs, config).unwrap();
+        let (v, i) = vbo::text(&target, text.chars(), &mut glyphs, config)
+            .unwrap()
+            .collect_mesh();
         let vbo = VertexBuffer::new_with(&target, &v);
         let ibo = IndexBuffer::new_with(&target, &i);
         let ubo = UniformBuffer::new(&target, 1);

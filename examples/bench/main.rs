@@ -19,12 +19,7 @@ fn main() {
         px: 80.0,
         ..Default::default()
     });
-    let config = TextConfig {
-        x_origin: 0,
-        y_origin: 0,
-        y_origin_line: YOrigin::Descender,
-        ..Default::default()
-    };
+    let config = TextConfig::default();
 
     // it runs 1M times per 0.5 seconds on my pc?
     // I didn't expect it to be this fast

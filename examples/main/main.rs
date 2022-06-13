@@ -1,6 +1,4 @@
-use std::sync::Arc;
-
-use srs2dge::{prelude::*, text::config::TextConfig};
+use srs2dge::prelude::*;
 
 //
 
@@ -53,22 +51,19 @@ struct FontIds {
 impl App {
     async fn init(target: &EventLoopTarget) -> Self {
         let engine = Engine::new();
-
-        let window = Arc::new(
-            WindowBuilder::new()
-                .with_visible(false)
-                .build(target)
-                .unwrap(),
-        );
-        let mut target = engine.new_target(window.clone()).await;
+        let target = engine.new_target_default(target).await.unwrap();
 
         let reporter = Reporter::new();
 
         let update_rate = UpdateRate::PerSecond(60);
         let update_loop = UpdateLoop::new(update_rate);
 
-        let ws = WindowState::new(&window);
+        let ws = WindowState::new(&target.get_window().unwrap());
         let is = KeyboardState::new();
+
+        // ----
+        // QUAD
+        // ----
 
         let texture_shader = Texture2DShader::new(&target);
         let text_shader = TextShader::new(&target);
@@ -85,10 +80,7 @@ impl App {
 
         let ibo = IndexBuffer::new_with(&target, &[0_u32, 1, 2, 0, 2, 3]);
 
-        let ubo = UniformBuffer::new_single(
-            &target,
-            Mat4::from_diagonal(Vec4::new(1.0, ws.aspect, 1.0, 1.0)) * Mat4::from_rotation_z(0.0),
-        );
+        let ubo = UniformBuffer::new(&target, 1);
 
         let texture = TextureAtlasMapBuilder::new()
             .with(
@@ -110,6 +102,10 @@ impl App {
             a: 0.0,
             speed,
         };
+
+        // -----------
+        // STATIC TEXT
+        // -----------
 
         let mut glyphs =
             Glyphs::new_with_fallback_bytes(&target, Rect::new(512, 512), None, res::font::ROBOTO)
@@ -139,7 +135,7 @@ impl App {
             .with("\n")
             .with("Random Unicode: \u{0416} \u{0409}\n")
             .with("|\t|\t|\t|\t|\t|\ttabs\n")
-            .with("may be|\t|\t|\tworking\n")
+            .with("may be|\t|\tworking\n\n")
             // code text
             .with(Color::ORANGE)
             .with(fonts.fira)
@@ -171,35 +167,66 @@ impl App {
             .with("\t\t\tclear\n")
             .with("\t\t\t\twith\n")
             .with("\t\t\t\t\tmonospace\n")
-            .with("\t\t\t\t\t\tfonts\n");
+            .with("\t\t\t\t\t\tfonts\n")
+            // multi font multi px same line
+            .with(Color::RED)
+            .with(fonts.roboto)
+            .with("Roboto ")
+            .with(Color::GREEN)
+            .with(fonts.fira)
+            .with("Fira\n")
+            .with(Color::RED)
+            .with(fonts.roboto)
+            .with(20.0)
+            .with("Roboto ")
+            .with(Color::GREEN)
+            .with(fonts.fira)
+            .with(28.0)
+            .with("Fira\n")
+            .with(Color::RED)
+            .with(fonts.roboto)
+            .with(28.0)
+            .with("Roboto ")
+            .with(Color::GREEN)
+            .with(fonts.fira)
+            .with(20.0)
+            .with("Fira\n")
+            .with(Color::RED)
+            .with(fonts.roboto)
+            .with(18.0)
+            .with("Roboto ")
+            .with(Color::GREEN)
+            .with(fonts.fira)
+            .with(10.0)
+            .with("Fira\n")
+            .with(Color::RED)
+            .with(fonts.roboto)
+            .with(38.0)
+            .with("Roboto ")
+            .with(Color::GREEN)
+            .with(fonts.fira)
+            .with(30.0)
+            .with("Fira\n");
 
         let (vbo, ibo) = vbo::text(
             &target,
             text.chars(),
             &mut glyphs,
             TextConfig {
-                x_origin: 50,
-                y_origin: -50,
+                x_origin: 10.0,
+                y_origin: -10.0,
+                align: TextAlign::top_left(),
                 ..Default::default()
             },
         )
-        .unwrap();
+        .unwrap()
+        .collect_mesh();
         let (vbo, ibo) = (
             VertexBuffer::new_with(&target, &vbo),
             IndexBuffer::new_with(&target, &ibo),
         );
 
-        let ubo = UniformBuffer::new_single(
-            &target,
-            Mat4::orthographic_rh(
-                0.0,
-                ws.size.width as _,
-                -(ws.size.height as f32),
-                0.0,
-                -100.0,
-                100.0,
-            ),
-        );
+        let ubo = UniformBuffer::new(&target, 1);
 
         let text = Text {
             vbo,
@@ -208,13 +235,12 @@ impl App {
             glyphs,
         };
 
+        // ------------
+        // DYNAMIC TEXT
+        // ------------
+
         let vbo = VertexBuffer::new(&target, 400);
-        let ibo = IndexBuffer::new_with(
-            &target,
-            &(0..100)
-                .flat_map(|i| [i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3])
-                .collect::<Vec<_>>(),
-        );
+        let ibo = IndexBuffer::new(&target, 500);
 
         let dyn_text = DynText { vbo, ibo };
 
@@ -236,6 +262,15 @@ impl App {
         }
     }
 
+    fn updates(&mut self) -> f32 {
+        let mut update_loop = self.update_loop.take().unwrap();
+        let delta = update_loop.update(|| {
+            self.update();
+        });
+        self.update_loop = Some(update_loop);
+        delta
+    }
+
     fn update(&mut self) {
         let mut delta = 0.0;
         if self.is.pressed(VirtualKeyCode::Left) {
@@ -248,59 +283,80 @@ impl App {
         self.quad.speed -= delta * UpdateRate::PerSecond(60).to_interval().as_secs_f32() / 2.0;
         self.quad.a += self.quad.speed;
     }
-}
 
-impl Runnable for App {
-    fn draw(&mut self) {
-        // update
-        let mut update_loop = self.update_loop.take().unwrap();
-        let delta = update_loop.update(|| {
-            self.update();
-        });
-        self.update_loop = Some(update_loop);
-
-        // draw
-        let timer = self.reporter.begin();
-        let mut frame = self.target.get_frame();
+    fn dynamic_text(&mut self, frame: &mut Frame) -> u32 {
+        // --------
+        // FPS TEXT
+        // --------
 
         let (frametime, fps) = self.reporter.last_string();
+        let (frametime_l, fps_l) = (frametime.chars().count(), fps.chars().count());
+        let max = frametime_l.max(fps_l);
+        let text = format!(
+            "FrameTime: {}{}\nFPS: {}{}",
+            " ".repeat(max - frametime_l),
+            frametime,
+            " ".repeat(max - fps_l),
+            fps
+        );
+
         // another way to make format strings
-        let text =
-            /* FormatString::from_iter([
-                format!("AVG frametime: {}\nAVG FPS: {}", frametime, fps).into()
-            ]) */
-            // or in this case just this:
-            FormatString::from(format!("AVG frametime: {}\nAVG FPS: {}", frametime, fps))
-            .with_init(Format {
-                color: Color::WHITE,
-                font: self.fonts.roboto,
-                px: 18.0,
-            });
-        let (vertices, indices) = vbo::text(
-            &self.target,
-            text.chars(),
-            &mut self.text.glyphs,
-            TextConfig {
-                x_origin: 500,
-                y_origin: -50,
-                x_origin_point: XOrigin::Right,
-                ..Default::default()
-            },
-        )
-        .unwrap();
+        let text = FormatString::from(text).with_init(Format {
+            color: Color::WHITE,
+            font: self.fonts.fira,
+            px: 18.0,
+        });
+        let config = TextConfig {
+            x_origin: self.ws.size.width as f32 - 10.0,
+            y_origin: -10.0,
+            align: TextAlign::top_right(),
+            ..Default::default()
+        };
+        let text_a = vbo::text(&self.target, text.chars(), &mut self.text.glyphs, config)
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        // ------
+        // BOTTOM
+        // ------
+        let text = FormatString::from("Bottom Middle").with_init(Format {
+            color: Color::WHITE,
+            font: self.fonts.roboto,
+            px: 24.0,
+        });
+        let config = TextConfig {
+            x_origin: self.ws.size.width as f32 * 0.5,
+            y_origin: self.ws.size.height as f32 * -1.0,
+            align: TextAlign::bottom(),
+            ..Default::default()
+        };
+        let text_b = vbo::text(&self.target, text.chars(), &mut self.text.glyphs, config)
+            .unwrap()
+            .collect::<Vec<_>>();
+
+        // ---------
+        // UPLOADING
+        // ---------
+
+        let (vertices, indices) = [text_a, text_b].into_iter().flatten().collect_mesh();
         self.dyn_text.vbo.upload(
             &mut self.target,
-            &mut frame,
+            frame,
             &vertices[..self.dyn_text.vbo.capacity().min(vertices.len())],
         );
         self.dyn_text.ibo.upload(
             &mut self.target,
-            &mut frame,
+            frame,
             &indices[..self.dyn_text.ibo.capacity().min(indices.len())],
         );
+
+        indices.len() as _
+    }
+
+    fn prepare_uniforms(&mut self, frame: &mut Frame, delta: f32) {
         self.quad.ubo.upload(
             &mut self.target,
-            &mut frame,
+            frame,
             &[
                 Mat4::from_diagonal(Vec4::new(1.0, self.ws.aspect, 1.0, 1.0))
                     * Mat4::from_rotation_z(self.quad.a + self.quad.speed * delta),
@@ -308,7 +364,7 @@ impl Runnable for App {
         );
         self.text.ubo.upload(
             &mut self.target,
-            &mut frame,
+            frame,
             &[Mat4::orthographic_rh(
                 0.0,
                 self.ws.size.width as _,
@@ -318,7 +374,26 @@ impl Runnable for App {
                 100.0,
             )],
         );
+    }
+}
 
+impl Runnable for App {
+    fn draw(&mut self) {
+        // updates
+
+        let delta = self.updates();
+
+        // draw
+
+        // begin perf
+        let timer = self.reporter.begin();
+        let mut frame = self.target.get_frame();
+
+        // setup
+        let indices = self.dynamic_text(&mut frame);
+        self.prepare_uniforms(&mut frame, delta);
+
+        // record
         frame
             .primary_render_pass()
             // quad draw
@@ -350,8 +425,9 @@ impl Runnable for App {
                     .bind_group((&self.text.ubo, &self.text.glyphs)),
             )
             .bind_shader(&self.text_shader)
-            .draw_indexed(0..indices.len() as _, 0, 0..1);
+            .draw_indexed(0..indices, 0, 0..1);
 
+        // end perf
         self.target.finish_frame(frame);
         self.reporter.end(timer);
 

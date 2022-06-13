@@ -9,7 +9,10 @@ use crate::{
     },
     impl_base_widget, impl_base_widget_builder_methods,
 };
-use srs2dge_core::glam::Vec2;
+use srs2dge_core::{color::Color, glam::Vec2, target::Target};
+use srs2dge_text::prelude::{
+    FormatChar, FormatString, TextAlign, TextChar, TextChars, TextConfig, XOrigin, YOrigin,
+};
 
 //
 
@@ -18,74 +21,96 @@ type Wb<'g> = TextBuilder<'g>;
 
 //
 
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Text {
     base: WidgetBase,
 }
 
 #[derive(Debug)]
-pub struct TextBuilder<'g> {
+pub struct TextBuilder<'s> {
     base: WidgetBaseBuilder,
-    gui: Option<&'g mut Gui>,
+    text: FormatString<'s>,
+    config: TextConfig,
 }
 
 //
 
 impl W {
-    pub fn builder<'g>() -> Wb<'g> {
+    pub fn builder<'s>() -> Wb<'s> {
         Wb::default()
     }
 }
 
-impl<'g> Default for Wb<'g> {
+impl<'s> Default for Wb<'s> {
     fn default() -> Self {
         Self {
             base: Default::default(),
-            px: 18.0,
-            text: Default::default(), // FString::from_string("Text Label"),
-            gui: Default::default(),
+            text: Default::default(),
+            config: TextConfig {
+                align: TextAlign {
+                    x: XOrigin::Middle,
+                    y: YOrigin::Middle,
+                },
+                ..Default::default()
+            },
         }
     }
 }
 
-impl<'g> Wb<'g> {
+impl<'s> Wb<'s> {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn with_px(mut self, px: f32) -> Self {
-        self.px = px;
+    pub fn with_text<S: Into<FormatString<'s>>>(mut self, text: S) -> Self {
+        self.text = text.into();
         self
     }
 
-    pub fn with_text(mut self, text: FString) -> Self {
-        self.text = text;
+    pub fn with_config(mut self, config: TextConfig) -> Self {
+        self.config = config;
         self
     }
 
-    pub fn with_gui(mut self, gui: &'g mut Gui) -> Self {
-        self.gui = Some(gui);
-        self
-    }
-
-    pub fn build(self) -> W {
+    pub fn build(self, gui: &mut Gui, target: &Target) -> W {
         let Self {
             base,
-            px,
             text,
-            gui,
+            mut config,
         } = self;
+        let glyphs = &mut gui.glyphs;
+        config.sdf = glyphs.is_sdf();
 
+        // base widget
         let base = base.build();
 
-        if let Some(gui) = gui {
-            let iter = CharPositionIter::new(&text, gui.glyphs(), px, true);
+        // queue glyphs
+        for FormatChar { character, format } in text.chars() {
+            glyphs.queue(character, format.px as _, format.font);
+        }
+        glyphs.flush(target).unwrap();
 
-            for x in iter {
-                x.x;
-            }
+        // generate text quads
+        for TextChar {
+            index,
+            format,
+            x,
+            y,
+            width,
+            height,
+            ..
+        } in TextChars::new(text.chars(), glyphs.fonts(), config)
+        {
+            let tex = glyphs
+                .get_indexed(index, format.px as _, format.font)
+                .unwrap();
 
-            text.chars();
+            gui.text_batcher.push_with(GuiGeom::Quad(GuiQuad {
+                pos: Vec2::new(x as _, y as _) + base.offset.floor(),
+                size: Vec2::new(width as _, height as _),
+                col: Color::WHITE,
+                tex,
+            }));
         }
 
         W { base }

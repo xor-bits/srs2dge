@@ -1,4 +1,4 @@
-use self::quad::QuadMesh;
+use self::{mesh::Mesh, quad::QuadMesh};
 use crate::prelude::{DefaultVertex, Frame, IndexBuffer, Target, Vertex, VertexBuffer};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -12,6 +12,7 @@ pub use wgpu::PrimitiveTopology;
 
 //
 
+pub mod mesh;
 pub mod prelude;
 pub mod quad;
 
@@ -33,17 +34,6 @@ where
     used: Vec<Option<M>>,
 
     _p: PhantomData<M>,
-}
-
-pub trait Mesh<V = DefaultVertex> {
-    const PRIM: PrimitiveTopology;
-
-    type VertexIter: Iterator<Item = V>;
-    type IndexIter: Iterator<Item = u32>;
-
-    fn vertices(&self) -> Self::VertexIter;
-    fn indices(&self, offset: u32) -> Self::IndexIter;
-    fn index_step(&self) -> u32;
 }
 
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]

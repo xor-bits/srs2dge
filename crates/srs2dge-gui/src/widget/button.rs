@@ -8,7 +8,7 @@ use srs2dge_core::glam::Vec2;
 //
 
 type W = Button;
-type Wb<'g> = ButtonBuilder<'g>;
+type Wb = ButtonBuilder;
 
 //
 
@@ -19,15 +19,14 @@ pub struct Button {
 }
 
 #[derive(Debug, Default)]
-pub struct ButtonBuilder<'g> {
+pub struct ButtonBuilder {
     base: WidgetBaseBuilder,
-    gui: Option<&'g mut Gui>,
 }
 
 //
 
 impl W {
-    pub fn builder<'g>() -> Wb<'g> {
+    pub fn builder() -> Wb {
         Wb::default()
     }
 
@@ -36,22 +35,17 @@ impl W {
     }
 }
 
-impl<'g> Wb<'g> {
+impl Wb {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn with_gui(mut self, gui: &'g mut Gui) -> Self {
-        self.gui = Some(gui);
-        self
-    }
-
-    pub fn build(self) -> W {
-        let Self { base, gui } = self;
+    pub fn build(self, gui: &mut Gui) -> W {
+        let Self { base } = self;
 
         let base = base.build();
 
-        let clicked = gui.map(|gui| gui.clicked(base)).unwrap_or(false);
+        let clicked = gui.clicked(base);
 
         W { base, clicked }
     }
@@ -60,4 +54,4 @@ impl<'g> Wb<'g> {
 //
 
 impl_base_widget! { base W }
-impl_base_widget_builder_methods! { base Wb <'g> }
+impl_base_widget_builder_methods! { base Wb  }

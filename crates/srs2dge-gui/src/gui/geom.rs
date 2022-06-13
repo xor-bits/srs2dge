@@ -1,5 +1,5 @@
 use srs2dge_core::{
-    batch::Mesh,
+    batch::mesh::Mesh,
     buffer::{DefaultIndex, DefaultVertex},
     color::Color,
     glam::{Vec2, Vec4, Vec4Swizzles},

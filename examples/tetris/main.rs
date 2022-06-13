@@ -236,13 +236,14 @@ impl Runnable for App {
                     text.chars(),
                     &mut self.glyphs,
                     TextConfig {
-                        x_origin: 5,
-                        y_origin: -5,
-                        y_origin_line: YOrigin::Ascender,
+                        x_origin: 0.0,
+                        y_origin: -5.0,
+                        align: TextAlign::top(),
                         ..Default::default()
                     },
                 )
-                .unwrap();
+                .unwrap()
+                .collect_mesh();
                 self.vbos = VertexBuffer::new_with(&self.target, &v);
                 self.ibos = IndexBuffer::new_with(&self.target, &i);
             }
@@ -266,13 +267,14 @@ impl Runnable for App {
                     text.chars(),
                     &mut self.glyphs,
                     TextConfig {
-                        x_origin: 5,
-                        y_origin: -5,
-                        y_origin_line: YOrigin::Ascender,
+                        x_origin: 5.0,
+                        y_origin: -5.0,
+                        align: TextAlign::top(),
                         ..Default::default()
                     },
                 )
-                .unwrap();
+                .unwrap()
+                .collect_mesh();
                 self.vbos = VertexBuffer::new_with(&self.target, &v);
                 self.ibos = IndexBuffer::new_with(&self.target, &i);
             }
@@ -297,10 +299,10 @@ impl Runnable for App {
             &mut self.target,
             &mut frame,
             &[SdfUniform::new_defaults(Mat4::orthographic_lh(
-                0.0,
-                self.ws.size.width as f32,
+                self.ws.size.width as f32 * -0.5,
+                self.ws.size.width as f32 * 0.5,
                 -(self.ws.size.height as f32) * 1.0,
-                0.0, /* self.ws.size.height as f32 * 0.5 */
+                0.0,
                 -10.0,
                 10.0,
             ))],

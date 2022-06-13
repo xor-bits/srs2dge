@@ -14,7 +14,7 @@ use srs2dge_core::{color::Color, glam::Vec2, prelude::TexturePosition};
 //
 
 type W = Fill;
-type Wb<'g> = FillBuilder<'g>;
+type Wb = FillBuilder;
 
 //
 
@@ -24,22 +24,21 @@ pub struct Fill {
 }
 
 #[derive(Debug, Default)]
-pub struct FillBuilder<'g> {
+pub struct FillBuilder {
     base: WidgetBaseBuilder,
     col: Color,
     tex: TexturePosition,
-    gui: Option<&'g mut Gui>,
 }
 
 //
 
 impl W {
-    pub fn builder<'g>() -> Wb<'g> {
+    pub fn builder() -> Wb {
         Wb::default()
     }
 }
 
-impl<'g> Wb<'g> {
+impl Wb {
     pub fn new() -> Self {
         Self::default()
     }
@@ -54,29 +53,17 @@ impl<'g> Wb<'g> {
         self
     }
 
-    pub fn with_gui(mut self, gui: &'g mut Gui) -> Self {
-        self.gui = Some(gui);
-        self
-    }
-
-    pub fn build(self) -> W {
-        let Self {
-            base,
-            col,
-            tex,
-            gui,
-        } = self;
+    pub fn build(self, gui: &mut Gui) -> W {
+        let Self { base, col, tex } = self;
 
         let base = base.build();
 
-        if let Some(gui) = gui {
-            gui.texture_batcher.push_with(GuiGeom::Quad(GuiQuad {
-                pos: base.offset,
-                size: base.size,
-                col,
-                tex,
-            }));
-        }
+        gui.texture_batcher.push_with(GuiGeom::Quad(GuiQuad {
+            pos: base.offset,
+            size: base.size,
+            col,
+            tex,
+        }));
 
         W { base }
     }
@@ -85,4 +72,4 @@ impl<'g> Wb<'g> {
 //
 
 impl_base_widget! { base W }
-impl_base_widget_builder_methods! { base Wb <'g> }
+impl_base_widget_builder_methods! { base Wb  }

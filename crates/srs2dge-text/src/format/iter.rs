@@ -26,6 +26,17 @@ impl<'a> FormatChars<'a> {
     pub fn init(&self) -> Format {
         self.init
     }
+
+    pub fn chars_only(&self) -> impl Iterator<Item = char> + '_ {
+        self.current
+            .iter()
+            .flat_map(|c| c.to_owned())
+            .chain(self.parts.to_owned().flat_map(|part| match part {
+                FormatStringPart::String(s) => s.chars(),
+                FormatStringPart::Str(s) => s.chars(),
+                _ => "".chars(),
+            }))
+    }
 }
 
 impl<'a> From<&'a str> for FormatChars<'a> {

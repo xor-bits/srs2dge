@@ -1,66 +1,48 @@
 use crate::{
     glyphs::{fonts::Fonts, Glyphs},
     prelude::{FormatChar, FormatChars},
-    typography::{bounds::TextBoundingBox, config::TextConfig, prelude::TextChars},
+    typography::{config::TextConfig, prelude::TextChars},
 };
-use srs2dge_core::{
-    batch::Mesh, buffer::DefaultVertex, glam::Vec2, image::RgbaImage, prelude::QuadMesh,
-    target::Target,
-};
+use srs2dge_core::{glam::Vec2, image::RgbaImage, prelude::QuadMesh, target::Target};
 
 //
 
 /// overwrites config sdf with the value from glyphs
-pub fn text(
+pub fn text<'i>(
     target: &Target,
-    chars: FormatChars,
-    glyphs: &mut Glyphs,
+    chars: FormatChars<'i>,
+    glyphs: &'i mut Glyphs,
     mut config: TextConfig,
-) -> Result<(Vec<DefaultVertex>, Vec<u32>), &'static str> {
+) -> Result<impl Iterator<Item = QuadMesh> + 'i, &'static str> {
     config.sdf = glyphs.is_sdf();
 
     // setup glyphs
 
     for FormatChar { character, format } in chars.clone() {
-        glyphs.queue(character, format.px as u16, format.font);
+        glyphs.queue(character, format.px as _, format.font);
     }
     glyphs.flush(target)?;
 
     // gen quads
-    let quads: Vec<_> = TextChars::new(chars, glyphs.fonts(), config)
-        .map(|c| {
-            let tex = glyphs
-                .get_indexed(c.index, c.format.px as _, c.format.font)
-                .unwrap();
+    Ok(TextChars::new(chars, glyphs.fonts(), config).map(|c| {
+        let tex = glyphs
+            .get_indexed(c.index, c.format.px as _, c.format.font)
+            .unwrap();
 
-            // TODO: mesh anchoring
-            let size = Vec2::new(c.width as f32, c.height as f32);
-            QuadMesh {
-                pos: Vec2::new(c.x as f32, c.y as f32) + 0.5 * size,
-                size,
-                col: c.format.color,
-                tex,
-            }
-        })
-        .collect();
-
-    let vertices = quads.iter().flat_map(|mesh| mesh.vertices()).collect();
-
-    let mut i = 0;
-    let indices = quads
-        .iter()
-        .flat_map(|mesh| {
-            let offset = i;
-            i += mesh.index_step();
-            mesh.indices(offset)
-        })
-        .collect();
-
-    Ok((vertices, indices))
+        // TODO: mesh anchoring
+        let size = Vec2::new(c.width as _, c.height as _);
+        QuadMesh {
+            pos: Vec2::new(c.x as _, c.y as _) + 0.5 * size,
+            size,
+            col: c.format.color,
+            tex,
+        }
+    }))
 }
 
-pub fn baked_text(chars: FormatChars, fonts: &Fonts, config: TextConfig) -> Option<RgbaImage> {
-    let TextBoundingBox {
+pub fn baked_text(_: FormatChars, _: &Fonts, _: TextConfig) -> Option<RgbaImage> {
+    todo!()
+    /* let TextBoundingBox {
         x,
         y,
         width,
@@ -93,5 +75,5 @@ pub fn baked_text(chars: FormatChars, fonts: &Fonts, config: TextConfig) -> Opti
         }
     }
 
-    RgbaImage::from_raw(width as u32, height as u32, text)
+    RgbaImage::from_raw(width as u32, height as u32, text) */
 }

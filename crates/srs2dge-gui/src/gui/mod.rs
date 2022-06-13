@@ -14,7 +14,7 @@ use srs2dge_core::{
     wgpu::TextureView,
     winit::event::{DeviceId, ElementState, MouseButton, WindowEvent},
 };
-use srs2dge_presets::{SdfShader, SdfUniform, Texture2DShader};
+use srs2dge_presets::{TextShader, Texture2DShader};
 use srs2dge_text::glyphs::Glyphs;
 use std::collections::HashMap;
 
@@ -31,15 +31,14 @@ pub mod renderer;
 pub struct Gui {
     ws: WindowState,
 
-    texture_ubo: UniformBuffer<Mat4>,
-    text_ubo: UniformBuffer<SdfUniform>,
+    ubo: UniformBuffer,
     texture_shader: Texture2DShader,
-    text_shader: SdfShader,
+    text_shader: TextShader,
     pub texture_batcher: GuiRenderer,
     pub text_batcher: GuiRenderer,
 
     texture: Option<Texture>,
-    glyphs: Glyphs,
+    pub(crate) glyphs: Glyphs,
 
     pointers: HashMap<DeviceId, PointerState>,
 }
@@ -51,10 +50,9 @@ impl Gui {
         Self {
             ws: WindowState::new(&target.get_window().unwrap()), // TODO: allow headless
 
-            texture_ubo: UniformBuffer::new(target, 1),
-            text_ubo: UniformBuffer::new(target, 1),
+            ubo: UniformBuffer::new(target, 1),
             texture_shader: Texture2DShader::new(target),
-            text_shader: SdfShader::new(target),
+            text_shader: TextShader::new(target),
             texture_batcher: GuiRenderer::default(),
             text_batcher: GuiRenderer::default(),
 
@@ -62,7 +60,7 @@ impl Gui {
             glyphs: Glyphs::new_with_fallback_bytes(
                 target,
                 Rect::new(512, 512),
-                Some(32),
+                None,
                 srs2dge_res::font::ROBOTO,
             )
             .unwrap(),
@@ -126,9 +124,9 @@ impl Gui {
     pub fn generate(&mut self, target: &mut Target, frame: &mut Frame) -> GeneratedGui {
         self.update_pointers();
         let texture = Self::texture_inner(&mut self.texture, target);
-        Self::upload_ubo(&self.texture_ubo, &self.text_ubo, &self.ws, target, frame);
+        Self::upload_ubo(&self.ubo, &self.ws, target, frame);
         Self::generate_inner(
-            (&self.texture_ubo, &self.text_ubo),
+            &self.ubo,
             (&mut self.texture_batcher, &mut self.text_batcher),
             (&self.texture_shader, &self.text_shader),
             target,
@@ -145,9 +143,9 @@ impl Gui {
         texture: &TextureView,
     ) -> GeneratedGui {
         self.update_pointers();
-        Self::upload_ubo(&self.texture_ubo, &self.text_ubo, &self.ws, target, frame);
+        Self::upload_ubo(&self.ubo, &self.ws, target, frame);
         Self::generate_inner(
-            (&self.texture_ubo, &self.text_ubo),
+            &self.ubo,
             (&mut self.texture_batcher, &mut self.text_batcher),
             (&self.texture_shader, &self.text_shader),
             target,
@@ -219,8 +217,7 @@ impl Gui {
     }
 
     fn upload_ubo<'a>(
-        texture_ubo: &'a UniformBuffer<Mat4>,
-        text_ubo: &'a UniformBuffer<SdfUniform>,
+        ubo: &'a UniformBuffer,
         ws: &WindowState,
         target: &mut Target,
         frame: &mut Frame,
@@ -233,20 +230,14 @@ impl Gui {
             -1.0,
             1.0,
         );
-        let sdf = SdfUniform {
-            mvp: mvp.to_cols_array_2d(),
-            border: 0.0,
-            ..Default::default()
-        };
-        texture_ubo.upload(target, frame, &[mvp]);
-        text_ubo.upload(target, frame, &[sdf]);
+        ubo.upload(target, frame, &[mvp]);
     }
 
     // partial borrows are not yet possible
     fn generate_inner<'a>(
-        (texture_ubo, text_ubo): (&'a UniformBuffer<Mat4>, &'a UniformBuffer<SdfUniform>),
+        ubo: &'a UniformBuffer,
         (texture_batcher, text_batcher): (&'a mut GuiRenderer, &'a mut GuiRenderer),
-        (texture_shader, text_shader): (&'a Texture2DShader, &'a SdfShader),
+        (texture_shader, text_shader): (&'a Texture2DShader, &'a TextShader),
         target: &mut Target,
         frame: &mut Frame,
         (texture, glyphs): (&TextureView, &TextureView),
@@ -255,19 +246,17 @@ impl Gui {
         let (text_vbo, text_ibo, text_indices) = text_batcher.generate(target, frame);
 
         GeneratedGui {
+            texture_shader,
             texture_vbo,
             texture_ibo,
             texture_indices,
+            texture_bindings: texture_shader.bind_group((ubo, texture)),
 
-            texture_shader,
-            texture_bindings: texture_shader.bind_group((texture_ubo, texture)),
-
+            text_shader,
             text_vbo,
             text_ibo,
             text_indices,
-
-            text_shader,
-            text_bindings: text_shader.bind_group((text_ubo, glyphs)),
+            text_bindings: text_shader.bind_group((ubo, glyphs)),
         }
     }
 }
