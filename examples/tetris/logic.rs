@@ -55,12 +55,12 @@ impl Board {
     pub fn new<R: Rng>(batcher: &mut BatchRenderer, rng: &mut R) -> Self {
         let mut board = [[Tile::default(); 10]; 20];
         let tetromino = Tetromino::new(rng);
-        let background = batcher.push_with(QuadMesh {
-            pos: Vec2::ZERO,
-            size: Vec2::new(1.0, 2.0),
-            col: tetromino.color(),
-            tex: TexturePosition::default(),
-        });
+        let background = batcher.push_with(QuadMesh::new_centered(
+            Vec2::ZERO,
+            Vec2::new(1.0, 2.0),
+            tetromino.color(),
+            TexturePosition::default(),
+        ));
 
         // init board
         board
@@ -153,10 +153,19 @@ impl Board {
         let mut copy = *self;
         while !copy.move_tetromino(Move::Down) {}
         for (x, y) in copy.tetromino.iter() {
-            batcher
+            let col = batcher
                 .get_mut(self.board[y as usize][x as usize].idx)
                 .unwrap()
-                .size = Vec2::ONE / 11.0;
+                .col;
+
+            *batcher
+                .get_mut(self.board[y as usize][x as usize].idx)
+                .unwrap() = QuadMesh::new_centered(
+                Vec2::new(x as f32 - 4.5, y as f32 - 9.5) / 10.0,
+                Vec2::ONE / 11.0,
+                col,
+                TexturePosition::default(),
+            );
         }
     }
 
@@ -169,7 +178,19 @@ impl Board {
         for y in 0..20 {
             for x in 0..10 {
                 if batcher.get(self.board[y][x].idx).unwrap().size.x <= 0.1 {
-                    batcher.get_mut(self.board[y][x].idx).unwrap().size = Vec2::ONE / 10.0;
+                    let col = batcher
+                        .get_mut(self.board[y as usize][x as usize].idx)
+                        .unwrap()
+                        .col;
+
+                    *batcher
+                        .get_mut(self.board[y as usize][x as usize].idx)
+                        .unwrap() = QuadMesh::new_centered(
+                        Vec2::new(x as f32 - 4.5, y as f32 - 9.5) / 10.0,
+                        Vec2::ONE / 10.0,
+                        col,
+                        TexturePosition::default(),
+                    );
                 }
             }
         }
@@ -224,12 +245,12 @@ impl Board {
 
 impl Tile {
     pub fn init(&mut self, batcher: &mut BatchRenderer, x: usize, y: usize) {
-        self.idx = batcher.push_with(QuadMesh {
-            pos: Vec2::new(x as f32 - 4.5, y as f32 - 9.5) / 10.0,
-            size: Vec2::ONE / 10.0,
-            col: Color::BLACK,
-            tex: TexturePosition::default(),
-        });
+        self.idx = batcher.push_with(QuadMesh::new_centered(
+            Vec2::new(x as f32 - 4.5, y as f32 - 9.5) / 10.0,
+            Vec2::ONE / 10.0,
+            Color::BLACK,
+            TexturePosition::default(),
+        ));
     }
 
     pub fn reset(&mut self, batcher: &mut BatchRenderer) {

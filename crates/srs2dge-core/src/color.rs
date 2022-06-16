@@ -17,11 +17,15 @@ use std::{
 /// # use std::str::FromStr;
 /// let color: Color = Color::new_rgb(1.0, 0.5, 0.0);
 /// println!("{color} {color:#}"); // '#ff7f00ff rgba[255, 127, 0, 255]'
-/// assert_eq!(u32::from(color), 0xff7f00ff);
+/// assert_eq!(color.into_u32_alpha(), 0xff7f00ff);
+/// assert_eq!(color.into_u32(), 0xff7f00);
+/// assert_eq!(u32::from(color), 0xff7f00);
 ///
 /// let color: Color = Color::ORANGE;
 /// println!("{color} {color:#}"); // '#ff7f00ff rgba[255, 127, 0, 255]'
-/// assert_eq!(u32::from(color), 0xff7f00ff);
+/// assert_eq!(color.into_u32_alpha(), 0xff7f00ff);
+/// assert_eq!(color.into_u32(), 0xff7f00);
+/// assert_eq!(u32::from(color), 0xff7f00);
 ///
 /// assert_eq!(Color::YELLOW, Color::from(0xffff00ff));
 /// assert_eq!(Color::YELLOW, Color::from_str("#ffff00ff").unwrap());

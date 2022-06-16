@@ -3,14 +3,13 @@ use super::{
     Widget,
 };
 use crate::{
-    gui::{
-        geom::{GuiGeom, GuiQuad},
-        Gui,
-    },
+    gui::{geom::GuiGeom, Gui},
     impl_base_widget, impl_base_widget_builder_methods,
 };
-use srs2dge_core::{glam::Vec2, target::Target};
-use srs2dge_text::prelude::{FormatChar, FormatString, TextAlign, TextChar, TextChars, TextConfig};
+use srs2dge_core::{glam::Vec2, prelude::QuadMesh, target::Target};
+use srs2dge_text::prelude::{
+    FormatChar, FormatString, TextAlign, TextChar, TextChars, TextConfig, XOrigin, YOrigin,
+};
 
 //
 
@@ -79,6 +78,20 @@ impl<'s> Wb<'s> {
         // base widget
         let base = base.build();
 
+        config.x_origin = base.offset.x
+            + match config.align.x {
+                XOrigin::Left => 0.0,
+                XOrigin::Middle => base.size.x * 0.5,
+                XOrigin::Right => base.size.x,
+            };
+        config.y_origin = base.offset.y
+            + match config.align.y {
+                YOrigin::Baseline => base.size.y,
+                YOrigin::Top => base.size.y,
+                YOrigin::Bottom => 0.0,
+                YOrigin::Middle => base.size.y * 0.5,
+            };
+
         // queue glyphs
         for FormatChar { character, format } in text.chars() {
             glyphs.queue(character, format.px as _, format.font);
@@ -100,12 +113,16 @@ impl<'s> Wb<'s> {
                 .get_indexed(index, format.px as _, format.font)
                 .unwrap();
 
-            gui.text_batcher.push_with(GuiGeom::Quad(GuiQuad {
-                pos: Vec2::new(x as _, y as _) + base.offset.floor(),
-                size: Vec2::new(width as _, height as _),
-                col: format.color,
+            if let Some(quad) = QuadMesh::new_top_left(
+                Vec2::new(x as _, y as _),
+                Vec2::new(width as _, height as _),
+                format.color,
                 tex,
-            }));
+            )
+            .clip(base.offset, base.offset + base.size)
+            {
+                gui.text_batcher.push_with(GuiGeom::Quad(quad));
+            }
         }
 
         W { base }

@@ -29,14 +29,8 @@ pub fn text<'i>(
             .get_indexed(c.index, c.format.px as _, c.format.font)
             .unwrap();
 
-        // TODO: mesh anchoring
         let size = Vec2::new(c.width as _, c.height as _);
-        QuadMesh {
-            pos: Vec2::new(c.x as _, c.y as _) + 0.5 * size,
-            size,
-            col: c.format.color,
-            tex,
-        }
+        QuadMesh::new_top_left(Vec2::new(c.x as _, c.y as _), size, c.format.color, tex)
     }))
 }
 

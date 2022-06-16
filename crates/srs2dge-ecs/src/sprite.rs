@@ -70,11 +70,11 @@ fn set_sprite(sprite: &mut Sprite, #[resource] batcher: &mut BatchRenderer) {
             mesh.tex = sprite.sprite;
         }
     } else {
-        sprite.idx = Some(batcher.push_with(QuadMesh {
-            pos: sprite.lerp_transform.translation,
-            size: sprite.lerp_transform.scale,
-            col: sprite.color,
-            tex: sprite.sprite,
-        }));
+        sprite.idx = Some(batcher.push_with(QuadMesh::new_centered(
+            sprite.lerp_transform.translation,
+            sprite.lerp_transform.scale,
+            sprite.color,
+            sprite.sprite,
+        )));
     }
 }

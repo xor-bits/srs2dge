@@ -3,13 +3,14 @@ use super::{
     Widget,
 };
 use crate::{
-    gui::{
-        geom::{GuiGeom, GuiQuad},
-        Gui,
-    },
+    gui::{geom::GuiGeom, Gui},
     impl_base_widget, impl_base_widget_builder_methods,
 };
-use srs2dge_core::{color::Color, glam::Vec2, prelude::TexturePosition};
+use srs2dge_core::{
+    color::Color,
+    glam::Vec2,
+    prelude::{QuadMesh, TexturePosition},
+};
 
 //
 
@@ -58,12 +59,13 @@ impl Wb {
 
         let base = base.build();
 
-        gui.texture_batcher.push_with(GuiGeom::Quad(GuiQuad {
-            pos: base.offset,
-            size: base.size,
-            col,
-            tex,
-        }));
+        gui.texture_batcher
+            .push_with(GuiGeom::Quad(QuadMesh::new_top_left(
+                base.offset,
+                base.size,
+                col,
+                tex,
+            )));
 
         W { base }
     }

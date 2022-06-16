@@ -1,6 +1,7 @@
 use crate::{
     color::Color,
     prelude::{DefaultVertex, Mesh, TexturePosition},
+    util::RemapRange,
 };
 use glam::{Vec2, Vec3, Vec3Swizzles, Vec4, Vec4Swizzles};
 use std::array::IntoIter;
@@ -27,6 +28,61 @@ pub struct IsoQuadMesh {
 
 //
 
+impl QuadMesh {
+    pub fn new_top_left(pos: Vec2, size: Vec2, col: Color, tex: TexturePosition) -> Self {
+        Self {
+            pos,
+            size,
+            col,
+            tex,
+        }
+    }
+
+    pub fn new_centered(pos: Vec2, size: Vec2, col: Color, tex: TexturePosition) -> Self {
+        Self {
+            pos: pos - size * 0.5,
+            size,
+            col,
+            tex,
+        }
+    }
+
+    /// remove those quads that are outside of the bounds
+    ///
+    /// and 'cut' those quads that are touching the bounds
+    pub fn clip(self, bounds_min: Vec2, bounds_max: Vec2) -> Option<Self> {
+        // discard quads outside of the bounding box
+        if (self.pos + self.size).cmplt(bounds_min).any() || self.pos.cmpge(bounds_max).any() {
+            return None;
+        }
+
+        // stretch (squash actually) quads that
+        // clip with the bounding box
+        //  - left & bottom clamp
+        let offset_clamp = self.pos.max(bounds_min);
+        let mut size = self.pos - offset_clamp + self.size;
+        let pos = offset_clamp;
+        //  - right & top clamp
+        size = (pos + size).min(bounds_max) - pos;
+
+        // texture position correction
+        // to not stretch textures when
+        // clamping the quads
+        let tex = TexturePosition {
+            top_left: pos.remap(
+                self.pos..self.pos + self.size,
+                self.tex.top_left..self.tex.bottom_right,
+            ),
+            bottom_right: (pos + size).remap(
+                self.pos..self.pos + self.size,
+                self.tex.top_left..self.tex.bottom_right,
+            ),
+        };
+
+        Some(Self::new_top_left(pos, size, self.col, tex))
+    }
+}
+
 impl Mesh<DefaultVertex> for QuadMesh {
     const PRIM: PrimitiveTopology = PrimitiveTopology::TriangleStrip;
 
@@ -34,9 +90,8 @@ impl Mesh<DefaultVertex> for QuadMesh {
     type IndexIter = IntoIter<u32, 5>;
 
     fn vertices(&self) -> Self::VertexIter {
-        let radius = self.size * 0.5;
-        let top_left = self.pos - radius;
-        let bottom_right = self.pos + radius;
+        let top_left = self.pos;
+        let bottom_right = self.pos + self.size;
         let p = Vec4::new(top_left.x, top_left.y, bottom_right.x, bottom_right.y);
         let c = Vec4::new(
             self.tex.top_left.x,
@@ -85,3 +140,5 @@ impl Mesh<DefaultVertex> for IsoQuadMesh {
         4
     }
 }
+
+//

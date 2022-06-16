@@ -99,15 +99,20 @@ impl Runnable for App {
             .with_texture(self.texture.get(&0).unwrap())
             .build(&mut self.gui);
 
-        let right = Grid::builder()
+        let right = Fill::builder()
             .with_base(split.next().unwrap())
             .with_size(|base| border_size(base, BORDER))
             .with_offset(|base, _| border_offset(base, BORDER))
-            .build();
+            .with_color(Color::ROSE)
+            .with_texture(self.texture.get(&0).unwrap())
+            .build(&mut self.gui);
 
-        for (i, base) in right.enumerate() {
+        let grid = Grid::builder().with_parent(&right).build();
+
+        for (i, base) in grid.enumerate() {
             let col = Color::new_mono((i as f32 / 8.0).powf(2.2));
-            let button = if self.gui.hovered(base) {
+            let hovered = self.gui.hovered(base);
+            let button = if hovered {
                 Button::builder()
                     .with_size(|base| border_size(base, 2.0))
                     .with_offset(|base, _| border_offset(base, 2.0))
@@ -136,9 +141,9 @@ impl Runnable for App {
                 .with_text(
                     FormatString::builder()
                         .with(text_col)
+                        .with(if hovered { 20.0 } else { 18.0 })
                         .with(format!("{col:#}")),
                 )
-                .with_offset(|base, size| base.offset + size * 0.5)
                 .build(&mut self.gui, &self.target);
 
             if button.clicked() {

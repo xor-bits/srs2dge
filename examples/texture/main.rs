@@ -31,12 +31,12 @@ impl App {
                 .to_rgba8(),
         );
 
-        let quad = QuadMesh {
-            pos: Vec2::new(-1.0, -1.0),
-            size: Vec2::new(2.0, 2.0),
-            col: Color::WHITE,
-            tex: TexturePosition::default(),
-        };
+        let quad = QuadMesh::new_centered(
+            Vec2::ZERO,
+            Vec2::new(2.0, 2.0),
+            Color::WHITE,
+            TexturePosition::default(),
+        );
         let vbo = VertexBuffer::new_with(&target, &quad.vertices().collect::<Box<_>>());
         let ibo = IndexBuffer::new_with(&target, &quad.indices(0).collect::<Box<_>>());
         let ubo = UniformBuffer::new(&target, 1);

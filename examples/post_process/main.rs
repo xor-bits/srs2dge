@@ -49,18 +49,18 @@ impl App {
                 .to_rgba8(),
         );
 
-        let quad_a = QuadMesh {
-            pos: Vec2::new(-0.5, -0.5), // bottom left
-            size: Vec2::new(1.0, 1.0),
-            col: Color::WHITE,
-            tex: TexturePosition::default(),
-        };
-        let quad_b = QuadMesh {
-            pos: Vec2::new(0.0, 0.0),
-            size: Vec2::new(2.0, 2.0),
-            col: Color::WHITE,
-            tex: TexturePosition::default(),
-        };
+        let quad_a = QuadMesh::new_centered(
+            Vec2::new(-0.5, -0.5), // bottom left
+            Vec2::new(1.0, 1.0),
+            Color::WHITE,
+            TexturePosition::default(),
+        );
+        let quad_b = QuadMesh::new_centered(
+            Vec2::new(0.0, 0.0),
+            Vec2::new(2.0, 2.0),
+            Color::WHITE,
+            TexturePosition::default(),
+        );
         let vbo = VertexBuffer::new_with(
             &target,
             &[quad_a, quad_b]
