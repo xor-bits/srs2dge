@@ -1,5 +1,5 @@
-use srs2dge_core::glam::Vec2;
 use crate::prelude::{GuiCalc, WidgetBase};
+use srs2dge_core::glam::Vec2;
 
 //
 
