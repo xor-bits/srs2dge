@@ -4,7 +4,8 @@ use super::{
 };
 use crate::{
     gui::{geom::GuiGeom, Gui},
-    impl_base_widget, impl_base_widget_builder_methods,
+    impl_base, impl_base_widget,
+    prelude::{BaseOffset, BaseSize, GuiCalc},
 };
 use srs2dge_core::{glam::Vec2, prelude::QuadMesh, target::Target};
 use srs2dge_text::prelude::{
@@ -14,7 +15,7 @@ use srs2dge_text::prelude::{
 //
 
 type W = Text;
-type Wb<'g> = TextBuilder<'g>;
+type Wb<'g, T, U> = TextBuilder<'g, T, U>;
 
 //
 
@@ -23,22 +24,24 @@ pub struct Text {
     base: WidgetBase,
 }
 
-#[derive(Debug)]
-pub struct TextBuilder<'s> {
-    base: WidgetBaseBuilder,
+#[derive(Debug, Clone, PartialEq)]
+pub struct TextBuilder<'s, T, U> {
+    base: WidgetBaseBuilder<T, U>,
     text: FormatString<'s>,
     config: TextConfig,
 }
 
 //
 
+impl_base! {}
+
 impl W {
-    pub fn builder<'s>() -> Wb<'s> {
-        Wb::default()
+    pub fn builder<'s>() -> Wb<'s, BaseSize, BaseOffset> {
+        Wb::new()
     }
 }
 
-impl<'s> Default for Wb<'s> {
+impl<'s> Default for Wb<'s, BaseSize, BaseOffset> {
     fn default() -> Self {
         Self {
             base: Default::default(),
@@ -51,11 +54,13 @@ impl<'s> Default for Wb<'s> {
     }
 }
 
-impl<'s> Wb<'s> {
+impl<'s> Wb<'s, BaseSize, BaseOffset> {
     pub fn new() -> Self {
         Self::default()
     }
+}
 
+impl<'s, T, U> Wb<'s, T, U> {
     pub fn with_text<S: Into<FormatString<'s>>>(mut self, text: S) -> Self {
         self.text = text.into();
         self
@@ -66,6 +71,14 @@ impl<'s> Wb<'s> {
         self
     }
 
+    impl_base_widget! { text, config => 's }
+}
+
+impl<'s, T, U> Wb<'s, T, U>
+where
+    T: GuiCalc,
+    U: GuiCalc,
+{
     pub fn build(self, gui: &mut Gui, target: &Target) -> W {
         let Self {
             base,
@@ -128,8 +141,3 @@ impl<'s> Wb<'s> {
         W { base }
     }
 }
-
-//
-
-impl_base_widget! { base W }
-impl_base_widget_builder_methods! { base Wb <'g> }

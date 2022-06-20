@@ -94,17 +94,22 @@ impl Color {
 
     #[inline]
     pub const fn new_rgb(r: f32, g: f32, b: f32) -> Self {
-        Self { r, g, b, a: 1.0 }
+        Self::new_rgba(r, g, b, 1.0)
     }
 
     #[inline]
-    pub const fn new_mono(val: f32) -> Self {
+    pub const fn new_mono_a(val: f32, a: f32) -> Self {
         Self {
             r: val,
             g: val,
             b: val,
-            a: 1.0,
+            a,
         }
+    }
+
+    #[inline]
+    pub const fn new_mono(val: f32) -> Self {
+        Self::new_mono_a(val, 1.0)
     }
 
     #[inline]

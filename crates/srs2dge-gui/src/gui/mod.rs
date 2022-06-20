@@ -5,7 +5,7 @@ use crate::{
 };
 use srs2dge_core::{
     buffer::UniformBuffer,
-    glam::Mat4,
+    glam::{Mat4, Vec2},
     main_game_loop::{event::Event, prelude::WindowState},
     prelude::{Frame, Rect},
     shader::Layout,
@@ -160,40 +160,69 @@ impl Gui {
     }
 
     /// iterator to all cursors, touch points, ...
-    pub fn pointers(&self) -> impl Iterator<Item = PointerState> + '_ {
-        self.pointers.values().copied()
+    pub fn pointers(&self) -> impl Iterator<Item = (DeviceId, PointerState)> + '_ {
+        self.pointers.iter().map(|(id, state)| (*id, *state))
     }
 
-    /// one of the pointers was pressed and released in this area
-    pub fn clicked(&self, area: WidgetBase) -> bool {
-        self.pointers().any(|pointer| match pointer {
-            PointerState::Release { initial, now } => {
+    /// all of the pointers that pressed and released in this area
+    pub fn clicked(&self, area: WidgetBase) -> impl Iterator<Item = DeviceId> + '_ {
+        self.pointers()
+            .filter(move |(_, pointer)| match pointer {
+                PointerState::Release { initial, now } => {
+                    let bl = area.offset;
+                    let tr = area.offset + area.size;
+
+                    (bl.x..tr.x).contains(&initial.x)
+                        && (bl.y..tr.y).contains(&initial.y)
+                        && (bl.x..tr.x).contains(&now.x)
+                        && (bl.y..tr.y).contains(&now.y)
+                }
+                _ => false,
+            })
+            .map(|(id, _)| id)
+    }
+
+    /// all of the pointers is in this area
+    pub fn hovered(&self, area: WidgetBase) -> impl Iterator<Item = DeviceId> + '_ {
+        self.pointers()
+            .filter(move |(_, pointer)| {
+                let now = match pointer {
+                    PointerState::Release { now, .. } => now,
+                    PointerState::Hover { now } => now,
+                    PointerState::Hold { now, .. } => now,
+                };
+
                 let bl = area.offset;
                 let tr = area.offset + area.size;
 
-                (bl.x..tr.x).contains(&initial.x)
-                    && (bl.y..tr.y).contains(&initial.y)
-                    && (bl.x..tr.x).contains(&now.x)
-                    && (bl.y..tr.y).contains(&now.y)
-            }
-            _ => false,
-        })
+                (bl.x..tr.x).contains(&now.x) && (bl.y..tr.y).contains(&now.y)
+            })
+            .map(|(id, _)| id)
     }
 
-    /// one of the pointers is in this area
-    pub fn hovered(&self, area: WidgetBase) -> bool {
-        self.pointers().any(|pointer| {
-            let now = match pointer {
-                PointerState::Release { now, .. } => now,
-                PointerState::Hover { now } => now,
-                PointerState::Hold { now, .. } => now,
+    /// all of the pointers that started dragging from this area
+    ///
+    /// returns an iterator of those pointers' current locations
+    pub fn dragged(&self, area: WidgetBase) -> impl Iterator<Item = (DeviceId, Vec2, Vec2)> + '_ {
+        self.pointers().filter_map(move |(id, pointer)| {
+            let (initial, now) = match pointer {
+                PointerState::Hold { initial, now } => (initial, now),
+                PointerState::Release { .. } | PointerState::Hover { .. } => return None,
             };
 
             let bl = area.offset;
             let tr = area.offset + area.size;
 
-            (bl.x..tr.x).contains(&now.x) && (bl.y..tr.y).contains(&now.y)
+            if (bl.x..tr.x).contains(&initial.x) && (bl.y..tr.y).contains(&initial.y) {
+                Some((id, initial, now))
+            } else {
+                None
+            }
         })
+    }
+
+    pub fn get_pointer_state(&self, id: DeviceId) -> Option<PointerState> {
+        self.pointers.get(&id).copied()
     }
 
     /// clear pointer `released` states

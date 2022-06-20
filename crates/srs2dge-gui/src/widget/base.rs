@@ -1,9 +1,7 @@
-use core::fmt;
-use std::fmt::Debug;
-
-use srs2dge_core::{glam::Vec2, main_game_loop::prelude::WindowState};
-
 use super::Widget;
+use crate::prelude::{inherit_offset, inherit_size, BaseOffset, BaseSize, GuiCalc};
+use srs2dge_core::{glam::Vec2, main_game_loop::prelude::WindowState};
+use std::fmt::Debug;
 
 //
 
@@ -13,68 +11,64 @@ pub struct WidgetBase {
     pub offset: Vec2,
 }
 
-pub struct WidgetBaseBuilder {
-    pub parent: WidgetBase,
-    pub size: Box<dyn FnOnce(WidgetBase) -> Vec2>,
-    pub offset: Box<dyn FnOnce(WidgetBase, Vec2) -> Vec2>,
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct WidgetBaseBuilder<T, U> {
+    pub base: WidgetBase,
+    pub size: T,
+    pub offset: U,
 }
 
 //
 
-impl Debug for WidgetBaseBuilder {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("WidgetBaseBuilder")
-            .field("parent", &self.parent)
-            .finish()
-    }
-}
-
-impl Default for WidgetBaseBuilder {
+impl Default for WidgetBaseBuilder<BaseSize, BaseOffset> {
     fn default() -> Self {
         Self {
-            parent: WidgetBase::default(),
-            size: Box::new(inherit_size),
-            offset: Box::new(inherit_offset),
+            base: Default::default(),
+            size: inherit_size(),
+            offset: inherit_offset(),
         }
     }
 }
 
-impl WidgetBaseBuilder {
+impl WidgetBaseBuilder<BaseSize, BaseOffset> {
     pub fn new() -> Self {
         Self::default()
     }
+}
+
+impl<T, U> WidgetBaseBuilder<T, U> {
+    pub fn with_parent(mut self, parent: &dyn Widget) -> Self {
+        self.base = parent.base();
+        self
+    }
 
     pub fn with_base(mut self, base: WidgetBase) -> Self {
-        self.parent = base;
+        self.base = base;
         self
     }
 
-    pub fn with_parent(mut self, parent: &dyn Widget) -> Self {
-        self.parent = parent.base();
-        self
+    pub fn with_size<Tn>(self, size: Tn) -> WidgetBaseBuilder<Tn, U> {
+        let Self { base, offset, .. } = self;
+        WidgetBaseBuilder { base, size, offset }
     }
 
-    pub fn with_size_boxed(mut self, size: Box<dyn FnOnce(WidgetBase) -> Vec2>) -> Self {
-        self.size = size;
-        self
+    pub fn with_offset<Un>(self, offset: Un) -> WidgetBaseBuilder<T, Un> {
+        let Self { base, size, .. } = self;
+        WidgetBaseBuilder { base, size, offset }
     }
+}
 
-    pub fn with_size<F: FnOnce(WidgetBase) -> Vec2 + 'static>(self, size: F) -> Self {
-        self.with_size_boxed(Box::new(size))
-    }
-
-    pub fn with_offset_boxed(mut self, offset: Box<dyn FnOnce(WidgetBase, Vec2) -> Vec2>) -> Self {
-        self.offset = offset;
-        self
-    }
-
-    pub fn with_offset<F: FnOnce(WidgetBase, Vec2) -> Vec2 + 'static>(self, offset: F) -> Self {
-        self.with_offset_boxed(Box::new(offset))
-    }
-
+impl<T, U> WidgetBaseBuilder<T, U>
+where
+    T: GuiCalc,
+    U: GuiCalc,
+{
     pub fn build(self) -> WidgetBase {
-        let size = (self.size)(self.parent);
-        let offset = (self.offset)(self.parent, size);
+        let base = self.base;
+
+        let size = self.size.reduce(base, Vec2::ZERO);
+        let offset = self.offset.reduce(base, size);
+
         WidgetBase { size, offset }
     }
 }
@@ -91,89 +85,50 @@ impl WidgetBase {
         Self::builder().build()
     }
 
-    pub fn builder() -> WidgetBaseBuilder {
+    pub fn builder() -> WidgetBaseBuilder<BaseSize, BaseOffset> {
         WidgetBaseBuilder::new()
     }
 }
 
 //
 
-#[inline]
-pub fn inherit_size(base: WidgetBase) -> Vec2 {
-    base.size
-}
-
-#[inline]
-pub fn inherit_offset(base: WidgetBase, _: Vec2) -> Vec2 {
-    base.offset
-}
-
-#[inline]
-pub fn align(base: WidgetBase, size: Vec2, side: Vec2) -> Vec2 {
-    base.offset + (base.size - size) * side
-}
-
-#[inline]
-pub fn border_size(base: WidgetBase, px: f32) -> Vec2 {
-    (base.size - Vec2::ONE * 2.0 * px).max(Vec2::ZERO)
-}
-
-#[inline]
-pub fn border_offset(base: WidgetBase, px: f32) -> Vec2 {
-    base.offset + Vec2::ONE * px
-}
-
-//
-
 #[macro_export]
-macro_rules! impl_base_widget {
-    ($base:ident $ty:tt) => {
-        impl Widget for $ty {
+macro_rules! impl_base {
+    () => {
+        impl Widget for W {
             fn base(&self) -> WidgetBase {
-                self.$base
+                self.base
             }
         }
     };
 }
 
 #[macro_export]
-macro_rules! impl_base_widget_builder_methods {
-    ($base:ident $ty:tt $($generics:tt)*) => {
-        impl $($generics)* $ty $($generics)* {
-            pub fn with_base(mut self, base: WidgetBase) -> Self {
-                self.$base = self.$base.with_base(base);
-                self
-            }
+macro_rules! impl_base_widget {
+    ($($fields:ident),* => $($generics:tt),*) => {
+        pub fn with_parent(mut self, parent: &dyn Widget) -> Self {
+            self.base = self.base.with_parent(parent);
+            self
+        }
 
-            pub fn with_parent(mut self, parent: &dyn Widget) -> Self {
-                self.$base = self.$base.with_parent(parent);
-                self
-            }
+        pub fn with_base(mut self, base: WidgetBase) -> Self {
+            self.base = self.base.with_base(base);
+            self
+        }
 
-            pub fn with_size_boxed(mut self, size: Box<dyn FnOnce(WidgetBase) -> Vec2>) -> Self {
-                self.$base = self.$base.with_size_boxed(size);
-                self
+        pub fn with_size<Tn>(self, size: Tn) -> Wb<$($generics,)* Tn, U> {
+            let Self { $($fields,)* base } = self;
+            Wb {
+                $($fields,)*
+                base: base.with_size(size),
             }
+        }
 
-            pub fn with_size<F: FnOnce(WidgetBase) -> Vec2 + 'static>(mut self, size: F) -> Self {
-                self.$base = self.$base.with_size(size);
-                self
-            }
-
-            pub fn with_offset_boxed(
-                mut self,
-                offset: Box<dyn FnOnce(WidgetBase, Vec2) -> Vec2>,
-            ) -> Self {
-                self.$base = self.$base.with_offset_boxed(offset);
-                self
-            }
-
-            pub fn with_offset<F: FnOnce(WidgetBase, Vec2) -> Vec2 + 'static>(
-                mut self,
-                offset: F,
-            ) -> Self {
-                self.$base = self.$base.with_offset(offset);
-                self
+        pub fn with_offset<Un>(self, offset: Un) -> Wb<$($generics,)* T, Un> {
+            let Self { $($fields,)* base } = self;
+            Wb {
+                $($fields,)*
+                base: base.with_offset(offset),
             }
         }
     };

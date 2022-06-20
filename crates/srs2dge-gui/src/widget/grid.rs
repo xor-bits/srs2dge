@@ -2,13 +2,15 @@ use super::{
     base::{WidgetBase, WidgetBaseBuilder},
     Widget,
 };
-use crate::{impl_base_widget, impl_base_widget_builder_methods};
-use srs2dge_core::glam::Vec2;
+use crate::{
+    impl_base, impl_base_widget,
+    prelude::{BaseOffset, BaseSize, GuiCalc},
+};
 
 //
 
 type W = Grid;
-type Wb = GridBuilder;
+type Wb<T, U> = GridBuilder<T, U>;
 
 //
 
@@ -23,9 +25,9 @@ pub struct Grid {
     i: usize,
 }
 
-#[derive(Debug)]
-pub struct GridBuilder {
-    base: WidgetBaseBuilder,
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GridBuilder<T, U> {
+    base: WidgetBaseBuilder<T, U>,
 
     cols: usize,
     rows: usize,
@@ -35,14 +37,32 @@ pub struct GridBuilder {
 
 //
 
+impl_base! {}
+
 impl W {
-    pub fn builder() -> Wb {
-        Wb::default()
+    pub fn builder() -> Wb<BaseSize, BaseOffset> {
+        Wb::new()
     }
 
     /* pub fn elements<F: FnOnce(WidgetBase) -> Vec2>(&mut self, size: F) -> WidgetBase {
         GridRow { base }
     } */
+}
+
+impl Default for Wb<BaseSize, BaseOffset> {
+    fn default() -> Self {
+        Self {
+            base: Default::default(),
+            cols: 3,
+            rows: 3,
+        }
+    }
+}
+
+impl Wb<BaseSize, BaseOffset> {
+    pub fn new() -> Self {
+        Self::default()
+    }
 }
 
 impl Iterator for W {
@@ -70,23 +90,7 @@ impl Iterator for W {
     }
 }
 
-impl Default for Wb {
-    fn default() -> Self {
-        Self {
-            base: Default::default(),
-            cols: 3,
-            rows: 3,
-            // border: Default::default(),
-            // margin: Default::default(),
-        }
-    }
-}
-
-impl Wb {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
+impl<T, U> Wb<T, U> {
     pub fn with_columns(mut self, cols: usize) -> Self {
         self.cols = cols;
         self
@@ -107,6 +111,14 @@ impl Wb {
         self
     } */
 
+    impl_base_widget! { cols, rows => }
+}
+
+impl<T, U> Wb<T, U>
+where
+    T: GuiCalc,
+    U: GuiCalc,
+{
     pub fn build(self) -> W {
         let Self {
             base,
@@ -128,8 +140,3 @@ impl Wb {
         }
     }
 }
-
-//
-
-impl_base_widget! { base W }
-impl_base_widget_builder_methods! { base Wb }

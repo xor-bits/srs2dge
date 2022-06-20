@@ -4,18 +4,18 @@ use super::{
 };
 use crate::{
     gui::{geom::GuiGeom, Gui},
-    impl_base_widget, impl_base_widget_builder_methods,
+    impl_base, impl_base_widget,
+    prelude::{BaseOffset, BaseSize, GuiCalc},
 };
 use srs2dge_core::{
     color::Color,
-    glam::Vec2,
     prelude::{QuadMesh, TexturePosition},
 };
 
 //
 
 type W = Fill;
-type Wb = FillBuilder;
+type Wb<T, U> = FillBuilder<T, U>;
 
 //
 
@@ -24,26 +24,40 @@ pub struct Fill {
     base: WidgetBase,
 }
 
-#[derive(Debug, Default)]
-pub struct FillBuilder {
-    base: WidgetBaseBuilder,
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct FillBuilder<T, U> {
+    base: WidgetBaseBuilder<T, U>,
     col: Color,
     tex: TexturePosition,
 }
 
 //
 
+impl_base! {}
+
 impl W {
-    pub fn builder() -> Wb {
-        Wb::default()
+    pub fn builder() -> Wb<BaseSize, BaseOffset> {
+        Wb::new()
     }
 }
 
-impl Wb {
+impl Default for Wb<BaseSize, BaseOffset> {
+    fn default() -> Self {
+        Self {
+            base: Default::default(),
+            col: Default::default(),
+            tex: Default::default(),
+        }
+    }
+}
+
+impl Wb<BaseSize, BaseOffset> {
     pub fn new() -> Self {
         Self::default()
     }
+}
 
+impl<T, U> Wb<T, U> {
     pub fn with_texture(mut self, tex: TexturePosition) -> Self {
         self.tex = tex;
         self
@@ -54,6 +68,14 @@ impl Wb {
         self
     }
 
+    impl_base_widget! { col, tex =>  }
+}
+
+impl<T, U> Wb<T, U>
+where
+    T: GuiCalc,
+    U: GuiCalc,
+{
     pub fn build(self, gui: &mut Gui) -> W {
         let Self { base, col, tex } = self;
 
@@ -70,8 +92,3 @@ impl Wb {
         W { base }
     }
 }
-
-//
-
-impl_base_widget! { base W }
-impl_base_widget_builder_methods! { base Wb  }

@@ -10,6 +10,7 @@ pub mod grid;
 pub mod prelude;
 pub mod root;
 pub mod text;
+pub mod drag_zone;
 
 //
 
