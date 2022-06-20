@@ -207,14 +207,15 @@ impl Target {
         compatible_surface: Option<&wgpu::Surface>,
         instance: &Instance,
     ) -> Arc<Adapter> {
+        let options = RequestAdapterOptionsBase {
+            power_preference: power_preference_from_env()
+                .unwrap_or(PowerPreference::HighPerformance),
+            compatible_surface,
+            ..Default::default()
+        };
         Arc::new(
             instance
-                .request_adapter(&RequestAdapterOptionsBase {
-                    power_preference: power_preference_from_env()
-                        .unwrap_or(PowerPreference::/* LowPower */ HighPerformance),
-                    compatible_surface,
-                    ..Default::default()
-                })
+                .request_adapter(&options)
                 .await
                 .expect("No suitable GPUs"),
         )
