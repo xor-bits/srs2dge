@@ -1,21 +1,12 @@
 use super::{
     base::{WidgetBase, WidgetBaseBuilder},
-    Widget,
+    Widget, WidgetBuilder,
 };
-use crate::{
-    gui::{geom::GuiGeom, Gui},
-    impl_base, impl_base_widget,
-    prelude::{BaseOffset, BaseSize, GuiCalc},
-};
+use crate::gui::{geom::GuiGeom, Gui};
 use srs2dge_core::{
     color::Color,
     prelude::{QuadMesh, TexturePosition},
 };
-
-//
-
-type W = Fill;
-type Wb<T, U> = FillBuilder<T, U>;
 
 //
 
@@ -24,40 +15,32 @@ pub struct Fill {
     base: WidgetBase,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct FillBuilder<T, U> {
-    base: WidgetBaseBuilder<T, U>,
-    col: Color,
-    tex: TexturePosition,
+impl<'a> Widget for Fill {
+    fn base(&self) -> WidgetBase {
+        self.base
+    }
+}
+
+impl<'a> Fill {
+    pub fn builder() -> FillBuilder<'a> {
+        FillBuilder::new()
+    }
 }
 
 //
 
-impl_base! {}
-
-impl W {
-    pub fn builder() -> Wb<BaseSize, BaseOffset> {
-        Wb::new()
-    }
+#[derive(Debug, Clone, Copy, Default)]
+pub struct FillBuilder<'a> {
+    base: WidgetBaseBuilder<'a>,
+    col: Color,
+    tex: TexturePosition,
 }
 
-impl Default for Wb<BaseSize, BaseOffset> {
-    fn default() -> Self {
-        Self {
-            base: Default::default(),
-            col: Default::default(),
-            tex: Default::default(),
-        }
-    }
-}
-
-impl Wb<BaseSize, BaseOffset> {
+impl<'a> FillBuilder<'a> {
     pub fn new() -> Self {
         Self::default()
     }
-}
 
-impl<T, U> Wb<T, U> {
     pub fn with_texture(mut self, tex: TexturePosition) -> Self {
         self.tex = tex;
         self
@@ -68,15 +51,7 @@ impl<T, U> Wb<T, U> {
         self
     }
 
-    impl_base_widget! { col, tex =>  }
-}
-
-impl<T, U> Wb<T, U>
-where
-    T: GuiCalc,
-    U: GuiCalc,
-{
-    pub fn build(self, gui: &mut Gui) -> W {
+    pub fn build(self, gui: &mut Gui) -> Fill {
         let Self { base, col, tex } = self;
 
         let base = base.build();
@@ -89,6 +64,16 @@ where
                 tex,
             )));
 
-        W { base }
+        Fill { base }
+    }
+}
+
+impl<'a> WidgetBuilder<'a> for FillBuilder<'a> {
+    fn inner(&self) -> &WidgetBaseBuilder<'a> {
+        &self.base
+    }
+
+    fn inner_mut(&mut self) -> &mut WidgetBaseBuilder<'a> {
+        &mut self.base
     }
 }

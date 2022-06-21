@@ -1,17 +1,8 @@
-use super::{
-    base::{WidgetBase, WidgetBaseBuilder},
-    Widget,
-};
+use super::{Widget, WidgetBuilder};
 use crate::{
     gui::Gui,
-    impl_base, impl_base_widget,
-    prelude::{BaseOffset, BaseSize, GuiCalc},
+    prelude::{WidgetBase, WidgetBaseBuilder},
 };
-
-//
-
-type W = Button;
-type Wb<T, U> = ButtonBuilder<T, U>;
 
 //
 
@@ -21,18 +12,15 @@ pub struct Button {
     clicked: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct ButtonBuilder<T, U> {
-    base: WidgetBaseBuilder<T, U>,
+impl Widget for Button {
+    fn base(&self) -> WidgetBase {
+        self.base
+    }
 }
 
-//
-
-impl_base! {}
-
-impl W {
-    pub fn builder() -> Wb<BaseSize, BaseOffset> {
-        Wb::new()
+impl Button {
+    pub fn builder<'a>() -> ButtonBuilder<'a> {
+        ButtonBuilder::new()
     }
 
     pub fn clicked(&self) -> bool {
@@ -40,36 +28,37 @@ impl W {
     }
 }
 
-impl Default for Wb<BaseSize, BaseOffset> {
-    fn default() -> Self {
-        Self {
-            base: Default::default(),
-        }
-    }
+//
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ButtonBuilder<'a> {
+    base: WidgetBaseBuilder<'a>,
 }
 
-impl Wb<BaseSize, BaseOffset> {
+//
+
+impl<'a> ButtonBuilder<'a> {
     pub fn new() -> Self {
         Self::default()
     }
-}
 
-impl<T, U> Wb<T, U> {
-    impl_base_widget! { => }
-}
-
-impl<T, U> Wb<T, U>
-where
-    T: GuiCalc,
-    U: GuiCalc,
-{
-    pub fn build(self, gui: &mut Gui) -> W {
+    pub fn build(self, gui: &mut Gui) -> Button {
         let Self { base } = self;
 
         let base = base.build();
 
         let clicked = gui.clicked(base).next().is_some();
 
-        W { base, clicked }
+        Button { base, clicked }
+    }
+}
+
+impl<'a> WidgetBuilder<'a> for ButtonBuilder<'a> {
+    fn inner(&self) -> &WidgetBaseBuilder<'a> {
+        &self.base
+    }
+
+    fn inner_mut(&mut self) -> &mut WidgetBaseBuilder<'a> {
+        &mut self.base
     }
 }

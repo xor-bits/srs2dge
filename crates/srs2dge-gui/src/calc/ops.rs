@@ -13,8 +13,8 @@ macro_rules! size_calc_math {
         }
 
         impl<T: GuiCalc, U: GuiCalc> GuiCalc for $name<T, U> {
-            fn reduce(self, base: WidgetBase, self_size: Vec2) -> Vec2 {
-                self.lhs.reduce(base, self_size) $op self.rhs.reduce(base, self_size)
+            fn reduce(&self, refs: &(WidgetBase, Vec2)) -> Vec2 {
+                self.lhs.reduce(refs) $op self.rhs.reduce(refs)
             }
         }
     };

@@ -1,16 +1,7 @@
 use super::{
     base::{WidgetBase, WidgetBaseBuilder},
-    Widget,
+    Widget, WidgetBuilder,
 };
-use crate::{
-    impl_base, impl_base_widget,
-    prelude::{BaseOffset, BaseSize, GuiCalc},
-};
-
-//
-
-type W = Empty;
-type Wb<T, U> = EmptyBuilder<T, U>;
 
 //
 
@@ -19,49 +10,46 @@ pub struct Empty {
     base: WidgetBase,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct EmptyBuilder<T, U> {
-    base: WidgetBaseBuilder<T, U>,
+impl<'a> Widget for Empty {
+    fn base(&self) -> WidgetBase {
+        self.base
+    }
+}
+
+impl Empty {
+    pub fn builder<'a>() -> EmptyBuilder<'a> {
+        EmptyBuilder::new()
+    }
 }
 
 //
 
-impl_base! {}
-
-impl W {
-    pub fn builder() -> Wb<BaseSize, BaseOffset> {
-        Wb::new()
-    }
+#[derive(Debug, Clone, Copy, Default)]
+pub struct EmptyBuilder<'a> {
+    base: WidgetBaseBuilder<'a>,
 }
 
-impl Default for Wb<BaseSize, BaseOffset> {
-    fn default() -> Self {
-        Self {
-            base: Default::default(),
-        }
-    }
-}
+//
 
-impl Wb<BaseSize, BaseOffset> {
+impl<'a> EmptyBuilder<'a> {
     pub fn new() -> Self {
         Self::default()
     }
-}
 
-impl<T, U> Wb<T, U> {
-    impl_base_widget! { => }
-}
-
-impl<T, U> Wb<T, U>
-where
-    T: GuiCalc,
-    U: GuiCalc,
-{
-    pub fn build(self) -> W {
+    pub fn build(self) -> Empty {
         let Self { base } = self;
 
         let base = base.build();
 
-        W { base }
+        Empty { base }
+    }
+}
+impl<'a> WidgetBuilder<'a> for EmptyBuilder<'a> {
+    fn inner(&self) -> &WidgetBaseBuilder<'a> {
+        &self.base
+    }
+
+    fn inner_mut(&mut self) -> &mut WidgetBaseBuilder<'a> {
+        &mut self.base
     }
 }

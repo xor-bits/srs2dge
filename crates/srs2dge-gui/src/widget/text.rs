@@ -1,21 +1,12 @@
 use super::{
     base::{WidgetBase, WidgetBaseBuilder},
-    Widget,
+    Widget, WidgetBuilder,
 };
-use crate::{
-    gui::{geom::GuiGeom, Gui},
-    impl_base, impl_base_widget,
-    prelude::{BaseOffset, BaseSize, GuiCalc},
-};
+use crate::gui::{geom::GuiGeom, Gui};
 use srs2dge_core::{glam::Vec2, prelude::QuadMesh, target::Target};
 use srs2dge_text::prelude::{
     FormatChar, FormatString, TextAlign, TextChar, TextChars, TextConfig, XOrigin, YOrigin,
 };
-
-//
-
-type W = Text;
-type Wb<'g, T, U> = TextBuilder<'g, T, U>;
 
 //
 
@@ -24,44 +15,33 @@ pub struct Text {
     base: WidgetBase,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct TextBuilder<'s, T, U> {
-    base: WidgetBaseBuilder<T, U>,
-    text: FormatString<'s>,
-    config: TextConfig,
+impl Widget for Text {
+    fn base(&self) -> WidgetBase {
+        self.base
+    }
+}
+
+impl Text {
+    pub fn builder<'a>() -> TextBuilder<'a> {
+        TextBuilder::new()
+    }
 }
 
 //
 
-impl_base! {}
-
-impl W {
-    pub fn builder<'s>() -> Wb<'s, BaseSize, BaseOffset> {
-        Wb::new()
-    }
+#[derive(Debug, Clone)]
+pub struct TextBuilder<'a> {
+    base: WidgetBaseBuilder<'a>,
+    text: FormatString<'a>,
+    config: TextConfig,
 }
 
-impl<'s> Default for Wb<'s, BaseSize, BaseOffset> {
-    fn default() -> Self {
-        Self {
-            base: Default::default(),
-            text: Default::default(),
-            config: TextConfig {
-                align: TextAlign::centered(),
-                ..Default::default()
-            },
-        }
-    }
-}
-
-impl<'s> Wb<'s, BaseSize, BaseOffset> {
+impl<'a> TextBuilder<'a> {
     pub fn new() -> Self {
         Self::default()
     }
-}
 
-impl<'s, T, U> Wb<'s, T, U> {
-    pub fn with_text<S: Into<FormatString<'s>>>(mut self, text: S) -> Self {
+    pub fn with_text<S: Into<FormatString<'a>>>(mut self, text: S) -> Self {
         self.text = text.into();
         self
     }
@@ -71,15 +51,7 @@ impl<'s, T, U> Wb<'s, T, U> {
         self
     }
 
-    impl_base_widget! { text, config => 's }
-}
-
-impl<'s, T, U> Wb<'s, T, U>
-where
-    T: GuiCalc,
-    U: GuiCalc,
-{
-    pub fn build(self, gui: &mut Gui, target: &Target) -> W {
+    pub fn build(self, gui: &mut Gui, target: &Target) -> Text {
         let Self {
             base,
             text,
@@ -138,6 +110,29 @@ where
             }
         }
 
-        W { base }
+        Text { base }
+    }
+}
+
+impl<'a> Default for TextBuilder<'a> {
+    fn default() -> Self {
+        Self {
+            base: Default::default(),
+            text: Default::default(),
+            config: TextConfig {
+                align: TextAlign::centered(),
+                ..Default::default()
+            },
+        }
+    }
+}
+
+impl<'a> WidgetBuilder<'a> for TextBuilder<'a> {
+    fn inner(&self) -> &WidgetBaseBuilder<'a> {
+        &self.base
+    }
+
+    fn inner_mut(&mut self) -> &mut WidgetBaseBuilder<'a> {
+        &mut self.base
     }
 }

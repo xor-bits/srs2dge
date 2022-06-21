@@ -1,19 +1,9 @@
 use super::{
     base::{WidgetBase, WidgetBaseBuilder},
-    Widget,
+    Widget, WidgetBuilder,
 };
-use crate::{
-    gui::Gui,
-    impl_base, impl_base_widget,
-    prelude::{BaseOffset, BaseSize, GuiCalc},
-};
+use crate::gui::Gui;
 use srs2dge_core::glam::Vec2;
-
-//
-
-type W = DragZone;
-type Wb<T, U> = DragZoneBuilder<T, U>;
-type Ws = DragZoneState;
 
 //
 
@@ -22,54 +12,32 @@ pub struct DragZone {
     base: WidgetBase,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct DragZoneBuilder<T, U> {
-    base: WidgetBaseBuilder<T, U>,
+impl Widget for DragZone {
+    fn base(&self) -> WidgetBase {
+        self.base
+    }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct DragZoneState {
-    pub dragging: Option<WidgetBase>,
-    pub drag: Vec2,
-    pub current: Vec2,
+impl DragZone {
+    pub fn builder<'a>() -> DragZoneBuilder<'a> {
+        DragZoneBuilder::new()
+    }
 }
 
 //
 
-impl_base! {}
-
-impl W {
-    pub fn builder() -> Wb<BaseSize, BaseOffset> {
-        Wb {
-            base: WidgetBaseBuilder::new(),
-        }
-    }
+#[derive(Debug, Clone, Copy, Default)]
+pub struct DragZoneBuilder<'a> {
+    base: WidgetBaseBuilder<'a>,
 }
 
-impl Default for Wb<BaseSize, BaseOffset> {
-    fn default() -> Self {
-        Self {
-            base: Default::default(),
-        }
-    }
-}
+//
 
-impl Wb<BaseSize, BaseOffset> {
+impl<'a> DragZoneBuilder<'a> {
     pub fn new() -> Self {
         Self::default()
     }
-}
-
-impl<T, U> Wb<T, U> {
-    impl_base_widget! { => }
-}
-
-impl<T, U> Wb<T, U>
-where
-    T: GuiCalc,
-    U: GuiCalc,
-{
-    pub fn build(self, gui: &mut Gui, state: &mut Ws) -> W {
+    pub fn build(self, gui: &mut Gui, state: &mut DragZoneState) -> DragZone {
         let Self { base } = self;
 
         let base = base.build();
@@ -96,11 +64,30 @@ where
             state.drag = Vec2::ZERO;
         };
 
-        W { base }
+        DragZone { base }
     }
 }
 
-impl Ws {
+impl<'a> WidgetBuilder<'a> for DragZoneBuilder<'a> {
+    fn inner(&self) -> &WidgetBaseBuilder<'a> {
+        &self.base
+    }
+
+    fn inner_mut(&mut self) -> &mut WidgetBaseBuilder<'a> {
+        &mut self.base
+    }
+}
+
+//
+
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct DragZoneState {
+    pub dragging: Option<WidgetBase>,
+    pub drag: Vec2,
+    pub current: Vec2,
+}
+
+impl DragZoneState {
     pub fn get(&self) -> Vec2 {
         self.current + self.drag
     }

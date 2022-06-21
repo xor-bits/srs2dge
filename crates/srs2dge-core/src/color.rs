@@ -157,6 +157,17 @@ impl Color {
         self.b = self.b.powf(n);
         self
     }
+
+    /// get the recommended foreground text
+    /// color for the given background color
+    #[inline]
+    pub fn foreground(self) -> Self {
+        if (self.r + self.g + self.b) / 3.0 >= 0.35 {
+            Self::BLACK
+        } else {
+            Self::WHITE
+        }
+    }
 }
 
 impl Display for Color {

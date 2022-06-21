@@ -22,17 +22,20 @@ pub trait GuiCalc {
     ///
     /// `self_size` is the size calculated for this widget
     /// `Vec2::ZERO` if it is currently being calculated
-    fn reduce(self, base: WidgetBase, self_size: Vec2) -> Vec2;
+    fn reduce(&self, refs: &(WidgetBase, Vec2)) -> Vec2;
 }
 
 //
 
-pub fn inherit_size() -> BaseSize {
-    BaseSize
+pub const INHERIT_SIZE: BaseSize = BaseSize;
+pub const INHERIT_OFFSET: BaseOffset = BaseOffset;
+
+pub const fn inherit_size() -> BaseSize {
+    INHERIT_SIZE
 }
 
-pub fn inherit_offset() -> BaseOffset {
-    BaseOffset
+pub const fn inherit_offset() -> BaseOffset {
+    INHERIT_OFFSET
 }
 
 pub fn align(side: Vec2) -> impl GuiCalc {

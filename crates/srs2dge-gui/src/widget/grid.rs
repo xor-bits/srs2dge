@@ -1,16 +1,7 @@
 use super::{
     base::{WidgetBase, WidgetBaseBuilder},
-    Widget,
+    Widget, WidgetBuilder,
 };
-use crate::{
-    impl_base, impl_base_widget,
-    prelude::{BaseOffset, BaseSize, GuiCalc},
-};
-
-//
-
-type W = Grid;
-type Wb<T, U> = GridBuilder<T, U>;
 
 //
 
@@ -25,23 +16,15 @@ pub struct Grid {
     i: usize,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct GridBuilder<T, U> {
-    base: WidgetBaseBuilder<T, U>,
-
-    cols: usize,
-    rows: usize,
-    // border: Vec2,
-    // margin: Vec2,
+impl Widget for Grid {
+    fn base(&self) -> WidgetBase {
+        self.base
+    }
 }
 
-//
-
-impl_base! {}
-
-impl W {
-    pub fn builder() -> Wb<BaseSize, BaseOffset> {
-        Wb::new()
+impl Grid {
+    pub fn builder<'a>() -> GridBuilder<'a> {
+        GridBuilder::new()
     }
 
     /* pub fn elements<F: FnOnce(WidgetBase) -> Vec2>(&mut self, size: F) -> WidgetBase {
@@ -49,23 +32,7 @@ impl W {
     } */
 }
 
-impl Default for Wb<BaseSize, BaseOffset> {
-    fn default() -> Self {
-        Self {
-            base: Default::default(),
-            cols: 3,
-            rows: 3,
-        }
-    }
-}
-
-impl Wb<BaseSize, BaseOffset> {
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
-
-impl Iterator for W {
+impl Iterator for Grid {
     type Item = WidgetBase;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -90,7 +57,25 @@ impl Iterator for W {
     }
 }
 
-impl<T, U> Wb<T, U> {
+//
+
+#[derive(Debug, Clone, Copy)]
+pub struct GridBuilder<'a> {
+    base: WidgetBaseBuilder<'a>,
+
+    cols: usize,
+    rows: usize,
+    // border: Vec2,
+    // margin: Vec2,
+}
+
+//
+
+impl<'a> GridBuilder<'a> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub fn with_columns(mut self, cols: usize) -> Self {
         self.cols = cols;
         self
@@ -111,15 +96,7 @@ impl<T, U> Wb<T, U> {
         self
     } */
 
-    impl_base_widget! { cols, rows => }
-}
-
-impl<T, U> Wb<T, U>
-where
-    T: GuiCalc,
-    U: GuiCalc,
-{
-    pub fn build(self) -> W {
+    pub fn build(self) -> Grid {
         let Self {
             base,
             cols,
@@ -130,7 +107,7 @@ where
 
         let base = base.build();
 
-        W {
+        Grid {
             base,
             cols,
             rows,
@@ -138,5 +115,25 @@ where
             // margin,
             i: 0,
         }
+    }
+}
+
+impl<'a> Default for GridBuilder<'a> {
+    fn default() -> Self {
+        Self {
+            base: Default::default(),
+            cols: 3,
+            rows: 3,
+        }
+    }
+}
+
+impl<'a> WidgetBuilder<'a> for GridBuilder<'a> {
+    fn inner(&self) -> &WidgetBaseBuilder<'a> {
+        &self.base
+    }
+
+    fn inner_mut(&mut self) -> &mut WidgetBaseBuilder<'a> {
+        &mut self.base
     }
 }
