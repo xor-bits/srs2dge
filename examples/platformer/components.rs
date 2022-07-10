@@ -104,16 +104,10 @@ fn collider(world: &mut SubWorld) {
     let mut movable_colliders = QueryA::query();
 
     let (mut movable, all) = world.split_for_query(&movable_colliders);
-    movable_colliders.for_each_mut(&mut movable, |query| {
-        // unwrap it here to give it a type
-        // just to fix a (bug/optimization)? in rust-analyzer
-        let (player, body, res, a, _): QueryA = query;
+    movable_colliders.for_each_mut(&mut movable, |(player, body, res, a, _)| {
         QueryB::query()
             .filter(!component::<RigidBody2D>())
-            .for_each(&all, |query| {
-                // same as above
-                let (b, _): QueryB = query;
-
+            .for_each(&all, |(b, _)| {
                 let a_min = a.translation + res.0 - a.scale * 0.5;
                 let a_max = a.translation + res.0 + a.scale * 0.5;
                 let b_min = b.translation - b.scale * 0.5;

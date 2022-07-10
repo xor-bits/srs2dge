@@ -1,7 +1,10 @@
 use crate::{plugin::Plugin, prelude::Time, rigidbody::RigidBody2D, transform::Transform2D, World};
 use legion::{component, maybe_changed, system};
 use serde::{Deserialize, Serialize};
-use srs2dge_core::prelude::{BatchRenderer, Color, Idx, QuadMesh, TexturePosition};
+use srs2dge_core::{
+    glam::{Vec2, Vec4},
+    prelude::{BatchRenderer, Color, Idx, QuadMesh, TexturePosition},
+};
 
 //
 
@@ -12,6 +15,7 @@ pub struct Sprite {
 
     pub idx: Option<Idx>,
 
+    #[serde(skip)]
     pub lerp_transform: Transform2D,
 }
 
@@ -55,24 +59,40 @@ fn set_pos_body(
 #[system(for_each)]
 #[filter(maybe_changed::<Sprite>())]
 fn set_sprite(sprite: &mut Sprite, #[resource] batcher: &mut BatchRenderer) {
+    let Transform2D {
+        translation, scale, ..
+    } = sprite.lerp_transform;
+
     // println!("set sprite");
     if let Some(idx) = sprite.idx {
         let mesh = batcher.get(idx).unwrap();
-        if mesh.pos != sprite.lerp_transform.translation
-            || mesh.size != sprite.lerp_transform.scale
-            || mesh.col != sprite.color
-            || mesh.tex != sprite.sprite
+        if (mesh.pos - translation - scale * 0.5)
+            .abs()
+            .cmpgt(Vec2::splat(f32::EPSILON))
+            .any()
+            || (mesh.size - scale)
+                .abs()
+                .cmpgt(Vec2::splat(f32::EPSILON))
+                .any()
+            || (mesh.col.to_vec4() - sprite.color.to_vec4())
+                .abs()
+                .cmpgt(Vec4::splat(f32::EPSILON))
+                .any()
+            || (mesh.tex.to_vec4() - sprite.sprite.to_vec4())
+                .abs()
+                .cmpgt(Vec4::splat(f32::EPSILON))
+                .any()
         {
             let mesh = batcher.get_mut(idx).unwrap();
-            mesh.pos = sprite.lerp_transform.translation;
-            mesh.size = sprite.lerp_transform.scale;
+            mesh.pos = translation - scale * 0.5;
+            mesh.size = scale;
             mesh.col = sprite.color;
             mesh.tex = sprite.sprite;
         }
     } else {
-        sprite.idx = Some(batcher.push_with(QuadMesh::new_centered(
-            sprite.lerp_transform.translation,
-            sprite.lerp_transform.scale,
+        sprite.idx = Some(batcher.push_with(QuadMesh::new_top_left(
+            translation - scale * 0.5,
+            scale,
             sprite.color,
             sprite.sprite,
         )));

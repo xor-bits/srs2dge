@@ -1,5 +1,5 @@
 use crate::prelude::{PositionedRect, Rect};
-use glam::Vec2;
+use glam::{Vec2, Vec4};
 use serde::{Deserialize, Serialize};
 
 //
@@ -22,6 +22,15 @@ impl TexturePosition {
             top_left,
             bottom_right,
         }
+    }
+
+    pub const fn to_vec4(self) -> Vec4 {
+        Vec4::from_array([
+            self.top_left.x,
+            self.top_left.y,
+            self.bottom_right.x,
+            self.bottom_right.y,
+        ])
     }
 }
 

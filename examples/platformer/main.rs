@@ -52,6 +52,77 @@ impl App {
             .with_plugin(DefaultPlugins)
             .with_plugin(CustomPlugin);
 
+        // generate
+        /* world.push((
+            RigidBody2D::default(),
+            Transform2D {
+                translation: Vec2::ZERO,
+                scale: Vec2::ONE * 0.1,
+                ..Default::default()
+            },
+            Sprite {
+                sprite: texture_atlas.get(&0).unwrap(),
+                color: Color::WHITE,
+                ..Default::default()
+            },
+            Player::default(),
+            Collider,
+            CollisionResolver::default(),
+        ));
+        world.push((
+            Transform2D {
+                translation: Vec2::new(0.0, -0.5),
+                scale: Vec2::new(1.5, 0.2),
+                ..Default::default()
+            },
+            Sprite {
+                sprite: texture_atlas.get(&1).unwrap(),
+                color: Color::ORANGE,
+                ..Default::default()
+            },
+            Collider,
+        ));
+        world.push((
+            Transform2D {
+                translation: Vec2::new(0.4, -0.2),
+                scale: Vec2::new(0.3, 0.2),
+                ..Default::default()
+            },
+            Sprite {
+                sprite: texture_atlas.get(&1).unwrap(),
+                color: Color::CYAN,
+                ..Default::default()
+            },
+            Collider,
+        ));
+        world.push((
+            Transform2D {
+                translation: Vec2::new(0.8, 0.0),
+                scale: Vec2::new(0.2, 0.4),
+                ..Default::default()
+            },
+            Sprite {
+                sprite: texture_atlas.get(&1).unwrap(),
+                color: Color::CHARTREUSE,
+                ..Default::default()
+            },
+            Collider,
+        ));
+        world.push((
+            Transform2D {
+                translation: Vec2::new(-0.95, 1.0),
+                scale: Vec2::new(0.2, 3.4),
+                ..Default::default()
+            },
+            Sprite {
+                sprite: texture_atlas.get(&1).unwrap(),
+                color: Color::AZURE,
+                ..Default::default()
+            },
+            Collider,
+        )); */
+
+        // load
         let mut reg = legion::Registry::<String>::default();
         reg.register::<RigidBody2D>("RigidBody2D".to_owned());
         reg.register::<Transform2D>("Transform2D".to_owned());
@@ -60,7 +131,6 @@ impl App {
         reg.register::<Player>("Player".to_owned());
         reg.register::<CollisionResolver>("CollisionResolver".to_owned());
         let entity_serializer = Canon::default();
-
         let w = world.deref_mut();
         *w = reg
             .as_deserialize(&entity_serializer)
