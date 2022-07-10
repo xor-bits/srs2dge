@@ -59,7 +59,7 @@ impl<T> Reference<T> for T {
 
 impl<T> Reference<T> for &T {
     fn reference(&self) -> &'_ T {
-        *self
+        self
     }
 }
 
