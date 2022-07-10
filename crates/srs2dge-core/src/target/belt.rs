@@ -1,4 +1,3 @@
-use main_game_loop::as_async;
 use std::sync::Arc;
 use wgpu::{util::StagingBelt, Device};
 
@@ -51,7 +50,7 @@ impl Belt {
     }
 
     pub fn set(&mut self, mut belt: StagingBelt) {
-        as_async(belt.recall());
+        belt.recall();
         self.belt = Some(belt);
     }
 }

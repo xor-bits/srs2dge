@@ -91,14 +91,14 @@ impl Frame {
             .expect("Frame was dropped")
             .begin_render_pass(&RenderPassDescriptor {
                 label: label!(),
-                color_attachments: &[RenderPassColorAttachment {
+                color_attachments: &[Some(RenderPassColorAttachment {
                     view: &self.main_view,
                     resolve_target: None,
                     ops: Operations {
                         load: LoadOp::Clear(self.clear_color.into()),
                         store: true,
                     },
-                }],
+                })],
                 depth_stencil_attachment: None,
             });
 
@@ -122,14 +122,14 @@ impl Frame {
             .expect("Frame was dropped")
             .begin_render_pass(&RenderPassDescriptor {
                 label: label!(),
-                color_attachments: &[RenderPassColorAttachment {
+                color_attachments: &[Some(RenderPassColorAttachment {
                     view: target,
                     resolve_target: None,
                     ops: Operations {
                         load: LoadOp::Clear(self.clear_color.into()),
                         store: true,
                     },
-                }],
+                })],
                 depth_stencil_attachment: None,
             });
 

@@ -5,6 +5,7 @@ use crate::{
 };
 use image::{DynamicImage, GrayImage, RgbaImage};
 use std::{mem, num::NonZeroU32, ops::Deref};
+use tokio::sync::oneshot::channel;
 use wgpu::{
     util::DeviceExt, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, Extent3d,
     ImageCopyBuffer, ImageCopyTexture, ImageDataLayout, MapMode, Origin3d, TextureAspect,
@@ -173,7 +174,9 @@ impl<const USAGE: u32> Texture<USAGE> {
         target.queue.submit([encoder.finish()]);
 
         let range = read_buffer.slice(..);
-        range.map_async(MapMode::Read).await.unwrap();
+        let (tx, rx) = channel();
+        range.map_async(MapMode::Read, |o| tx.send(o).unwrap());
+        rx.await.unwrap().unwrap();
 
         let bytes = range
             .get_mapped_range()

@@ -15,7 +15,7 @@ pub struct Fill {
     base: WidgetBase,
 }
 
-impl<'a> Widget for Fill {
+impl Widget for Fill {
     fn base(&self) -> WidgetBase {
         self.base
     }

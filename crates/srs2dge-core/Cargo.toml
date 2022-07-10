@@ -17,10 +17,10 @@ spirv = ["wgpu/spirv", "naga/spv-in"]
 colorful = "0.2"
 log = "0.4"
 # graphics
-glam = { version = "0.20", features = ["serde", "bytemuck"] }
+glam = { version = "0.21", features = ["serde", "bytemuck"] }
 main_game_loop = "0.4"
-naga = { version = "0.8", features = ["wgsl-in", "validate"] }
-wgpu = { version = "0.12", features = ["webgl"] }
+naga = { version = "0.9", features = ["wgsl-in", "validate"] }
+wgpu = { version = "0.13", features = ["webgl"] }
 # naga = { git = "https://github.com/gfx-rs/naga", rev = "1aa91549", features = [
 # 	"wgsl-in",
 # 	"validate",
@@ -38,6 +38,7 @@ rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 # opt
 integer-sqrt = "0.1"
+tokio = { version = "1.19", features = ["sync"] }
 
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]

@@ -1,4 +1,4 @@
-#![feature(bench_black_box)]
+/* #![feature(bench_black_box)]
 
 use instant::Instant;
 use srs2dge::prelude::*;
@@ -55,3 +55,5 @@ fn main() {
     }
     println!("iter elapsed: {:?}", i.elapsed());
 }
+ */
+fn main() {}

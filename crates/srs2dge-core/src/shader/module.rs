@@ -57,9 +57,26 @@ impl<'a> ShaderModule<'a> {
         target: &Target,
         descriptor: ShaderModuleDescriptor<'a>,
     ) -> Result<Self, String> {
+        let source = match &descriptor.source {
+            #[cfg(feature = "spirv")]
+            ShaderSource::SpirV(spv) => ShaderSource::SpirV(spv.clone()),
+            #[cfg(feature = "glsl")]
+            ShaderSource::Glsl {
+                shader,
+                stage,
+                defines,
+            } => ShaderSource::Glsl {
+                shader: shader.clone(),
+                stage: stage.clone(),
+                defines: defines.clone(),
+            },
+            ShaderSource::Wgsl(source) => ShaderSource::Wgsl(source.clone()),
+            _ => todo!(),
+        };
+
         Ok(Self {
-            inner: target.catch_error(|engine| engine.device.create_shader_module(&descriptor))?,
-            source: descriptor.source,
+            source,
+            inner: target.catch_error(|engine| engine.device.create_shader_module(descriptor))?,
         })
     }
 }

@@ -184,11 +184,11 @@ where
                 fragment: Some(FragmentState {
                     module: &frag_mod.inner,
                     entry_point: frag_entry,
-                    targets: &[ColorTargetState {
+                    targets: &[Some(ColorTargetState {
                         format,
                         blend: Some(BlendState::ALPHA_BLENDING),
                         write_mask: ColorWrites::ALL,
-                    }],
+                    })],
                 }),
                 multiview: None,
             });

@@ -1,7 +1,7 @@
 use crate::{label, prelude::ShaderModule, target::Target};
 use naga::{
     valid::{Capabilities, ValidationFlags, Validator},
-    ImageClass, ImageDimension, Module, ScalarKind, StorageClass, TypeInner,
+    AddressSpace, ImageClass, ImageDimension, Module, ScalarKind, TypeInner,
 };
 use std::{collections::BTreeMap, num::NonZeroU64};
 use wgpu::{
@@ -90,7 +90,7 @@ impl AutoLayout {
             .global_variables
             .iter()
             .filter(|(handle, _)| !entry_function[*handle].is_empty())
-            .filter_map(|(_, var)| Some((var.class, var.binding.clone()?, var.ty)))
+            .filter_map(|(_, var)| Some((var.space, var.binding.clone()?, var.ty)))
             .filter_map(|(space, bind, ty)| {
                 let size = layouter[ty];
                 let ty = module.types.get_handle(ty).unwrap();
@@ -143,7 +143,7 @@ impl AutoLayout {
                         },
                         count: None,
                     }),
-                    (_, StorageClass::Uniform) => Some(BindGroupLayoutEntry {
+                    (_, AddressSpace::Uniform) => Some(BindGroupLayoutEntry {
                         binding: bind.binding,
                         visibility,
                         ty: BindingType::Buffer {
@@ -213,5 +213,7 @@ fn parse(source: &ShaderSource) -> Module {
         }
 
         ShaderSource::Wgsl(source) => naga::front::wgsl::parse_str(source).unwrap(),
+
+        _ => todo!(),
     }
 }

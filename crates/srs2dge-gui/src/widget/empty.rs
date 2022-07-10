@@ -10,7 +10,7 @@ pub struct Empty {
     base: WidgetBase,
 }
 
-impl<'a> Widget for Empty {
+impl Widget for Empty {
     fn base(&self) -> WidgetBase {
         self.base
     }

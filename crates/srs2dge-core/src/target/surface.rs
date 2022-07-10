@@ -52,9 +52,10 @@ impl ISurface {
 
     pub fn complete(self, adapter: &Adapter, device: Arc<Device>) -> Surface {
         let surface = self;
-        let format = surface
+        let format = *surface
             .surface
-            .get_preferred_format(adapter)
+            .get_supported_formats(adapter)
+            .first() // first one is the preferred format
             .expect("Surface is not incompatible");
 
         let mut surface = Surface {
@@ -78,9 +79,9 @@ impl ISurface {
 impl Surface {
     pub fn set_vsync(&mut self, on: bool) {
         let new = if on {
-            PresentMode::Mailbox // fallbacks to Fifo if not available
+            PresentMode::AutoVsync
         } else {
-            PresentMode::Immediate
+            PresentMode::AutoNoVsync
         };
         let updated = self.present_mode != new;
         self.present_mode = new;
@@ -92,9 +93,9 @@ impl Surface {
 
     pub fn get_vsync(&self) -> bool {
         match self.present_mode {
-            PresentMode::Immediate => false,
-            PresentMode::Mailbox => true,
-            PresentMode::Fifo => true,
+            PresentMode::AutoVsync => true,
+            PresentMode::AutoNoVsync => false,
+            _ => unreachable!(),
         }
     }
 
