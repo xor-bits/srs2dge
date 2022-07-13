@@ -1,6 +1,6 @@
 [package]
 name = "srs2dge"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "Simple Rust 2D Game Engine"
 license = "MIT"
@@ -15,17 +15,18 @@ lto = true
 codegen-units = 1
 opt-level = 'z'
 
+# [profile.release]
+# debug = true
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-#[profile.release]
-#debug = true
-
 [features]
-default = ["ecs", "gizmos", "gui", "presets", "res", "text"]
+default = ["parallel-ecs", "gizmos", "gui", "presets", "res", "text"]
 
 dynamic = ["srs2dge-link-dynamic"]
 
+parallel-ecs = ["srs2dge-link-static/parallel-ecs"]
 ecs = ["srs2dge-link-static/ecs"]
 gizmos = ["srs2dge-link-static/gizmos"]
 gui = ["srs2dge-link-static/gui"]
@@ -35,8 +36,8 @@ text = ["srs2dge-link-static/text"]
 
 
 [dependencies]
-srs2dge-link-static = { path = "crates/srs2dge-link-static", version = "0.2" }
-srs2dge-link-dynamic = { path = "crates/srs2dge-link-dynamic", version = "0.2", optional = true }
+srs2dge-link-static = { path = "crates/srs2dge-link-static", version = "0.3" }
+srs2dge-link-dynamic = { path = "crates/srs2dge-link-dynamic", version = "0.3", optional = true }
 
 [dev-dependencies]
 instant = "0.1"
@@ -49,6 +50,7 @@ legion = { version = "0.4", default-features = false, features = [
 ] }
 serde = { version = "1.0", features = ["derive"] }
 ron = "0.7"
+fastrand = "1.7"
 # rapier2d = "0.11"
 
 

@@ -529,6 +529,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fastrand"
+version = "1.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3fcf0cee53519c866c09b5de1f6c56ff9d647101f81c1964fa632e148896cdf"
+dependencies = [
+ "instant",
+]
+
+[[package]]
 name = "fixedbitset"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -580,7 +589,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2624b77be334e896533c861524d8de4055660c4eade69ffc4d1906106658ea2b"
 dependencies = [
  "fontdue",
- "glam 0.21.2",
+ "glam",
  "ordered-float",
  "ttf-parser",
 ]
@@ -677,12 +686,6 @@ dependencies = [
  "web-sys",
  "winapi",
 ]
-
-[[package]]
-name = "glam"
-version = "0.20.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f43e957e744be03f5801a55472f593d43fabdebf25a4585db250f04d86b1675f"
 
 [[package]]
 name = "glam"
@@ -1016,15 +1019,15 @@ dependencies = [
 
 [[package]]
 name = "main_game_loop"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c448bffd295d1631c9db11464299f94fef9a970a56c85620a8690cd3863b4dfe"
+checksum = "d1446e77fae42c3a044eca7dcf245ba5164be4131d92746bc1b5ad43c13c46e7"
 dependencies = [
  "console_error_panic_hook",
  "console_log",
  "env_logger",
  "gilrs",
- "glam 0.20.5",
+ "glam",
  "instant",
  "log",
  "pollster",
@@ -1664,18 +1667,18 @@ checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "serde"
-version = "1.0.138"
+version = "1.0.139"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1578c6245786b9d168c5447eeacfb96856573ca56c9d68fdcf394be134882a47"
+checksum = "0171ebb889e45aa68b44aee0859b3eede84c6f5f5c228e6f140c0b2a0a46cad6"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.138"
+version = "1.0.139"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "023e9b1467aef8a10fb88f25611870ada9800ef7e22afce356bb0d2387b6f27c"
+checksum = "dc1d3230c1de7932af58ad8ffbe1d784bd55efd5a9d84ac24f69c72d83543dfb"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1737,8 +1740,9 @@ dependencies = [
 
 [[package]]
 name = "srs2dge"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
+ "fastrand",
  "instant",
  "legion",
  "rand",
@@ -1755,7 +1759,7 @@ version = "0.2.0"
 dependencies = [
  "bytemuck",
  "colorful",
- "glam 0.21.2",
+ "glam",
  "image",
  "integer-sqrt",
  "log",
@@ -1772,8 +1776,9 @@ dependencies = [
 
 [[package]]
 name = "srs2dge-ecs"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
+ "atomic_refcell",
  "legion",
  "serde",
  "srs2dge-core",
@@ -1801,14 +1806,14 @@ dependencies = [
 
 [[package]]
 name = "srs2dge-link-dynamic"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "srs2dge-link-static",
 ]
 
 [[package]]
 name = "srs2dge-link-static"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "srs2dge-core",
  "srs2dge-ecs",
@@ -1831,9 +1836,6 @@ dependencies = [
 [[package]]
 name = "srs2dge-res"
 version = "0.2.0"
-dependencies = [
- "srs2dge-core",
-]
 
 [[package]]
 name = "srs2dge-text"

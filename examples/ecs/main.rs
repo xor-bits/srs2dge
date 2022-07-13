@@ -1,6 +1,3 @@
-use legion::system;
-use rand::Rng;
-
 use srs2dge::prelude::*;
 
 //
@@ -20,17 +17,22 @@ struct App {
     world: World,
 }
 
-#[cfg_attr(target_arch = "wasm32", system(for_each))]
-#[cfg_attr(not(target_arch = "wasm32"), system(par_for_each))]
+#[cfg_attr(
+    any(target_arch = "wasm32", not(feature = "parallel-ecs")),
+    legion::system(for_each)
+)]
+#[cfg_attr(
+    not(any(target_arch = "wasm32", not(feature = "parallel-ecs"))),
+    legion::system(par_for_each)
+)]
 fn random_movement(body: &mut RigidBody2D) {
-    let mut rng = rand::thread_rng();
-    if (0.9..=1.0).contains(&rng.gen()) {
+    if (0.9..=1.0).contains(&fastrand::f32()) {
         // 10% chance to stop moving
         body.linear_velocity = Vec2::ZERO;
     }
-    if (0.0..=0.005).contains(&rng.gen()) {
+    if (0.0..=0.005).contains(&fastrand::f32()) {
         // 0.5% chance to start moving
-        let movement = Vec2::new(rng.gen_range(-1.0..=1.0), rng.gen_range(-1.0..=1.0));
+        let movement = Vec2::new(fastrand::f32() * 2.0 - 1.0, fastrand::f32() * 2.0 - 1.0);
         body.linear_velocity = movement;
     }
 }
@@ -56,11 +58,9 @@ impl App {
         let ubo = UniformBuffer::new(&target, 1);
         let shader = Texture2DShader::new(&target);
 
-        let mut world = World::new(&target).with_plugin(DefaultPlugins);
-        world.insert_update_system(random_movement_system);
-        for _ in 0..1_000_000
-        /* _000 */
-        {
+        let mut world = World::new().with_plugin(DefaultClientPlugins(&target));
+        world.updates.insert(random_movement_system);
+        for _ in 0..1_000_000 {
             world.push((
                 RigidBody2D::default(),
                 Transform2D {
@@ -103,17 +103,14 @@ impl Runnable for App {
     fn draw(&mut self) {
         self.world.run();
 
-        let (ecs_update, ecs_frame) = self.world.reporters();
-        if ecs_frame.should_report() {
+        if self.frame_report.should_report() {
             log::info!(
                 "{}",
                 Reporter::report_all(
                     "ECS Perf report",
-                    [
-                        ("ECS Updates", ecs_update),
-                        ("ECS Frames", ecs_frame),
-                        ("Frames", &mut self.frame_report)
-                    ]
+                    self.world
+                        .reporters()
+                        .chain([("Frames", &mut self.frame_report)])
                 )
             )
         }
@@ -134,10 +131,8 @@ impl Runnable for App {
             )],
         );
 
-        let (vbo, ibo, i) = self
-            .world
-            .get_batcher_mut()
-            .generate(&mut self.target, &mut frame);
+        let mut batcher = self.world.get_batcher_mut();
+        let (vbo, ibo, i) = batcher.generate(&mut self.target, &mut frame);
 
         frame
             .primary_render_pass()

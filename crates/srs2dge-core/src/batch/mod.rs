@@ -1,10 +1,7 @@
 use self::{mesh::Mesh, quad::QuadMesh};
 use crate::prelude::{DefaultVertex, Frame, IndexBuffer, Target, Vertex, VertexBuffer};
 use serde::{Deserialize, Serialize};
-use std::{
-    collections::{BinaryHeap, HashSet},
-    marker::PhantomData,
-};
+use std::{collections::BinaryHeap, marker::PhantomData};
 
 //
 
@@ -29,7 +26,7 @@ where
     ibo_regen: bool,
     ibo_len: u32,
 
-    modified: HashSet<usize>,
+    modified: bool, /* HashSet<usize> */
     free: BinaryHeap<usize>,
     used: Vec<Option<M>>,
 
@@ -64,7 +61,7 @@ where
     pub fn clear(&mut self) {
         self.ibo_regen = true;
         self.ibo_len = 0;
-        self.modified.clear();
+        self.modified = false; //.clear();
         self.free.clear();
         self.used.clear();
     }
@@ -79,7 +76,7 @@ where
             self.used.push(Some(mesh));
             spot
         };
-        self.modified.insert(spot);
+        self.modified = true; //.insert(spot);
         Idx(spot)
     }
 
@@ -95,7 +92,7 @@ where
         if let Some(m) = self.used.get_mut(idx.0) {
             *m = None;
         }
-        self.modified.insert(idx.0);
+        self.modified = true; //.insert(idx.0);
         self.free.push(idx.0);
     }
 
@@ -109,7 +106,7 @@ where
 
     pub fn get_mut(&mut self, idx: Idx) -> Option<&mut M> {
         if let Some(Some(mesh)) = self.used.get_mut(idx.0) {
-            self.modified.insert(idx.0);
+            self.modified = true; //.insert(idx.0);
             Some(mesh)
         } else {
             None
@@ -143,7 +140,7 @@ where
             }
         }
 
-        if !self.modified.is_empty() {
+        if self.modified {
             let new_data: Vec<V> = self
                 .used
                 .iter()

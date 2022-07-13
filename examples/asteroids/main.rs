@@ -55,8 +55,8 @@ impl App {
         let shader = LineShader::new(&target, true);
         let ubo = UniformBuffer::new(&target, 1);
 
-        let mut world = World::new(&target)
-            .with_plugin(DefaultPlugins)
+        let mut world = World::new()
+            .with_plugin(DefaultClientPlugins(&target))
             .with_plugin(PlayerPlugin)
             .with_plugin(AsteroidPlugin)
             .with_plugin(ColliderPlugin)
@@ -86,9 +86,8 @@ impl App {
             easy_rotation: true,
         };
 
-        let resources = world.resources();
-        resources.insert(settings);
-        resources.insert(settings);
+        world.resources.insert(settings);
+        world.resources.insert(settings);
 
         Self {
             target,
@@ -122,22 +121,21 @@ impl Runnable for App {
         let mvp = Mat4::orthographic_rh(-self.ws.aspect, self.ws.aspect, -1.0, 1.0, -1.0, 1.0);
 
         // update
-        let resources = self.world.resources();
-        resources.insert(if self.ws.cursor_pos != self.old_cursor_pos {
+        let cursor = if self.ws.cursor_pos != self.old_cursor_pos {
             self.old_cursor_pos = self.ws.cursor_pos;
-
             Gizmos::screen_to_world(mvp, &self.ws, self.ws.cursor_pos)
         } else {
             None
-        });
-        resources.insert(self.ks.clone());
-        resources.insert(self.gs.clone());
-        resources.insert(self.batcher.take().unwrap());
+        };
+        self.world.resources.insert(cursor);
+        self.world.resources.insert(self.ks.clone());
+        self.world.resources.insert(self.gs.clone());
+        self.world.resources.insert(self.batcher.take().unwrap());
         if self.world.run() {
             self.ks.clear();
             self.gs.clear();
         }
-        self.batcher = Some(self.world.resources().remove().unwrap());
+        self.batcher = Some(self.world.resources.remove().unwrap());
 
         // draw
         let mut frame = self.target.get_frame();

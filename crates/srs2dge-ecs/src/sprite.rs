@@ -26,22 +26,34 @@ pub struct SpritePlugin;
 
 impl Plugin for SpritePlugin {
     fn build(&self, world: &mut World) {
-        world.insert_internal_update_system(200, set_pos_static_system);
-        world.insert_internal_frame_system(200, set_pos_body_system);
-        world.insert_internal_frame_system(201, set_sprite_system);
+        world.updates.insert_internal(200, set_pos_static_system);
+        world.frames.insert_internal(200, set_pos_body_system);
+        world.frames.insert_internal(201, set_sprite_system);
     }
 }
 
-#[cfg_attr(target_arch = "wasm32", system(for_each))]
-#[cfg_attr(not(target_arch = "wasm32"), system(par_for_each))]
+#[cfg_attr(
+    any(target_arch = "wasm32", not(feature = "parallel")),
+    legion::system(for_each)
+)]
+#[cfg_attr(
+    all(not(target_arch = "wasm32"), feature = "parallel"),
+    legion::system(par_for_each)
+)]
 #[filter(!component::<RigidBody2D>())]
 fn set_pos_static(sprite: &mut Sprite, transform: &Transform2D) {
     // println!("move sprite 0");
     sprite.lerp_transform = *transform;
 }
 
-#[cfg_attr(target_arch = "wasm32", system(for_each))]
-#[cfg_attr(not(target_arch = "wasm32"), system(par_for_each))]
+#[cfg_attr(
+    any(target_arch = "wasm32", not(feature = "parallel")),
+    legion::system(for_each)
+)]
+#[cfg_attr(
+    all(not(target_arch = "wasm32"), feature = "parallel"),
+    legion::system(par_for_each)
+)]
 fn set_pos_body(
     sprite: &mut Sprite,
     transform: &Transform2D,
@@ -66,7 +78,7 @@ fn set_sprite(sprite: &mut Sprite, #[resource] batcher: &mut BatchRenderer) {
     // println!("set sprite");
     if let Some(idx) = sprite.idx {
         let mesh = batcher.get(idx).unwrap();
-        if (mesh.pos - translation - scale * 0.5)
+        if (mesh.pos - translation + scale * 0.5)
             .abs()
             .cmpgt(Vec2::splat(f32::EPSILON))
             .any()

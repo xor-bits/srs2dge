@@ -1,6 +1,6 @@
 [package]
 name = "srs2dge-link-static"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 description = "Simple Rust 2D Game Engine"
 license = "MIT"
@@ -10,6 +10,7 @@ license = "MIT"
 [features]
 default = []
 
+parallel-ecs = ["ecs", "srs2dge-ecs/parallel"]
 ecs = ["srs2dge-ecs"]
 gizmos = ["srs2dge-gizmos"]
 gui = ["srs2dge-gui"]
@@ -23,7 +24,7 @@ spirv = ["srs2dge-core/spirv"]
 
 [dependencies]
 srs2dge-core = { path = "../srs2dge-core", version = "0.2" }
-srs2dge-ecs = { path = "../srs2dge-ecs", version = "0.2", optional = true }
+srs2dge-ecs = { path = "../srs2dge-ecs", version = "0.3", optional = true }
 srs2dge-gizmos = { path = "../srs2dge-gizmos", version = "0.2", optional = true }
 srs2dge-gui = { path = "../srs2dge-gui", version = "0.2", optional = true }
 srs2dge-presets = { path = "../srs2dge-presets", version = "0.2", optional = true }

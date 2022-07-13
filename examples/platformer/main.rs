@@ -48,8 +48,8 @@ impl App {
         let ubo = UniformBuffer::new(&target, 1);
         let shader = Texture2DShader::new(&target);
 
-        let mut world = World::new(&target)
-            .with_plugin(DefaultPlugins)
+        let mut world = World::new()
+            .with_plugin(DefaultClientPlugins(&target))
             .with_plugin(CustomPlugin);
 
         // generate
@@ -166,9 +166,8 @@ impl Runnable for App {
     }
 
     fn draw(&mut self) {
-        let resources = self.world.resources();
-        resources.insert(self.ks.clone());
-        resources.insert(self.gs.clone());
+        self.world.resources.insert(self.ks.clone());
+        self.world.resources.insert(self.gs.clone());
         if self.world.run() {
             self.ks.clear();
             self.gs.clear();
@@ -202,10 +201,8 @@ impl Runnable for App {
             }],
         );
 
-        let (vbo, ibo, i) = self
-            .world
-            .get_batcher_mut()
-            .generate(&mut self.target, &mut frame);
+        let mut batcher = self.world.get_batcher_mut();
+        let (vbo, ibo, i) = batcher.generate(&mut self.target, &mut frame);
 
         frame
             .primary_render_pass()

@@ -23,10 +23,10 @@ pub struct CustomPlugin;
 
 impl Plugin for CustomPlugin {
     fn build(&self, world: &mut World) {
-        world.insert_internal_update_system(50, player_system);
-        world.insert_internal_update_system(105, collider_system);
-        world.insert_internal_update_system(106, collision_resolution_system);
-        world.insert_internal_update_system(107, player_reposition_system);
+        world.updates.insert_internal(50, player_system);
+        world.updates.insert_internal(105, collider_system);
+        world.updates.insert_internal(106, collision_res_system);
+        world.updates.insert_internal(107, player_reposition_system);
     }
 }
 
@@ -132,7 +132,7 @@ fn collider(world: &mut SubWorld) {
 
 #[cfg_attr(target_arch = "wasm32", system(for_each))]
 #[cfg_attr(not(target_arch = "wasm32"), system(par_for_each))]
-fn collision_resolution(transform: &mut Transform2D, res: &mut CollisionResolver) {
+fn collision_res(transform: &mut Transform2D, res: &mut CollisionResolver) {
     transform.translation += res.0;
     res.0 = Vec2::ZERO;
 }

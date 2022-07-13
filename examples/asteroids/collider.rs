@@ -19,7 +19,9 @@ pub struct ColliderPlugin;
 
 impl Plugin for ColliderPlugin {
     fn build(&self, world: &mut World) {
-        world.insert_internal_update_system(150, split_collided_asteroids_system);
+        world
+            .updates
+            .insert_internal(150, split_collided_asteroids_system);
     }
 }
 

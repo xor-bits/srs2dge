@@ -16,8 +16,8 @@ pub struct BulletPlugin;
 
 impl Plugin for BulletPlugin {
     fn build(&self, world: &mut World) {
-        world.insert_internal_update_system(150, bullet_destroy_system);
-        world.insert_internal_frame_system(200, bullet_mesh_system);
+        world.updates.insert_internal(150, bullet_destroy_system);
+        world.frames.insert_internal(200, bullet_mesh_system);
     }
 }
 

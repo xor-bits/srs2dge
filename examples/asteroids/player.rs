@@ -16,10 +16,10 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, world: &mut World) {
-        world.insert_internal_update_system(50, player_movement_system);
-        world.insert_internal_update_system(50, player_shoot_system);
-        world.insert_internal_update_system(150, map_wrapping_system);
-        world.insert_internal_frame_system(200, player_mesh_system);
+        world.updates.insert_internal(50, player_movement_system);
+        world.updates.insert_internal(50, player_shoot_system);
+        world.updates.insert_internal(150, map_wrapping_system);
+        world.frames.insert_internal(200, player_mesh_system);
     }
 }
 

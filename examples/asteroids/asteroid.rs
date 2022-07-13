@@ -30,12 +30,14 @@ pub struct AsteroidPlugin;
 
 impl Plugin for AsteroidPlugin {
     fn build(&self, world: &mut World) {
-        world.insert_internal_update_system(10, asteroid_spawner_timeout_system);
-        world.insert_internal_update_system(11, asteroid_spawner_system);
-        world.insert_internal_frame_system(200, asteroid_mesh_system);
-        world.resources().insert(Timeout {
+        world
+            .updates
+            .insert_internal(10, asteroid_spawner_timeout_system);
+        world.updates.insert_internal(11, asteroid_spawner_system);
+        world.frames.insert_internal(200, asteroid_mesh_system);
+        world.resources.insert(Timeout {
             deadline: Some(Instant::now() + Duration::from_millis(1500)),
-        })
+        });
     }
 }
 
