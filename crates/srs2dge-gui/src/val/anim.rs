@@ -295,7 +295,16 @@ mod tests {
 
     #[test]
     fn test_curves() {
-        todo!()
+        use AnimationCurve::*;
+        for curve in [Instant, Linear, Poly, Sine, Exponential] {
+            for i in 0..=100 {
+                let x = i as f32 * 0.01;
+                let y = curve.run(x);
+
+                assert!((0.0..=1.0).contains(&x));
+                assert!((0.0..=1.0).contains(&y));
+            }
+        }
     }
 
     #[test]
