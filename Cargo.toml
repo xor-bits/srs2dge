@@ -1,6 +1,6 @@
 [package]
 name = "srs2dge"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 description = "Simple Rust 2D Game Engine"
 license = "MIT"
@@ -42,8 +42,8 @@ text = ["srs2dge-link-static/text"]
 
 
 [dependencies]
-srs2dge-link-static = { path = "crates/srs2dge-link-static", version = "0.3" }
-srs2dge-link-dynamic = { path = "crates/srs2dge-link-dynamic", version = "0.3", optional = true }
+srs2dge-link-static = { path = "crates/srs2dge-link-static", version = "0.4" }
+srs2dge-link-dynamic = { path = "crates/srs2dge-link-dynamic", version = "0.4", optional = true }
 
 [dev-dependencies]
 instant = "0.1"

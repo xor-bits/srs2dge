@@ -5,7 +5,7 @@ use std::any::Any;
 
 //
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Grid {
     pub cols: usize,
     pub rows: usize,
