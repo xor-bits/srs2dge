@@ -1,4 +1,4 @@
-use crate::prelude::{GuiCalc, WidgetBase};
+use crate::prelude::{GuiCalc, WidgetLayout};
 use srs2dge_core::glam::Vec2;
 
 //
@@ -7,7 +7,7 @@ use srs2dge_core::glam::Vec2;
 pub struct Const(pub Vec2);
 
 impl GuiCalc for Const {
-    fn reduce(&self, _: &(WidgetBase, Vec2)) -> Vec2 {
+    fn reduce(&self, _: &(WidgetLayout, Vec2)) -> Vec2 {
         self.0
     }
 }

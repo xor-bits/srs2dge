@@ -5,14 +5,17 @@
 /// Text rendering configuration
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TextConfig {
-    /// initial x position, defaults to `0`
+    /// initial x position, defaults to `0.0`
     pub x_origin: f32,
 
-    /// initial y position, defaults to `0`
+    /// initial y position, defaults to `0.0`
     pub y_origin: f32,
 
     /// text alignment
     pub align: TextAlign,
+
+    /// text px scale, defaults to `1.0`
+    pub scale: f32,
 
     // TODO:
     /// see [`TextDirection`], text direction, defaults to `Right`
@@ -33,9 +36,10 @@ pub struct TextConfig {
 impl Default for TextConfig {
     fn default() -> Self {
         Self {
-            x_origin: Default::default(),
-            y_origin: Default::default(),
+            x_origin: 0.0,
+            y_origin: 0.0,
             align: Default::default(),
+            scale: 1.0,
             dir: Default::default(),
             tab_width: 4,
             line_gap: None,

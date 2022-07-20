@@ -1,139 +1,103 @@
-use super::{
-    base::{WidgetBase, WidgetBaseBuilder},
-    Widget, WidgetBuilder,
-};
+use super::{Widget, WidgetLayout};
+use crate::prelude::{GuiEvent, GuiGraphics, WidgetBase};
+use srs2dge_core::{glam::Vec2, target::Target};
+use std::any::Any;
 
 //
 
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Grid {
-    base: WidgetBase,
-
-    cols: usize,
-    rows: usize,
-    // border: Vec2,
-    // margin: Vec2,
-    i: usize,
+    pub cols: usize,
+    pub rows: usize,
 }
 
-impl Widget for Grid {
-    fn base(&self) -> WidgetBase {
-        self.base
-    }
-}
+//
 
 impl Grid {
-    pub fn builder<'a>() -> GridBuilder<'a> {
-        GridBuilder::new()
+    pub const fn new() -> Self {
+        Self::with(3, 3)
     }
 
-    /* pub fn elements<F: FnOnce(WidgetBase) -> Vec2>(&mut self, size: F) -> WidgetBase {
-        GridRow { base }
-    } */
-}
-
-impl Iterator for Grid {
-    type Item = WidgetBase;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let x = self.i % self.cols;
-        let y = self.i / self.cols;
-
-        if y == self.rows {
-            // wrapped around
-            return None;
-        }
-
-        // next pos
-        self.i += 1;
-
-        let mut base = self.base;
-        base.size.x /= self.cols as f32;
-        base.size.y /= self.rows as f32;
-        base.offset.x += base.size.x * x as f32;
-        base.offset.y += base.size.y * y as f32;
-
-        Some(base)
-    }
-}
-
-//
-
-#[derive(Debug, Clone, Copy)]
-pub struct GridBuilder<'a> {
-    base: WidgetBaseBuilder<'a>,
-
-    cols: usize,
-    rows: usize,
-    // border: Vec2,
-    // margin: Vec2,
-}
-
-//
-
-impl<'a> GridBuilder<'a> {
-    pub fn new() -> Self {
-        Self::default()
+    pub const fn with(rows: usize, cols: usize) -> Self {
+        Self { cols, rows }
     }
 
-    pub fn with_columns(mut self, cols: usize) -> Self {
+    pub const fn with_columns(mut self, cols: usize) -> Self {
         self.cols = cols;
         self
     }
 
-    pub fn with_rows(mut self, rows: usize) -> Self {
+    pub const fn with_rows(mut self, rows: usize) -> Self {
         self.rows = rows;
         self
     }
 
-    /* pub fn with_border(mut self, border: Vec2) -> Self {
-        self.border = border;
-        self
-    } */
+    pub fn new_grid<const ROWS: usize, const COLS: usize, T>(
+        grid: [[WidgetBase<T>; COLS]; ROWS],
+    ) -> WidgetBase<T> {
+        Self::with(ROWS, COLS).into_widget_with(grid.into_iter().flatten())
+    }
 
-    /* pub fn with_margin(mut self, margin: Vec2) -> Self {
-        self.margin = margin;
-        self
-    } */
+    pub fn new_row<const COLS: usize, T>(grid: [WidgetBase<T>; COLS]) -> WidgetBase<T> {
+        Self::with(1, COLS).into_widget_with(grid)
+    }
 
-    pub fn build(self) -> Grid {
-        let Self {
-            base,
-            cols,
-            rows,
-            // border,
-            // margin,
-        } = self;
+    fn layout_grid_init(&self, layout: WidgetLayout) -> WidgetLayout {
+        WidgetLayout {
+            size: layout.size / Vec2::new(self.cols as f32, self.rows as f32),
+            offset: layout.offset,
+        }
+    }
 
-        let base = base.build();
+    fn layout_grid_nth(&self, init: WidgetLayout, n: usize) -> WidgetLayout {
+        let x = (n % self.cols) as f32;
+        let y = (n / self.cols) as f32;
 
-        Grid {
-            base,
-            cols,
-            rows,
-            // border,
-            // margin,
-            i: 0,
+        WidgetLayout {
+            size: init.size,
+            offset: init.offset + init.size * Vec2::new(x, y),
         }
     }
 }
 
-impl<'a> Default for GridBuilder<'a> {
+impl<T> Widget<T> for Grid {
+    fn event_recurse(
+        &mut self,
+        subwidgets: &mut [WidgetBase<T>],
+        state: &mut T,
+        layout: WidgetLayout,
+        mut event: GuiEvent,
+    ) -> GuiEvent {
+        let init = self.layout_grid_init(layout);
+
+        for (n, widget) in subwidgets.iter_mut().enumerate().rev() {
+            event = widget.event(state, self.layout_grid_nth(init, n), event);
+        }
+
+        event
+    }
+
+    fn draw_recurse(
+        &mut self,
+        subwidgets: &mut [WidgetBase<T>],
+        gui: &mut GuiGraphics,
+        target: &Target,
+        layout: WidgetLayout,
+    ) {
+        let init = self.layout_grid_init(layout);
+
+        for (n, widget) in subwidgets.iter_mut().enumerate() {
+            widget.draw(gui, target, self.layout_grid_nth(init, n));
+        }
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+impl Default for Grid {
     fn default() -> Self {
-        Self {
-            base: Default::default(),
-            cols: 3,
-            rows: 3,
-        }
-    }
-}
-
-impl<'a> WidgetBuilder<'a> for GridBuilder<'a> {
-    fn inner(&self) -> &WidgetBaseBuilder<'a> {
-        &self.base
-    }
-
-    fn inner_mut(&mut self) -> &mut WidgetBaseBuilder<'a> {
-        &mut self.base
+        Self::new()
     }
 }

@@ -1,1 +1,1 @@
-pub use super::{generated::*, geom::*, renderer::*, *};
+pub use super::{generated::*, geom::*, graphics::*, renderer::*, *};

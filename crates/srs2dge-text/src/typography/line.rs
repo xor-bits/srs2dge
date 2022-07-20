@@ -111,8 +111,9 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         loop {
             let FormatChar { character, format } = self.chars.next()?;
-            let Format { font, px, .. } = format;
+            let Format { font, mut px, .. } = format;
             let font = self.fonts.get_font(font);
+            px = (px * self.config.scale).round();
 
             match character {
                 '\t' => {
@@ -129,8 +130,8 @@ where
                 _ => {
                     let index = font.lookup_glyph_index(character);
                     let metrics = font.metrics_indexed(index, px, self.config.sdf);
-                    let x = self.config.x_origin as i32 + metrics.xmin;
-                    let y = self.config.y_origin as i32 + metrics.ymin;
+                    let x = self.config.x_origin /* as i32 */ + metrics.xmin as f32;
+                    let y = self.config.y_origin /* as i32 */ + metrics.ymin as f32;
                     let width = metrics.width as _;
                     let height = metrics.height as _;
                     let area = width * height;

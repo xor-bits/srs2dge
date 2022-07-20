@@ -1,4 +1,4 @@
-use crate::prelude::{GuiCalc, WidgetBase};
+use crate::prelude::{GuiCalc, WidgetLayout};
 use srs2dge_core::{glam::Vec2, util::ForceAspectRatio};
 
 //
@@ -38,7 +38,7 @@ where
 impl<T: GuiCalc> IntoRatio for T {}
 
 impl<T: GuiCalc> GuiCalc for Ratio<T> {
-    fn reduce(&self, refs: &(WidgetBase, Vec2)) -> Vec2 {
+    fn reduce(&self, refs: &(WidgetLayout, Vec2)) -> Vec2 {
         let mut val = self.val.reduce(refs);
         if self.with_x {
             val = val.force_ratio_with_x(self.ratio);

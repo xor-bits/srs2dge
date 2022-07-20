@@ -1,4 +1,4 @@
-use crate::prelude::{GuiCalc, WidgetBase};
+use crate::prelude::{GuiCalc, WidgetLayout};
 use srs2dge_core::glam::Vec2;
 
 //
@@ -26,7 +26,7 @@ where
 impl<T: GuiCalc, U: GuiCalc> IntoMin<U> for T {}
 
 impl<T: GuiCalc, U: GuiCalc> GuiCalc for Min<T, U> {
-    fn reduce(&self, refs: &(WidgetBase, Vec2)) -> Vec2 {
+    fn reduce(&self, refs: &(WidgetLayout, Vec2)) -> Vec2 {
         self.a.reduce(refs).min(self.b.reduce(refs))
     }
 }

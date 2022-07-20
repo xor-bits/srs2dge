@@ -31,6 +31,8 @@ pub struct TextureAtlasBuilder {
 
     // side length limit
     limit: u16,
+
+    padding: u8,
 }
 
 #[derive(Debug)]
@@ -65,9 +67,13 @@ impl<T> Reference<T> for &T {
 
 impl Default for TextureAtlasBuilder {
     fn default() -> Self {
+        let mut packer = Packer::default();
+        let padding = 2;
+        packer.padding = padding;
         Self {
-            packer: Default::default(),
+            packer,
             limit: u16::MAX,
+            padding,
         }
     }
 }
@@ -87,6 +93,13 @@ impl TextureAtlasBuilder {
     /// side length limit
     pub fn with_limit(mut self, limit: u16) -> Self {
         self.limit = limit;
+        self
+    }
+
+    /// texture padding
+    pub fn with_padding(mut self, padding: u8) -> Self {
+        self.padding = padding;
+        self.packer.padding = padding;
         self
     }
 

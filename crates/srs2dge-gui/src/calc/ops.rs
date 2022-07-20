@@ -1,4 +1,4 @@
-use crate::prelude::{BaseOffset, BaseSize, Const, GuiCalc, Max, Min, SelfSize, WidgetBase};
+use crate::prelude::{BaseOffset, BaseSize, Const, GuiCalc, Max, Min, SelfSize, WidgetLayout};
 use srs2dge_core::glam::Vec2;
 use std::ops::{Add, Div, Mul, Sub};
 
@@ -13,7 +13,7 @@ macro_rules! size_calc_math {
         }
 
         impl<T: GuiCalc, U: GuiCalc> GuiCalc for $name<T, U> {
-            fn reduce(&self, refs: &(WidgetBase, Vec2)) -> Vec2 {
+            fn reduce(&self, refs: &(WidgetLayout, Vec2)) -> Vec2 {
                 self.lhs.reduce(refs) $op self.rhs.reduce(refs)
             }
         }

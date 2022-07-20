@@ -1,94 +1,136 @@
-use super::{
-    base::{WidgetBase, WidgetBaseBuilder},
-    Widget, WidgetBuilder,
-};
-use crate::gui::Gui;
-use srs2dge_core::glam::Vec2;
+use super::{Widget, WidgetLayout};
+use crate::prelude::{GuiEvent, GuiEventTy, PointerState};
+use srs2dge_core::{glam::Vec2, winit::event::MouseButton};
+use std::{any::Any, fmt::Debug};
 
 //
 
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct DragZone {
-    base: WidgetBase,
+pub struct DragZone<T> {
+    blocking: bool,
+    button: Option<MouseButton>,
+    dragging: bool,
+
+    on_drag: Vec<Handler<T>>,
+    on_release: Vec<Handler<T>>,
 }
 
-impl Widget for DragZone {
-    fn base(&self) -> WidgetBase {
-        self.base
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DragZoneFilter {
+    /// Pointer is dragging from the initial area
+    #[default]
+    OnDrag,
+
+    /// A dragging pointer was released
+    OnRelease,
 }
 
-impl DragZone {
-    pub fn builder<'a>() -> DragZoneBuilder<'a> {
-        DragZoneBuilder::new()
-    }
-}
+pub type Handler<T> = Box<dyn FnMut(&mut T, Vec2)>;
 
 //
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct DragZoneBuilder<'a> {
-    base: WidgetBaseBuilder<'a>,
-}
-
-//
-
-impl<'a> DragZoneBuilder<'a> {
+impl<T> DragZone<T> {
     pub fn new() -> Self {
-        Self::default()
-    }
-    pub fn build(self, gui: &mut Gui, state: &mut DragZoneState) -> DragZone {
-        let Self { base } = self;
+        Self {
+            blocking: true,
+            button: Some(MouseButton::Left),
+            dragging: false,
 
-        let base = base.build();
-
-        if let Some((area_before_dragging, (_, initial, now))) =
-            state.dragging.and_then(|area_before_dragging| {
-                Some((
-                    area_before_dragging,
-                    gui.dragged(area_before_dragging).next()?,
-                ))
-            })
-        {
-            // continue dragging
-            state.dragging = Some(area_before_dragging);
-            state.drag = now - initial;
-        } else if let Some((_, initial, now)) = gui.dragged(base).next() {
-            // begin dragging
-            state.dragging = Some(base);
-            state.drag = now - initial;
-        } else {
-            // release
-            state.dragging = None;
-            state.current += state.drag;
-            state.drag = Vec2::ZERO;
-        };
-
-        DragZone { base }
-    }
-}
-
-impl<'a> WidgetBuilder<'a> for DragZoneBuilder<'a> {
-    fn inner(&self) -> &WidgetBaseBuilder<'a> {
-        &self.base
+            on_drag: vec![],
+            on_release: vec![],
+        }
     }
 
-    fn inner_mut(&mut self) -> &mut WidgetBaseBuilder<'a> {
-        &mut self.base
+    pub fn with_blocking(mut self, blocking: bool) -> Self {
+        self.blocking = blocking;
+        self
+    }
+
+    pub fn with_button(mut self, button: Option<MouseButton>) -> Self {
+        self.button = button;
+        self
+    }
+
+    pub fn with_handler<F: FnMut(&mut T, Vec2) + 'static>(
+        mut self,
+        filter: DragZoneFilter,
+        handler: F,
+    ) -> Self {
+        match filter {
+            DragZoneFilter::OnDrag => &mut self.on_drag,
+            DragZoneFilter::OnRelease => &mut self.on_release,
+        }
+        .push(Box::new(handler));
+        self
     }
 }
 
-//
+impl<T: 'static> Widget<T> for DragZone<T> {
+    fn event(&mut self, state: &mut T, layout: WidgetLayout, mut event: GuiEvent) -> GuiEvent {
+        match &event.ty {
+            GuiEventTy::Pointer(PointerState::Hold {
+                button,
+                initial,
+                now,
+                ..
+            }) => {
+                let check = self.button.map(|btn| btn == *button).unwrap_or(false)
+                    && (layout.contains(*initial) || self.dragging);
+                self.dragging = check;
 
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct DragZoneState {
-    pub dragging: Option<WidgetBase>,
-    pub drag: Vec2,
-    pub current: Vec2,
+                if check {
+                    let delta = *now - *initial;
+                    for handler in self.on_drag.iter_mut() {
+                        (handler)(state, delta);
+                    }
+
+                    event.blocked |= self.blocking;
+                }
+            }
+            GuiEventTy::Pointer(PointerState::Release {
+                button,
+                initial,
+                now,
+            }) => {
+                if self.dragging && self.button.map(|btn| btn == *button).unwrap_or(false) {
+                    let delta = *now - *initial;
+                    for handler in self.on_release.iter_mut() {
+                        (handler)(state, delta);
+                    }
+
+                    self.dragging = false;
+                }
+
+                event.blocked |= self.blocking && layout.contains(*now);
+            }
+            GuiEventTy::Pointer(PointerState::Press { now, .. }) => {
+                event.blocked |= self.blocking && layout.contains(*now);
+            }
+            GuiEventTy::Pointer(PointerState::Hover { now }) => {
+                event.blocked |= self.blocking && layout.contains(*now);
+            }
+            _ => {}
+        }
+
+        event
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
-impl DragZoneState {
-    pub fn get(&self) -> Vec2 {
-        self.current + self.drag
+impl<T> Debug for DragZone<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DragZone")
+            .field("blocking", &self.blocking)
+            .field("button", &self.button)
+            .field("on_drag", &self.on_drag.len())
+            .finish()
+    }
+}
+
+impl<T> Default for DragZone<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }

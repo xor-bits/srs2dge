@@ -1,4 +1,4 @@
-use crate::prelude::{GuiCalc, WidgetBase};
+use crate::prelude::{GuiCalc, WidgetLayout};
 use srs2dge_core::glam::Vec2;
 
 //
@@ -7,7 +7,7 @@ use srs2dge_core::glam::Vec2;
 pub struct BaseSize;
 
 impl GuiCalc for BaseSize {
-    fn reduce(&self, (base, _): &(WidgetBase, Vec2)) -> Vec2 {
+    fn reduce(&self, (base, _): &(WidgetLayout, Vec2)) -> Vec2 {
         base.size
     }
 }
@@ -18,7 +18,7 @@ impl GuiCalc for BaseSize {
 pub struct BaseOffset;
 
 impl GuiCalc for BaseOffset {
-    fn reduce(&self, (base, _): &(WidgetBase, Vec2)) -> Vec2 {
+    fn reduce(&self, (base, _): &(WidgetLayout, Vec2)) -> Vec2 {
         base.offset
     }
 }
@@ -29,7 +29,7 @@ impl GuiCalc for BaseOffset {
 pub struct SelfSize;
 
 impl GuiCalc for SelfSize {
-    fn reduce(&self, (_, self_size): &(WidgetBase, Vec2)) -> Vec2 {
+    fn reduce(&self, (_, self_size): &(WidgetLayout, Vec2)) -> Vec2 {
         *self_size
     }
 }

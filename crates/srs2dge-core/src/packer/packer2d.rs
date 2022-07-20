@@ -24,6 +24,7 @@ pub struct Packer {
     rect: Rect,
     rows: Vec<Row>,
     bottom: PositionedRect,
+    pub padding: u8,
 }
 
 impl Default for Packer {
@@ -37,7 +38,12 @@ impl Packer {
     pub const fn new(rect: Rect) -> Self {
         let rows = vec![];
         let bottom = rect.positioned(0, 0);
-        Self { rect, rows, bottom }
+        Self {
+            rect,
+            rows,
+            bottom,
+            padding: 0,
+        }
     }
 
     /// Creates a Packer with where the area is a square.
@@ -55,6 +61,11 @@ impl Packer {
     /// Side length will be `ceil(sqrt(<area>))`.
     pub fn from_area(area: u32) -> Self {
         Self::from_side(area.integer_sqrt())
+    }
+
+    pub fn with_padding(mut self, padding: u8) -> Self {
+        self.padding = padding;
+        self
     }
 
     pub fn area(&self) -> Rect {
@@ -148,7 +159,10 @@ impl Packer {
     pub fn push(&mut self, rect: Rect) -> Option<PositionedRect> {
         if rect.width == 0 || rect.height == 0 {
             return Some(rect.positioned(0, 0));
-        } else if rect.width > self.rect.width || rect.height > self.rect.height {
+        }
+
+        let pad = self.padding as u32;
+        if rect.width + pad > self.rect.width || rect.height + pad > self.rect.height {
             return None;
         }
 
@@ -157,15 +171,15 @@ impl Packer {
             .rows
             .iter()
             .enumerate()
-            .filter(|(_, row)| row.height >= rect.height)
+            .filter(|(_, row)| row.height >= rect.height + pad)
             .flat_map(|(index_row, row)| {
                 row.free_spaces
                     .iter()
                     .enumerate()
-                    .filter(|(_, row)| row.width >= rect.width)
+                    .filter(|(_, row)| row.width >= rect.width + pad)
                     .map(move |(index_col, _)| (index_row, index_col))
             })
-            .map(|(row, col)| (row, col, self.rows[row].height - rect.height))
+            .map(|(row, col)| (row, col, self.rows[row].height - rect.height - pad))
             .min_by_key(|(_, _, wasted)| *wasted)
         {
             Some(s) => s,
@@ -173,7 +187,7 @@ impl Packer {
         };
 
         // try pushing a new row if about to waste way too much
-        if score > rect.height && self.can_push_row(rect) {
+        if score > rect.height + pad && self.can_push_row(rect) {
             match self.push_row(rect) {
                 None => {}
                 some => return some,
@@ -189,7 +203,7 @@ impl Packer {
         // free space gets split into 1 or 2 new areas
         // 1 if the rectangle fits perfectly into the required space
         // 2 otherwise
-        match (w == rect.width, l) {
+        match (w == rect.width + pad, l) {
             // width is the same
             // +--+-------+--+
             // |//| free  |//|
@@ -225,8 +239,8 @@ impl Packer {
             // +------+--+---------+------+--+
             (false, _) => {
                 let a = Space {
-                    x: x + rect.width,
-                    width: w - rect.width,
+                    x: x + rect.width + pad,
+                    width: w - rect.width + pad,
                 };
                 self.rows[row].free_spaces[col] = a;
             }
@@ -256,17 +270,19 @@ impl Packer {
 
     #[inline]
     const fn can_push_row(&self, rect: Rect) -> bool {
-        self.bottom.height >= rect.height && self.bottom.width >= rect.width
+        let pad = self.padding as u32;
+        self.bottom.height >= rect.height + pad && self.bottom.width >= rect.width + pad
     }
 
     #[inline]
     fn push_row(&mut self, rect: Rect) -> Option<PositionedRect> {
-        let width = self.bottom.width.checked_sub(rect.width)?;
-        self.bottom.height = self.bottom.height.checked_sub(rect.height)?;
+        let pad = self.padding as u32;
+        let width = self.bottom.width.checked_sub(rect.width + pad)?;
+        self.bottom.height = self.bottom.height.checked_sub(rect.height + pad)?;
 
         let free_spaces = if width != 0 {
             vec![Space {
-                x: self.bottom.x + rect.width,
+                x: self.bottom.x + rect.width + pad,
                 width,
             }]
         } else {
@@ -275,14 +291,14 @@ impl Packer {
 
         self.rows.push(Row {
             y: self.bottom.y,
-            height: rect.height,
+            height: rect.height + pad,
 
             free_spaces,
         });
 
-        self.bottom.y += rect.height;
+        self.bottom.y += rect.height + pad;
 
-        Some(rect.positioned(self.bottom.x, self.bottom.y - rect.height))
+        Some(rect.positioned(self.bottom.x, self.bottom.y - rect.height - pad))
     }
 
     #[inline]

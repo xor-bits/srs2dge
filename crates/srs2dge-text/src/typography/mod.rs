@@ -18,8 +18,8 @@ pub struct TextChar {
     // formatting
     pub format: Format,
     // top left
-    pub x: i32,
-    pub y: i32,
+    pub x: f32,
+    pub y: f32,
     // size
     pub width: u32,
     pub height: u32,

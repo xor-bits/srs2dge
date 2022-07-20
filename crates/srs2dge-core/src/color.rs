@@ -1,5 +1,5 @@
 use bytemuck::{Pod, Zeroable};
-use glam::Vec4;
+use glam::{Vec3, Vec4};
 use rand::{distributions::Standard, prelude::Distribution, Rng};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -111,6 +111,11 @@ impl Color {
     #[inline]
     pub const fn new_mono(val: f32) -> Self {
         Self::new_mono_a(val, 1.0)
+    }
+
+    #[inline]
+    pub fn lerp(self, other: Self, s: f32) -> Self {
+        Self::from(self.to_vec4().lerp(other.to_vec4(), s))
     }
 
     #[inline]
@@ -419,6 +424,39 @@ impl From<Color> for wgpu::Color {
             g: color.g as _,
             b: color.b as _,
             a: color.a as _,
+        }
+    }
+}
+
+impl From<f32> for Color {
+    fn from(mono: f32) -> Self {
+        Self {
+            r: mono,
+            g: mono,
+            b: mono,
+            a: 1.0,
+        }
+    }
+}
+
+impl From<Vec3> for Color {
+    fn from(vec: Vec3) -> Self {
+        Self {
+            r: vec.x,
+            g: vec.y,
+            b: vec.z,
+            a: 1.0,
+        }
+    }
+}
+
+impl From<Vec4> for Color {
+    fn from(vec: Vec4) -> Self {
+        Self {
+            r: vec.x,
+            g: vec.y,
+            b: vec.z,
+            a: vec.w,
         }
     }
 }

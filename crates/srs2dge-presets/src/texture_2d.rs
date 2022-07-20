@@ -25,7 +25,7 @@ type Internal<I> = Shader<DefaultVertex, I>;
 //
 
 #[derive(Debug)]
-pub struct Texture2DShader<I = DefaultIndex>
+pub struct Texture2DShader<const FILTER: bool = false, I = DefaultIndex>
 where
     I: Index,
 {
@@ -36,7 +36,7 @@ where
     device: Arc<Device>,
 }
 
-impl<I> Texture2DShader<I>
+impl<const FILTER: bool, I> Texture2DShader<FILTER, I>
 where
     I: Index,
 {
@@ -79,14 +79,19 @@ where
     ) -> Self {
         let layout = Self::bind_group_layout(&target.get_device());
 
+        let filter = if FILTER {
+            FilterMode::Linear
+        } else {
+            FilterMode::Nearest
+        };
         let sampler = target.get_device().create_sampler(&SamplerDescriptor {
             label: label!(),
             address_mode_u: AddressMode::ClampToEdge,
             address_mode_v: AddressMode::ClampToEdge,
             address_mode_w: AddressMode::ClampToEdge,
-            mag_filter: FilterMode::Nearest,
-            min_filter: FilterMode::Nearest,
-            mipmap_filter: FilterMode::Nearest,
+            mag_filter: filter,
+            min_filter: filter,
+            mipmap_filter: filter,
             lod_min_clamp: 0.0,
             lod_max_clamp: f32::MAX,
             compare: None,
@@ -114,7 +119,7 @@ where
     }
 }
 
-impl<'a, I> Layout<'a> for Texture2DShader<I>
+impl<'a, const FILTER: bool, I> Layout<'a> for Texture2DShader<FILTER, I>
 where
     I: Index,
 {
@@ -138,7 +143,7 @@ where
                     binding: 1,
                     visibility: ShaderStages::FRAGMENT,
                     ty: BindingType::Texture {
-                        sample_type: TextureSampleType::Float { filterable: false },
+                        sample_type: TextureSampleType::Float { filterable: FILTER },
                         view_dimension: TextureViewDimension::D2,
                         multisampled: false,
                     },
@@ -147,7 +152,11 @@ where
                 BindGroupLayoutEntry {
                     binding: 2,
                     visibility: ShaderStages::FRAGMENT,
-                    ty: BindingType::Sampler(SamplerBindingType::NonFiltering),
+                    ty: BindingType::Sampler(if FILTER {
+                        SamplerBindingType::Filtering
+                    } else {
+                        SamplerBindingType::NonFiltering
+                    }),
                     count: None,
                 },
             ],
@@ -176,7 +185,7 @@ where
     }
 }
 
-impl<I> Deref for Texture2DShader<I>
+impl<const FILTER: bool, I> Deref for Texture2DShader<FILTER, I>
 where
     I: Index,
 {
@@ -187,7 +196,7 @@ where
     }
 }
 
-impl<I> DerefMut for Texture2DShader<I>
+impl<const FILTER: bool, I> DerefMut for Texture2DShader<FILTER, I>
 where
     I: Index,
 {

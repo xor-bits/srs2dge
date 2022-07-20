@@ -1,79 +1,69 @@
-use super::{
-    base::{WidgetBase, WidgetBaseBuilder},
-    Widget, WidgetBuilder,
+use super::{Widget, WidgetLayout};
+use crate::{
+    gui::geom::GuiGeom,
+    prelude::{GuiGraphics, GuiValue},
 };
-use crate::gui::{geom::GuiGeom, Gui};
 use srs2dge_core::{
     color::Color,
     prelude::{QuadMesh, TexturePosition},
+    target::Target,
 };
+use std::{any::Any, borrow::Cow};
 
 //
 
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Fill {
-    base: WidgetBase,
-}
-
-impl Widget for Fill {
-    fn base(&self) -> WidgetBase {
-        self.base
-    }
-}
-
-impl<'a> Fill {
-    pub fn builder() -> FillBuilder<'a> {
-        FillBuilder::new()
-    }
+    col: GuiValue<Color>,
+    tex: GuiValue<TexturePosition>,
 }
 
 //
 
-#[derive(Debug, Clone, Copy, Default)]
-pub struct FillBuilder<'a> {
-    base: WidgetBaseBuilder<'a>,
-    col: Color,
-    tex: TexturePosition,
-}
-
-impl<'a> FillBuilder<'a> {
+impl Fill {
     pub fn new() -> Self {
         Self::default()
     }
 
-    pub fn with_texture(mut self, tex: TexturePosition) -> Self {
-        self.tex = tex;
+    pub fn with_texture<T: Into<GuiValue<TexturePosition>>>(mut self, tex: T) -> Self {
+        self.set_texture(tex);
         self
     }
 
-    pub fn with_color(mut self, col: Color) -> Self {
-        self.col = col;
+    pub fn with_color<T: Into<GuiValue<Color>>>(mut self, col: T) -> Self {
+        self.set_color(col);
         self
     }
 
-    pub fn build(self, gui: &mut Gui) -> Fill {
-        let Self { base, col, tex } = self;
+    pub fn set_texture<T: Into<GuiValue<TexturePosition>>>(&mut self, tex: T) {
+        self.tex = tex.into()
+    }
 
-        let base = base.build();
+    pub fn set_color<T: Into<GuiValue<Color>>>(&mut self, col: T) {
+        self.col = col.into()
+    }
 
-        gui.texture_batcher
-            .push_with(GuiGeom::Quad(QuadMesh::new_top_left(
-                base.offset,
-                base.size,
-                col,
-                tex,
-            )));
+    pub fn get_texture(&mut self) -> Cow<TexturePosition> {
+        self.tex.get()
+    }
 
-        Fill { base }
+    pub fn get_color(&mut self) -> Cow<Color> {
+        self.col.get()
     }
 }
 
-impl<'a> WidgetBuilder<'a> for FillBuilder<'a> {
-    fn inner(&self) -> &WidgetBaseBuilder<'a> {
-        &self.base
+impl<T> Widget<T> for Fill {
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 
-    fn inner_mut(&mut self) -> &mut WidgetBaseBuilder<'a> {
-        &mut self.base
+    fn draw(&mut self, gui: &mut GuiGraphics, _: &Target, layout: WidgetLayout) {
+        gui.texture_batcher
+            .push_with(GuiGeom::Quad(QuadMesh::new_top_left(
+                layout.offset,
+                layout.size,
+                *self.get_color(),
+                *self.get_texture(),
+            )));
     }
 }

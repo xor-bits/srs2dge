@@ -1,20 +1,13 @@
-use self::{generated::GeneratedGui, renderer::GuiRenderer};
-use crate::{
-    event::PointerState,
-    prelude::{Root, WidgetBase},
-};
+use self::{generated::GeneratedGui, graphics::GuiGraphics};
+use crate::prelude::{GuiEvent, GuiEventTy, PointerState, Root, Widget, WidgetBase, WidgetLayout};
 use srs2dge_core::{
-    buffer::UniformBuffer,
-    glam::{Mat4, Vec2},
     main_game_loop::{event::Event, prelude::WindowState},
-    prelude::{Frame, Rect},
-    shader::Layout,
+    prelude::Frame,
     target::Target,
     texture::Texture,
     wgpu::TextureView,
-    winit::event::{DeviceId, ElementState, MouseButton, WindowEvent},
+    winit::event::{DeviceEvent, DeviceId, ElementState, WindowEvent},
 };
-use srs2dge_presets::{TextShader, Texture2DShader};
 use srs2dge_text::glyphs::Glyphs;
 use std::collections::HashMap;
 
@@ -22,136 +15,130 @@ use std::collections::HashMap;
 
 pub mod generated;
 pub mod geom;
+pub mod graphics;
 pub mod prelude;
 pub mod renderer;
 
 //
 
 #[derive(Debug)]
-pub struct Gui {
+pub struct Gui<T = ()> {
     ws: WindowState,
-
-    ubo: UniformBuffer,
-    texture_shader: Texture2DShader,
-    text_shader: TextShader,
-    pub texture_batcher: GuiRenderer,
-    pub text_batcher: GuiRenderer,
-
-    texture: Option<Texture>,
-    pub(crate) glyphs: Glyphs,
-
     pointers: HashMap<DeviceId, PointerState>,
+
+    graphics: GuiGraphics,
+
+    root: WidgetBase<T>,
+    state: T,
 }
 
 //
 
-impl Gui {
-    pub fn new(target: &Target) -> Self {
+impl<T> Gui<T> {
+    pub fn new(target: &Target, state: T) -> Self {
         Self {
             ws: WindowState::new(&target.get_window().unwrap()), // TODO: allow headless
-
-            ubo: UniformBuffer::new(target, 1),
-            texture_shader: Texture2DShader::new(target),
-            text_shader: TextShader::new(target),
-            texture_batcher: GuiRenderer::default(),
-            text_batcher: GuiRenderer::default(),
-
-            texture: None,
-            glyphs: Glyphs::new_with_fallback_bytes(
-                target,
-                Rect::new(512, 512),
-                None,
-                srs2dge_res::font::ROBOTO,
-            )
-            .unwrap(),
-
             pointers: Default::default(),
+
+            graphics: GuiGraphics::new(target),
+
+            root: Root.into_widget(),
+            state,
         }
     }
 
     /// default texture if custom one is not provided
     pub fn texture(&mut self, target: &Target) -> &Texture {
-        Self::texture_inner(&mut self.texture, target)
+        self.graphics.get_texture(target)
     }
 
     /// SDF glyph texture
     pub fn glyphs(&mut self) -> &mut Glyphs {
-        &mut self.glyphs
+        &mut self.graphics.glyphs
     }
 
     /// handle gui events
     pub fn event(&mut self, event: Event<'static>) {
         self.ws.event(&event);
 
-        match event {
+        let event = match event {
+            Event::DeviceEvent {
+                event: DeviceEvent::Text { codepoint },
+                ..
+            } => Some(GuiEvent::new(GuiEventTy::Text(codepoint))),
+
+            Event::DeviceEvent {
+                event: DeviceEvent::Key(key),
+                ..
+            } => Some(GuiEvent::new(GuiEventTy::Key(key))),
+
             Event::WindowEvent { window_id, event } if Some(window_id) == self.ws.id => match event
             {
                 WindowEvent::CursorMoved {
                     device_id,
                     position,
                     ..
-                } => self
-                    .pointers
-                    .entry(device_id)
-                    .or_default()
-                    .moved_physical(position, &self.ws),
+                } => {
+                    let pointer = self.pointers.entry(device_id).or_default();
+                    pointer.moved_physical(position, &self.ws);
+                    Some(GuiEvent::new(GuiEventTy::Pointer(*pointer)))
+                }
                 WindowEvent::MouseInput {
                     device_id,
                     state: ElementState::Pressed,
-                    button: MouseButton::Left,
+                    button,
                     ..
-                } => self.pointers.entry(device_id).or_default().pressed(),
+                } => {
+                    let pointer = self.pointers.entry(device_id).or_default();
+                    pointer.pressed(button);
+                    Some(GuiEvent::new(GuiEventTy::Pointer(*pointer)))
+                }
                 WindowEvent::MouseInput {
                     device_id,
                     state: ElementState::Released,
-                    button: MouseButton::Left,
+                    button,
                     ..
-                } => self.pointers.entry(device_id).or_default().released(),
-                _ => {}
+                } => {
+                    let pointer = self.pointers.entry(device_id).or_default();
+                    pointer.released(button);
+                    Some(GuiEvent::new(GuiEventTy::Pointer(*pointer)))
+                }
+                _ => None,
             },
-            _ => {}
+            _ => None,
+        };
+
+        if let Some(event) = event {
+            self.root.event(
+                &mut self.state,
+                WidgetLayout::from_window_state(&self.ws),
+                event,
+            );
         }
+
+        self.update_pointers();
     }
 
-    /// root widget
+    /// the root widget
     ///
-    /// start widget tree from this
-    pub fn root(&mut self) -> Root {
-        Root::new(&self.ws)
+    /// push (or expand) subwidgets here
+    pub fn root(&mut self) -> &mut WidgetBase<T> {
+        &mut self.root
     }
 
     /// generate drawable geometry
-    pub fn generate(&mut self, target: &mut Target, frame: &mut Frame) -> GeneratedGui {
-        self.update_pointers();
-        let texture = Self::texture_inner(&mut self.texture, target);
-        Self::upload_ubo(&self.ubo, &self.ws, target, frame);
-        Self::generate_inner(
-            &self.ubo,
-            (&mut self.texture_batcher, &mut self.text_batcher),
-            (&self.texture_shader, &self.text_shader),
-            target,
-            frame,
-            (texture, &self.glyphs),
-        )
+    pub fn draw(&mut self, target: &mut Target, frame: &mut Frame) -> GeneratedGui {
+        self.draw_inner(target, frame, None)
     }
 
     /// generate drawable geometry with custom texture
-    pub fn generate_with(
+    pub fn draw_with(
         &mut self,
         target: &mut Target,
         frame: &mut Frame,
         texture: &TextureView,
     ) -> GeneratedGui {
-        self.update_pointers();
-        Self::upload_ubo(&self.ubo, &self.ws, target, frame);
-        Self::generate_inner(
-            &self.ubo,
-            (&mut self.texture_batcher, &mut self.text_batcher),
-            (&self.texture_shader, &self.text_shader),
-            target,
-            frame,
-            (texture, &self.glyphs),
-        )
+        self.draw_inner(target, frame, Some(texture))
     }
 
     /// gui internal `WindowState`
@@ -159,70 +146,18 @@ impl Gui {
         &self.ws
     }
 
-    /// iterator to all cursors, touch points, ...
-    pub fn pointers(&self) -> impl Iterator<Item = (DeviceId, PointerState)> + '_ {
-        self.pointers.iter().map(|(id, state)| (*id, *state))
-    }
+    fn draw_inner(
+        &mut self,
+        target: &mut Target,
+        frame: &mut Frame,
+        texture: Option<&TextureView>,
+    ) -> GeneratedGui {
+        let layout = WidgetLayout::from_window_state(&self.ws);
+        self.root
+            .event(&mut self.state, layout, GuiEvent::default());
+        self.root.draw(&mut self.graphics, target, layout);
 
-    /// all of the pointers that pressed and released in this area
-    pub fn clicked(&self, area: WidgetBase) -> impl Iterator<Item = DeviceId> + '_ {
-        self.pointers()
-            .filter(move |(_, pointer)| match pointer {
-                PointerState::Release { initial, now } => {
-                    let bl = area.offset;
-                    let tr = area.offset + area.size;
-
-                    (bl.x..tr.x).contains(&initial.x)
-                        && (bl.y..tr.y).contains(&initial.y)
-                        && (bl.x..tr.x).contains(&now.x)
-                        && (bl.y..tr.y).contains(&now.y)
-                }
-                _ => false,
-            })
-            .map(|(id, _)| id)
-    }
-
-    /// all of the pointers is in this area
-    pub fn hovered(&self, area: WidgetBase) -> impl Iterator<Item = DeviceId> + '_ {
-        self.pointers()
-            .filter(move |(_, pointer)| {
-                let now = match pointer {
-                    PointerState::Release { now, .. } => now,
-                    PointerState::Hover { now } => now,
-                    PointerState::Hold { now, .. } => now,
-                };
-
-                let bl = area.offset;
-                let tr = area.offset + area.size;
-
-                (bl.x..tr.x).contains(&now.x) && (bl.y..tr.y).contains(&now.y)
-            })
-            .map(|(id, _)| id)
-    }
-
-    /// all of the pointers that started dragging from this area
-    ///
-    /// returns an iterator of those pointers' current locations
-    pub fn dragged(&self, area: WidgetBase) -> impl Iterator<Item = (DeviceId, Vec2, Vec2)> + '_ {
-        self.pointers().filter_map(move |(id, pointer)| {
-            let (initial, now) = match pointer {
-                PointerState::Hold { initial, now } => (initial, now),
-                PointerState::Release { .. } | PointerState::Hover { .. } => return None,
-            };
-
-            let bl = area.offset;
-            let tr = area.offset + area.size;
-
-            if (bl.x..tr.x).contains(&initial.x) && (bl.y..tr.y).contains(&initial.y) {
-                Some((id, initial, now))
-            } else {
-                None
-            }
-        })
-    }
-
-    pub fn get_pointer_state(&self, id: DeviceId) -> Option<PointerState> {
-        self.pointers.get(&id).copied()
+        self.graphics.draw(target, frame, &self.ws, texture)
     }
 
     /// clear pointer `released` states
@@ -230,62 +165,5 @@ impl Gui {
         self.pointers
             .values_mut()
             .for_each(|pointer| pointer.update());
-    }
-
-    fn texture_inner<'a>(texture: &'a mut Option<Texture>, target: &Target) -> &'a Texture {
-        if texture.is_none() {
-            *texture = Some(Texture::new_rgba_with(
-                target,
-                &srs2dge_core::image::load_from_memory(srs2dge_res::texture::EMPTY)
-                    .unwrap()
-                    .to_rgba8(),
-            ));
-        }
-
-        texture.as_ref().unwrap()
-    }
-
-    fn upload_ubo<'a>(
-        ubo: &'a UniformBuffer,
-        ws: &WindowState,
-        target: &mut Target,
-        frame: &mut Frame,
-    ) {
-        let mvp = Mat4::orthographic_rh(
-            0.0,
-            ws.size.width as f32,
-            0.0,
-            ws.size.height as f32,
-            -1.0,
-            1.0,
-        );
-        ubo.upload(target, frame, &[mvp]);
-    }
-
-    // partial borrows are not yet possible
-    fn generate_inner<'a>(
-        ubo: &'a UniformBuffer,
-        (texture_batcher, text_batcher): (&'a mut GuiRenderer, &'a mut GuiRenderer),
-        (texture_shader, text_shader): (&'a Texture2DShader, &'a TextShader),
-        target: &mut Target,
-        frame: &mut Frame,
-        (texture, glyphs): (&TextureView, &TextureView),
-    ) -> GeneratedGui<'a> {
-        let (texture_vbo, texture_ibo, texture_indices) = texture_batcher.generate(target, frame);
-        let (text_vbo, text_ibo, text_indices) = text_batcher.generate(target, frame);
-
-        GeneratedGui {
-            texture_shader,
-            texture_vbo,
-            texture_ibo,
-            texture_indices,
-            texture_bindings: texture_shader.bind_group((ubo, texture)),
-
-            text_shader,
-            text_vbo,
-            text_ibo,
-            text_indices,
-            text_bindings: text_shader.bind_group((ubo, glyphs)),
-        }
     }
 }

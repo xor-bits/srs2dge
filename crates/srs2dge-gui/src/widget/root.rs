@@ -1,24 +1,15 @@
-use super::{Widget, WidgetBase};
-use srs2dge_core::main_game_loop::prelude::WindowState;
+use super::Widget;
+use std::any::Any;
 
 //
 
-pub struct Root {
-    base: WidgetBase,
-}
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Root;
 
 //
 
-impl Widget for Root {
-    fn base(&self) -> WidgetBase {
-        self.base
-    }
-}
-
-impl Root {
-    pub(crate) fn new(ws: &WindowState) -> Self {
-        Self {
-            base: WidgetBase::new_root(ws),
-        }
+impl<T> Widget<T> for Root {
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }

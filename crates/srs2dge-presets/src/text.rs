@@ -11,7 +11,7 @@ use std::{
 
 //
 
-type Internal<I> = Texture2DShader<I>;
+type Internal<I> = Texture2DShader<true, I>;
 
 //
 

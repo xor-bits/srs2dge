@@ -1798,6 +1798,7 @@ name = "srs2dge-gui"
 version = "0.2.0"
 dependencies = [
  "log",
+ "rand",
  "srs2dge-core",
  "srs2dge-presets",
  "srs2dge-res",

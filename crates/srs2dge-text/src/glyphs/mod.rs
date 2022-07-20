@@ -56,7 +56,7 @@ impl Glyphs {
     pub fn new(target: &Target, dim: Rect, sdf: Option<u16>, fonts: Fonts) -> Self {
         Self {
             texture: Texture::new_grey(target, dim),
-            packer: Packer::new(dim),
+            packer: Packer::new(dim).with_padding(2),
 
             fonts,
             glyphs: Default::default(),
@@ -153,7 +153,7 @@ impl Glyphs {
 
             let rect = self
                 .packer
-                .push(Rect::new(metrics.width as _, metrics.height as _))
+                .push(Rect::new(metrics.width as u32, metrics.height as u32))
                 .ok_or("Out of space")?;
 
             let dim = self.packer.area();

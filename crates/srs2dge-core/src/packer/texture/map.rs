@@ -50,6 +50,8 @@ pub struct TextureAtlasMapBuilder<K> {
     // side length limit
     limit: u16,
 
+    padding: u8,
+
     images: BinaryHeap<SortBySize<K>>,
 }
 
@@ -76,6 +78,7 @@ impl<K> Default for TextureAtlasMapBuilder<K> {
         Self {
             images: Default::default(),
             limit: u16::MAX,
+            padding: 2,
         }
     }
 }
@@ -88,6 +91,12 @@ impl<K> TextureAtlasMapBuilder<K> {
     /// side length limit
     pub fn with_limit(mut self, limit: u16) -> Self {
         self.limit = limit;
+        self
+    }
+
+    /// texture padding
+    pub fn with_padding(mut self, padding: u8) -> Self {
+        self.padding = padding;
         self
     }
 
@@ -110,7 +119,9 @@ where
     K: Eq + Hash + Clone,
 {
     pub fn build(mut self, target: &Target) -> TextureAtlasMap<K> {
-        let mut builder = TextureAtlasBuilder::new();
+        let mut builder = TextureAtlasBuilder::new()
+            .with_padding(self.padding)
+            .with_limit(self.limit);
         let mut images = vec![];
 
         while let Some(SortBySize { key, image }) = self.images.pop() {

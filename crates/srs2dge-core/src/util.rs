@@ -102,3 +102,13 @@ macro_rules! unwrap_or_return {
         }
     };
 }
+
+#[macro_export]
+macro_rules! captures {
+    ([$($capt:ident),*] $closure:expr) => {
+        {
+            $(let $capt = $capt.clone();)*
+            $closure
+        }
+    };
+}

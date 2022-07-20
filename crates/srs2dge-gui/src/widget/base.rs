@@ -1,80 +1,129 @@
-use super::WidgetBuilder;
-use crate::prelude::{GuiCalc, INHERIT_OFFSET, INHERIT_SIZE};
-use srs2dge_core::{glam::Vec2, main_game_loop::prelude::WindowState};
-use std::fmt::Debug;
+use srs2dge_core::target::Target;
+
+use super::{Widget, WidgetLayout};
+use crate::prelude::{GuiCalcOffset, GuiCalcSize, GuiEvent, GuiGraphics, GuiValue};
+use core::fmt;
+use std::{any::type_name, fmt::Debug};
 
 //
 
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
-pub struct WidgetBase {
-    pub size: Vec2,
-    pub offset: Vec2,
-}
+pub struct WidgetBase<T = ()> {
+    widget: Box<dyn Widget<T>>,
+    name: &'static str,
+    subwidgets: Vec<WidgetBase<T>>,
 
-impl WidgetBase {
-    pub fn new_root(ws: &WindowState) -> Self {
-        Self {
-            size: Vec2::new(ws.size.width as f32, ws.size.height as f32),
-            offset: Vec2::ZERO,
-        }
-    }
-
-    pub fn new() -> Self {
-        Self::builder().build()
-    }
-
-    pub fn builder<'a>() -> WidgetBaseBuilder<'a> {
-        WidgetBaseBuilder::new()
-    }
+    pub size: GuiValue<GuiCalcSize>,
+    pub offset: GuiValue<GuiCalcOffset>,
+    // layout: WidgetLayout,
 }
 
 //
 
-#[derive(Clone, Copy)]
-pub struct WidgetBaseBuilder<'a> {
-    pub base: WidgetBase,
-    pub size: &'a dyn GuiCalc,
-    pub offset: &'a dyn GuiCalc,
-}
-
-//
-
-impl<'a> Debug for WidgetBaseBuilder<'a> {
+impl<T> Debug for WidgetBase<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("WidgetBaseBuilder")
-            .field("base", &self.base)
+        f.debug_struct("WidgetBase")
+            .field(
+                "widget",
+                &WidgetDebug {
+                    name: self.name,
+                    widget: self.widget.as_ref(),
+                },
+            )
+            .field("subwidgets", &self.subwidgets)
             .finish()
     }
 }
 
-impl<'a> Default for WidgetBaseBuilder<'a> {
-    fn default() -> Self {
+impl<T> WidgetBase<T> {
+    pub fn new<W>(widget: W) -> Self
+    where
+        W: Widget<T> + 'static,
+    {
+        Self::new_with(widget, vec![])
+    }
+
+    pub fn new_with<W, I>(widget: W, subwidgets: I) -> Self
+    where
+        W: Widget<T> + 'static,
+        I: IntoIterator<Item = WidgetBase<T>>,
+    {
+        Self::new_with_vec(widget, subwidgets.into_iter().collect())
+    }
+
+    pub fn new_with_vec<W>(widget: W, subwidgets: Vec<WidgetBase<T>>) -> Self
+    where
+        W: Widget<T> + 'static,
+    {
         Self {
-            base: Default::default(),
-            size: &INHERIT_SIZE,
-            offset: &INHERIT_OFFSET,
+            widget: Box::new(widget),
+            name: type_name::<W>(),
+            subwidgets,
+
+            size: Default::default(),
+            offset: Default::default(),
+            // layout: None,
         }
     }
-}
 
-impl<'a> WidgetBuilder<'a> for WidgetBaseBuilder<'a> {
-    fn inner(&self) -> &WidgetBaseBuilder<'a> {
+    pub fn push(&mut self, subwidget: WidgetBase<T>) {
+        self.subwidgets.push(subwidget)
+    }
+
+    pub fn extend<I: IntoIterator<Item = WidgetBase<T>>>(&mut self, subwidgets: I) {
+        self.subwidgets.extend(subwidgets)
+    }
+
+    pub fn try_as<W>(&self) -> Option<&W>
+    where
+        W: Widget<T> + 'static,
+    {
+        self.widget.as_any().downcast_ref()
+    }
+
+    pub fn calculate_layout(&mut self, parent_layout: WidgetLayout) -> WidgetLayout {
+        let layout = self
+            .widget
+            .layout(parent_layout, &self.size.get(), &self.offset.get());
+        // layout.size = layout.size.floor();
+        // layout.offset = layout.offset.floor();
+        layout
+    }
+
+    pub fn event(
+        &mut self,
+        state: &mut T,
+        parent_layout: WidgetLayout,
+        event: GuiEvent,
+    ) -> GuiEvent {
+        let layout = self.calculate_layout(parent_layout);
+        self.widget
+            .event_recurse(&mut self.subwidgets[..], state, layout, event)
+    }
+
+    pub fn draw(&mut self, gui: &mut GuiGraphics, target: &Target, parent_layout: WidgetLayout) {
+        let layout = self.calculate_layout(parent_layout);
+        self.widget
+            .draw_recurse(&mut self.subwidgets[..], gui, target, layout)
+    }
+
+    pub fn with_size<C: Into<GuiValue<GuiCalcSize>>>(mut self, size: C) -> Self {
+        self.size = size.into();
         self
     }
 
-    fn inner_mut(&mut self) -> &mut WidgetBaseBuilder<'a> {
+    pub fn with_offset<C: Into<GuiValue<GuiCalcOffset>>>(mut self, offset: C) -> Self {
+        self.offset = offset.into();
         self
     }
 }
 
-impl<'a> WidgetBaseBuilder<'a> {
-    pub fn new() -> Self {
-        Self::default()
-    }
+struct WidgetDebug<'a, T> {
+    name: &'static str,
+    widget: &'a dyn Widget<T>,
+}
 
-    pub fn build(self) -> WidgetBase {
-        let size = self.size.reduce(&(self.base, Vec2::ZERO));
-        let offset = self.offset.reduce(&(self.base, size));
-        WidgetBase { size, offset }
+impl<'a, T> Debug for WidgetDebug<'a, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.widget.debug(self.name, f)
     }
 }
