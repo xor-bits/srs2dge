@@ -1,5 +1,6 @@
 use crate::prelude::Lerp;
 use std::{
+    ops::Deref,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, RwLock,
@@ -61,12 +62,12 @@ impl<T> Animated<T> {
         T: Lerp + Clone,
     {
         let animator = self.animator.state.read().unwrap();
-        match *animator {
+        match animator.deref() {
             State::NotStarted => self.init.clone(),
             State::Running(started) => self.get_at_tp(started.elapsed()),
             State::RunningReverse(started) => self.get_at_tp_rev(started.elapsed()),
-            State::Stopped(elapsed) => self.get_at_tp(elapsed),
-            State::StoppedReverse(elapsed) => self.get_at_tp_rev(elapsed),
+            State::Stopped(elapsed) => self.get_at_tp(*elapsed),
+            State::StoppedReverse(elapsed) => self.get_at_tp_rev(*elapsed),
         }
     }
 
@@ -174,7 +175,7 @@ impl Animator {
     /// triggers the animator or keeps it running
     pub fn trigger(&self) {
         let mut lock = self.state.write().unwrap();
-        match *lock {
+        match lock.deref() {
             State::NotStarted
             | State::RunningReverse(_)
             | State::Stopped(_)
@@ -191,7 +192,7 @@ impl Animator {
     /// triggers the animator or keeps it running
     pub fn trigger_rev(&self) {
         let mut lock = self.state.write().unwrap();
-        match *lock {
+        match lock.deref() {
             State::NotStarted
             | State::Running(_)
             | State::Stopped(_)
@@ -208,12 +209,12 @@ impl Animator {
     /// stops the animator
     pub fn stop(&self) {
         let mut lock = self.state.write().unwrap();
-        *lock = match *lock {
+        *lock = match lock.deref() {
             State::NotStarted => State::NotStarted,
             State::Running(r) => State::Stopped(r.elapsed()),
             State::RunningReverse(r) => State::StoppedReverse(r.elapsed()),
-            State::Stopped(s) => State::Stopped(s),
-            State::StoppedReverse(s) => State::StoppedReverse(s),
+            State::Stopped(s) => State::Stopped(*s),
+            State::StoppedReverse(s) => State::StoppedReverse(*s),
         };
     }
 
