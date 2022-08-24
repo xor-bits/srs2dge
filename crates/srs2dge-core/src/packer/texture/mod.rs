@@ -2,11 +2,13 @@ use super::{
     packer2d::Packer,
     rect::{PositionedRect, Rect},
 };
-use crate::{target::Target, texture::Texture};
+use crate::{
+    target::Target,
+    texture::{serde::SerializeableTexture, Texture},
+};
 use image::RgbaImage;
-use rapid_qoi::{Colors, Qoi};
-use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
-use std::ops::Deref;
+use serde::{Deserialize, Serialize};
+use std::{any::type_name, ops::Deref};
 use wgpu::TextureUsages;
 
 //
@@ -33,16 +35,19 @@ pub struct TextureAtlasBuilder {
     limit: u16,
 
     padding: u8,
+
+    label: Option<String>,
 }
 
 #[derive(Debug)]
 pub struct TextureAtlas {
     texture: Texture<USAGE>,
+    label: Option<String>,
 }
 
-#[derive(Debug, Clone)]
-pub struct TextureAtlasFile {
-    image: RgbaImage,
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+pub struct SerializeableTextureAtlas {
+    inner: SerializeableTexture,
 }
 
 //
@@ -65,7 +70,7 @@ impl<T> Reference<T> for &T {
     }
 }
 
-impl Default for TextureAtlasBuilder {
+impl<'a> Default for TextureAtlasBuilder {
     fn default() -> Self {
         let mut packer = Packer::default();
         let padding = 2;
@@ -74,6 +79,7 @@ impl Default for TextureAtlasBuilder {
             packer,
             limit: u16::MAX,
             padding,
+            label: None,
         }
     }
 }
@@ -103,6 +109,11 @@ impl TextureAtlasBuilder {
         self
     }
 
+    pub fn with_label(mut self, label: Option<String>) -> Self {
+        self.label = label;
+        self
+    }
+
     pub fn push(&mut self, rect: Rect) -> Option<PositionedRect> {
         self.packer.push_until(rect, self.limit)
     }
@@ -113,6 +124,7 @@ impl TextureAtlasBuilder {
         I: IntoIterator<Item = (R, PositionedRect)>,
     {
         let dim = self.packer.area();
+        let label = self.label;
 
         // combine all images into one
         let mut combined = RgbaImage::new(dim.width, dim.height);
@@ -122,9 +134,18 @@ impl TextureAtlasBuilder {
             }
         }
 
-        let texture = Texture::new_rgba_with(target, &combined);
+        let texture = Texture::new_rgba_with(
+            target,
+            &combined,
+            Some(
+                label
+                    .as_ref()
+                    .map(|s| s.as_str())
+                    .unwrap_or(type_name::<Self>()),
+            ),
+        );
 
-        TextureAtlas { texture }
+        TextureAtlas { texture, label }
     }
 }
 
@@ -133,9 +154,25 @@ impl TextureAtlas {
         TextureAtlasBuilder::new()
     }
 
-    pub async fn convert(&self, target: &Target) -> TextureAtlasFile {
-        let image = self.texture.read(target).await.into_rgba8();
-        TextureAtlasFile { image }
+    pub async fn download(&self, target: &Target) -> SerializeableTextureAtlas {
+        let inner = self.texture.download(target, self.label.clone()).await;
+        SerializeableTextureAtlas { inner }
+    }
+
+    pub fn upload(from: &SerializeableTextureAtlas, target: &Target) -> Self {
+        from.upload(target)
+    }
+}
+
+impl SerializeableTextureAtlas {
+    pub async fn download(from: &TextureAtlas, target: &Target) -> Self {
+        from.download(target).await
+    }
+
+    pub fn upload(&self, target: &Target) -> TextureAtlas {
+        let texture = self.inner.upload(target);
+        let label = self.inner.label.clone();
+        TextureAtlas { texture, label }
     }
 }
 
@@ -144,70 +181,5 @@ impl Deref for TextureAtlas {
 
     fn deref(&self) -> &Self::Target {
         &self.texture
-    }
-}
-
-impl TextureAtlasFile {
-    pub fn convert(&self, target: &Target) -> TextureAtlas {
-        let texture = Texture::new_rgba_with(target, &self.image);
-        TextureAtlas { texture }
-    }
-}
-
-impl Serialize for TextureAtlasFile {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let qoi = Qoi {
-            width: self.image.width(),
-            height: self.image.height(),
-            colors: Colors::Rgba,
-        };
-
-        let image = qoi
-            .encode_alloc(self.image.as_raw())
-            .map_err(serde::ser::Error::custom)?;
-
-        serializer.serialize_bytes(&image)
-    }
-}
-
-impl<'de> Deserialize<'de> for TextureAtlasFile {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let image = deserializer.deserialize_byte_buf(V)?;
-
-        struct V;
-
-        impl<'de> Visitor<'de> for V {
-            type Value = Vec<u8>;
-
-            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                write!(f, "byte array")
-            }
-
-            fn visit_bytes<E>(self, v: &[u8]) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                Ok(v.to_owned())
-            }
-
-            fn visit_byte_buf<E>(self, v: Vec<u8>) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                Ok(v)
-            }
-        }
-
-        let (qoi, image) = Qoi::decode_alloc(&image).map_err(serde::de::Error::custom)?;
-
-        Ok(Self {
-            image: RgbaImage::from_raw(qoi.width, qoi.height, image).unwrap(),
-        })
     }
 }

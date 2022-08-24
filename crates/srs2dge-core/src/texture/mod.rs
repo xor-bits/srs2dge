@@ -16,6 +16,7 @@ use wgpu::{
 
 pub mod pos;
 pub mod prelude;
+pub mod serde;
 
 //
 
@@ -51,38 +52,45 @@ pub type RenderTargetTexture = Texture<
 //
 
 impl<const USAGE: u32> Texture<USAGE> {
-    pub fn new(target: &Target, format: TextureFormat, dim: Rect) -> Self {
-        Self::new_inner(target, format, dim, None)
+    pub fn new(target: &Target, format: TextureFormat, dim: Rect, label: Option<&str>) -> Self {
+        Self::new_inner(target, format, dim, None, label)
     }
 
-    pub fn new_rgba(target: &Target, dim: Rect) -> Self {
-        Self::new_inner(target, TextureFormat::Rgba8Unorm, dim, None)
+    pub fn new_rgba(target: &Target, dim: Rect, label: Option<&str>) -> Self {
+        Self::new_inner(target, TextureFormat::Rgba8Unorm, dim, None, label)
     }
 
-    pub fn new_rgba_with(target: &Target, data: &RgbaImage) -> Self {
+    pub fn new_rgba_with(target: &Target, data: &RgbaImage, label: Option<&str>) -> Self {
         Self::new_inner(
             target,
             TextureFormat::Rgba8Unorm,
             Rect::from(data.dimensions()),
             Some(data.as_raw()),
+            label,
         )
     }
 
-    pub fn new_grey(target: &Target, dim: Rect) -> Self {
-        Self::new_inner(target, TextureFormat::R8Unorm, dim, None)
+    pub fn new_grey(target: &Target, dim: Rect, label: Option<&str>) -> Self {
+        Self::new_inner(target, TextureFormat::R8Unorm, dim, None, label)
     }
 
-    pub fn new_grey_with(target: &Target, data: &GrayImage) -> Self {
+    pub fn new_grey_with(target: &Target, data: &GrayImage, label: Option<&str>) -> Self {
         Self::new_inner(
             target,
             TextureFormat::R8Unorm,
             Rect::from(data.dimensions()),
             Some(data.as_raw()),
+            label,
         )
     }
 
-    pub fn new_format(target: &Target, dim: Rect, format: TextureFormat) -> Self {
-        Self::new_inner(target, format, dim, None)
+    pub fn new_format(
+        target: &Target,
+        dim: Rect,
+        format: TextureFormat,
+        label: Option<&str>,
+    ) -> Self {
+        Self::new_inner(target, format, dim, None, label)
     }
 
     pub fn get_dim(&self) -> Rect {
@@ -201,9 +209,15 @@ impl<const USAGE: u32> Texture<USAGE> {
         }
     }
 
-    fn new_inner(target: &Target, format: TextureFormat, dim: Rect, data: Option<&[u8]>) -> Self {
+    fn new_inner(
+        target: &Target,
+        format: TextureFormat,
+        dim: Rect,
+        data: Option<&[u8]>,
+        label: Option<&str>,
+    ) -> Self {
         let desc = TextureDescriptor {
-            label: label!(),
+            label,
             size: dim.into(),
             mip_level_count: 1,
             sample_count: 1,

@@ -7,7 +7,7 @@ use srs2dge_core::{
     texture::Texture,
     wgpu::TextureUsages,
 };
-use std::{collections::HashMap, ops::Deref};
+use std::{any::type_name, collections::HashMap, ops::Deref};
 
 //
 
@@ -53,9 +53,15 @@ impl Glyphs {
     /// `sdf` enables or disables the optional SDF
     /// renderer mode. SDF rendering requires the
     /// `SdfShader` instead of `TextShader`.
-    pub fn new(target: &Target, dim: Rect, sdf: Option<u16>, fonts: Fonts) -> Self {
+    pub fn new(
+        target: &Target,
+        dim: Rect,
+        sdf: Option<u16>,
+        fonts: Fonts,
+        label: Option<&str>,
+    ) -> Self {
         Self {
-            texture: Texture::new_grey(target, dim),
+            texture: Texture::new_grey(target, dim, Some(label.unwrap_or(type_name::<Self>()))),
             packer: Packer::new(dim).with_padding(2),
 
             fonts,
@@ -75,8 +81,14 @@ impl Glyphs {
     /// `sdf` enables or disables the optional SDF
     /// renderer mode. SDF rendering requires the
     /// `SdfShader` instead of `TextShader`.
-    pub fn new_with_fallback(target: &Target, dim: Rect, sdf: Option<u16>, fallback: Font) -> Self {
-        Self::new(target, dim, sdf, Fonts::new(fallback))
+    pub fn new_with_fallback(
+        target: &Target,
+        dim: Rect,
+        sdf: Option<u16>,
+        fallback: Font,
+        label: Option<&str>,
+    ) -> Self {
+        Self::new(target, dim, sdf, Fonts::new(fallback), label)
     }
 
     /// Creates a dynamic glyph atlas map thingy.
@@ -93,12 +105,14 @@ impl Glyphs {
         dim: Rect,
         sdf: Option<u16>,
         fallback_bytes: &[u8],
+        label: Option<&str>,
     ) -> Result<Self, &'static str> {
         Ok(Self::new(
             target,
             dim,
             sdf,
             Fonts::new_bytes(fallback_bytes)?,
+            label,
         ))
     }
 

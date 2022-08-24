@@ -5,6 +5,7 @@ use std::{any::Any, fmt::Debug};
 
 //
 
+#[derive(Clone)]
 pub struct DragZone<T> {
     blocking: bool,
     button: Option<MouseButton>,
@@ -25,6 +26,30 @@ pub enum DragZoneFilter {
 }
 
 pub type Handler<T> = Box<dyn FnMut(&mut T, Vec2)>;
+
+pub trait HandlerB<I, O> {
+    fn call(&mut self, i: I) -> O;
+
+    fn clone(&self) -> Box<dyn HandlerB<I, O>>;
+}
+
+impl<A, O, F: FnMut(A) -> O + Clone + 'static> HandlerB<(A,), O> for F {
+    fn call(&mut self, i: (A,)) -> O {
+        (self)(i.0)
+    }
+    fn clone(&self) -> Box<dyn HandlerB<(A,), O>> {
+        Box::new(self.clone())
+    }
+}
+
+impl<A, B, O, F: FnMut(A, B) -> O + Clone + 'static> HandlerB<(A, B), O> for F {
+    fn call(&mut self, i: (A, B)) -> O {
+        (self)(i.0, i.1)
+    }
+    fn clone(&self) -> Box<dyn HandlerB<(A, B), O>> {
+        Box::new(self.clone())
+    }
+}
 
 //
 
@@ -116,6 +141,10 @@ impl<T: 'static> Widget<T> for DragZone<T> {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+
+    fn clone_widget(&self) -> Box<dyn Widget<T>> {
+        Box::new(self.clone())
     }
 }
 

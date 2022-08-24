@@ -29,6 +29,7 @@ impl App {
             &image::load_from_memory(res::texture::RUST)
                 .unwrap()
                 .to_rgba8(),
+            Some("Main Texture"),
         );
 
         let quad = QuadMesh::new_centered(

@@ -11,6 +11,9 @@ pub use crate::gizmos::*;
 #[cfg(feature = "gui")]
 pub use crate::gui::*;
 
+#[cfg(feature = "gui-derive")]
+pub use crate::gui_derive::*;
+
 #[cfg(feature = "presets")]
 pub use crate::presets::*;
 

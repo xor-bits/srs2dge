@@ -1,3 +1,4 @@
+use crate::util::present_mode_from_env;
 use std::{
     ops::{Deref, DerefMut},
     sync::Arc,
@@ -7,8 +8,6 @@ use wgpu::{
     TextureFormat, TextureUsages,
 };
 use winit::window::Window;
-
-use crate::util::present_mode_from_env;
 
 //
 
@@ -62,7 +61,7 @@ impl ISurface {
             device,
             surface,
             format,
-            present_mode: present_mode_from_env().unwrap_or(PresentMode::Mailbox),
+            present_mode: present_mode_from_env().unwrap_or(PresentMode::AutoVsync),
 
             width: 0, // properly configured in just a bit
             height: 0,

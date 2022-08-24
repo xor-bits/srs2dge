@@ -43,6 +43,7 @@ impl GuiGraphics {
                 Rect::new(512, 512),
                 None,
                 srs2dge_res::font::ROBOTO,
+                Some("GuiGlyphs"),
             )
             .unwrap(),
         }
@@ -89,6 +90,7 @@ impl GuiGraphics {
                 &srs2dge_core::image::load_from_memory(srs2dge_res::texture::EMPTY)
                     .unwrap()
                     .to_rgba8(),
+                Some("GuiFallbackRGBATexture"),
             )
         })
     }

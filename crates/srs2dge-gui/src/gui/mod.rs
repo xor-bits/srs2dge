@@ -1,5 +1,9 @@
-use self::{generated::GeneratedGui, graphics::GuiGraphics};
-use crate::prelude::{GuiEvent, GuiEventTy, PointerState, Root, Widget, WidgetBase, WidgetLayout};
+use self::{
+    generated::GeneratedGui,
+    graphics::GuiGraphics,
+    layout::{GuiLayout, WidgetLayout},
+};
+use crate::prelude::{GuiDraw, GuiEvent, GuiEventTy, PointerState, Widget};
 use srs2dge_core::{
     main_game_loop::{event::Event, prelude::WindowState},
     prelude::Frame,
@@ -9,41 +13,48 @@ use srs2dge_core::{
     winit::event::{DeviceEvent, DeviceId, ElementState, WindowEvent},
 };
 use srs2dge_text::glyphs::Glyphs;
-use std::collections::HashMap;
+use std::{
+    any::{Any, TypeId},
+    collections::HashMap,
+};
+use taffy::prelude::{Number, Size};
 
 //
 
 pub mod generated;
 pub mod geom;
 pub mod graphics;
+pub mod layout;
 pub mod prelude;
 pub mod renderer;
 
 //
 
 #[derive(Debug)]
-pub struct Gui<T = ()> {
+pub struct Gui {
     ws: WindowState,
     pointers: HashMap<DeviceId, PointerState>,
 
     graphics: GuiGraphics,
 
-    root: WidgetBase<T>,
-    state: T,
+    layout: GuiLayout,
+
+    state: HashMap<TypeId, Box<dyn Any>>,
 }
 
 //
 
-impl<T> Gui<T> {
-    pub fn new(target: &Target, state: T) -> Self {
+impl Gui {
+    pub fn new(target: &Target) -> Self {
         Self {
             ws: WindowState::new(&target.get_window().unwrap()), // TODO: allow headless
             pointers: Default::default(),
 
             graphics: GuiGraphics::new(target),
 
-            root: Root.into_widget(),
-            state,
+            layout: GuiLayout::default(),
+
+            state: Default::default(),
         }
     }
 
@@ -58,10 +69,73 @@ impl<T> Gui<T> {
     }
 
     /// handle gui events
-    pub fn event(&mut self, event: Event<'static>) {
+    pub fn event<T: Widget>(
+        &mut self,
+        root: &mut T,
+        event: Event<'static>,
+    ) -> Result<(), taffy::Error> {
+        if let Some(mut event) = self.event_inner(event) {
+            self.layout.compute_layout(
+                root.node(),
+                Size {
+                    width: Number::Defined(self.ws.size.width as f32),
+                    height: Number::Defined(self.ws.size.height as f32),
+                },
+            )?;
+            root.event(WidgetLayout::default(), &mut self.layout, &mut event)?;
+        }
+
+        self.update_pointers();
+
+        Ok(())
+    }
+
+    /// generate drawable geometry
+    pub fn draw<T: Widget>(
+        &mut self,
+        root: &mut T,
+        target: &mut Target,
+        frame: &mut Frame,
+    ) -> Result<GeneratedGui, taffy::Error> {
+        self.draw_inner(root, target, frame, None)
+    }
+
+    /// generate drawable geometry with custom texture
+    pub fn draw_with<T: Widget>(
+        &mut self,
+        root: &mut T,
+        target: &mut Target,
+        frame: &mut Frame,
+        texture: &TextureView,
+    ) -> Result<GeneratedGui, taffy::Error> {
+        self.draw_inner(root, target, frame, Some(texture))
+    }
+
+    /// gui internal `WindowState`
+    pub fn window_state(&self) -> &WindowState {
+        &self.ws
+    }
+
+    pub fn state<T: Any + Default>(&mut self) -> &mut T {
+        self.state
+            .entry(TypeId::of::<T>())
+            .or_insert_with(|| Box::new(T::default()) as Box<dyn Any>)
+            .downcast_mut()
+            .unwrap()
+    }
+
+    pub fn layout(&self) -> &GuiLayout {
+        &self.layout
+    }
+
+    pub fn layout_mut(&mut self) -> &mut GuiLayout {
+        &mut self.layout
+    }
+
+    fn event_inner(&mut self, event: Event<'static>) -> Option<GuiEvent> {
         self.ws.event(&event);
 
-        let event = match event {
+        match event {
             Event::DeviceEvent {
                 event: DeviceEvent::Text { codepoint },
                 ..
@@ -106,58 +180,39 @@ impl<T> Gui<T> {
                 _ => None,
             },
             _ => None,
-        };
-
-        if let Some(event) = event {
-            self.root.event(
-                &mut self.state,
-                WidgetLayout::from_window_state(&self.ws),
-                event,
-            );
         }
-
-        self.update_pointers();
     }
 
-    /// the root widget
-    ///
-    /// push (or expand) subwidgets here
-    pub fn root(&mut self) -> &mut WidgetBase<T> {
-        &mut self.root
-    }
-
-    /// generate drawable geometry
-    pub fn draw(&mut self, target: &mut Target, frame: &mut Frame) -> GeneratedGui {
-        self.draw_inner(target, frame, None)
-    }
-
-    /// generate drawable geometry with custom texture
-    pub fn draw_with(
+    fn draw_inner<T: Widget>(
         &mut self,
-        target: &mut Target,
-        frame: &mut Frame,
-        texture: &TextureView,
-    ) -> GeneratedGui {
-        self.draw_inner(target, frame, Some(texture))
-    }
-
-    /// gui internal `WindowState`
-    pub fn window_state(&self) -> &WindowState {
-        &self.ws
-    }
-
-    fn draw_inner(
-        &mut self,
+        root: &mut T,
         target: &mut Target,
         frame: &mut Frame,
         texture: Option<&TextureView>,
-    ) -> GeneratedGui {
-        let layout = WidgetLayout::from_window_state(&self.ws);
-        self.root
-            .event(&mut self.state, layout, GuiEvent::default());
-        self.root.draw(&mut self.graphics, target, layout);
+    ) -> Result<GeneratedGui, taffy::Error> {
+        self.layout.compute_layout(
+            root.node(),
+            Size {
+                width: Number::Defined(self.ws.size.width as f32),
+                height: Number::Defined(self.ws.size.height as f32),
+            },
+        )?;
 
-        self.graphics.draw(target, frame, &self.ws, texture)
+        root.event(
+            WidgetLayout::default(),
+            &mut self.layout,
+            &mut GuiEvent::default(),
+        )?;
+        root.draw(
+            WidgetLayout::default(),
+            &mut self.layout,
+            &mut GuiDraw {
+                graphics: &mut self.graphics,
+                target,
+            },
+        )?;
+
+        Ok(self.graphics.draw(target, frame, &self.ws, texture))
     }
 
     /// clear pointer `released` states

@@ -9,6 +9,16 @@ documentation = "https://docs.rs/srs2dge"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[example]]
+name = "asteroids"
+path = "examples/asteroids/main.rs"
+
+[[example]]
+name = "gui"
+path = "examples/gui/main.rs"
+
+# profiles
+
 [profile.release-wasm]
 inherits = "release"
 lto = true
@@ -27,8 +37,10 @@ opt-level = 3
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+# features
+
 [features]
-default = ["parallel-ecs", "gizmos", "gui", "presets", "res", "text"]
+default = ["parallel-ecs", "gizmos", "gui", "gui-derive", "presets", "res", "text"]
 
 dynamic = ["srs2dge-link-dynamic"]
 
@@ -36,10 +48,12 @@ parallel-ecs = ["srs2dge-link-static/parallel-ecs"]
 ecs = ["srs2dge-link-static/ecs"]
 gizmos = ["srs2dge-link-static/gizmos"]
 gui = ["srs2dge-link-static/gui"]
+gui-derive = ["srs2dge-link-static/gui-derive"]
 presets = ["srs2dge-link-static/presets"]
 res = ["srs2dge-link-static/res"]
 text = ["srs2dge-link-static/text"]
 
+# deps
 
 [dependencies]
 srs2dge-link-static = { path = "crates/srs2dge-link-static", version = "0.4" }
@@ -55,7 +69,7 @@ legion = { version = "0.4", default-features = false, features = [
 	"serialize",
 ] }
 serde = { version = "1.0", features = ["derive"] }
-ron = "0.7"
+ron = "0.8"
 fastrand = "1.7"
 # rapier2d = "0.11"
 

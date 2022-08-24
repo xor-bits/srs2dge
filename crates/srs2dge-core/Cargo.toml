@@ -1,6 +1,6 @@
 [package]
 name = "srs2dge-core"
-version = "0.2.0"
+version = "0.4.0"
 edition = "2021"
 description = "Simple Rust 2D Game Engine"
 license = "MIT"
@@ -18,7 +18,7 @@ colorful = "0.2"
 log = "0.4"
 # graphics
 glam = { version = "0.21", features = ["serde", "bytemuck"] }
-main_game_loop = "0.4"
+main_game_loop = "0.4.6"
 naga = { version = "0.9", features = ["wgsl-in", "validate"] }
 wgpu = { version = "0.13", features = ["webgl"] }
 # naga = { git = "https://github.com/gfx-rs/naga", rev = "1aa91549", features = [
@@ -28,7 +28,7 @@ wgpu = { version = "0.13", features = ["webgl"] }
 # wgpu = { git = "https://github.com/gfx-rs/wgpu", rev = "af259aa1", features = [
 # 	"webgl",
 # ] }
-winit = "0.26"
+winit = "0.27"
 # resources
 image = "0.24"
 rapid-qoi = "0.6"

@@ -19,6 +19,11 @@ pub mod gui {
     pub use srs2dge_gui::prelude::*;
 }
 
+#[cfg(feature = "gui-derive")]
+pub mod gui_derive {
+    pub use srs2dge_gui_derive::Widget;
+}
+
 #[cfg(feature = "presets")]
 pub mod presets {
     pub use srs2dge_presets::*;

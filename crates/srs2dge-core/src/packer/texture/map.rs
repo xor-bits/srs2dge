@@ -1,6 +1,5 @@
 use crate::prelude::{
-    PositionedRect, Rect, Target, TextureAtlas, TextureAtlasBuilder, TextureAtlasFile,
-    TexturePosition,
+    PositionedRect, Rect, Target, TextureAtlas, TextureAtlasBuilder, TexturePosition,
 };
 use image::{load_from_memory, ImageResult, RgbaImage};
 use serde::{Deserialize, Serialize};
@@ -10,40 +9,9 @@ use std::{
     ops::Deref,
 };
 
+use super::SerializeableTextureAtlas;
+
 //
-
-#[derive(Debug, Clone)]
-struct SortBySize<K> {
-    key: K,
-    image: RgbaImage,
-}
-
-impl<K> SortBySize<K> {
-    fn size(&self) -> u64 {
-        let (w, h) = self.image.dimensions();
-        w as u64 * h as u64
-    }
-}
-
-impl<K> PartialEq for SortBySize<K> {
-    fn eq(&self, other: &Self) -> bool {
-        self.size() == other.size()
-    }
-}
-
-impl<K> Eq for SortBySize<K> {}
-
-impl<K> PartialOrd for SortBySize<K> {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        self.size().partial_cmp(&other.size())
-    }
-}
-
-impl<K> Ord for SortBySize<K> {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.size().cmp(&other.size())
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct TextureAtlasMapBuilder<K> {
@@ -53,6 +21,8 @@ pub struct TextureAtlasMapBuilder<K> {
     padding: u8,
 
     images: BinaryHeap<SortBySize<K>>,
+
+    label: Option<String>,
 }
 
 #[derive(Debug)]
@@ -64,12 +34,12 @@ where
     map: HashMap<K, TexturePosition>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TextureAtlasMapFile<K>
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct SerializeableTextureAtlasMap<K>
 where
     K: Eq + Hash + Clone,
 {
-    inner: TextureAtlasFile,
+    inner: SerializeableTextureAtlas,
     map: HashMap<K, TexturePosition>,
 }
 
@@ -79,6 +49,7 @@ impl<K> Default for TextureAtlasMapBuilder<K> {
             images: Default::default(),
             limit: u16::MAX,
             padding: 2,
+            label: None,
         }
     }
 }
@@ -97,6 +68,11 @@ impl<K> TextureAtlasMapBuilder<K> {
     /// texture padding
     pub fn with_padding(mut self, padding: u8) -> Self {
         self.padding = padding;
+        self
+    }
+
+    pub fn with_label(mut self, label: Option<String>) -> Self {
+        self.label = label;
         self
     }
 
@@ -121,7 +97,8 @@ where
     pub fn build(mut self, target: &Target) -> TextureAtlasMap<K> {
         let mut builder = TextureAtlasBuilder::new()
             .with_padding(self.padding)
-            .with_limit(self.limit);
+            .with_limit(self.limit)
+            .with_label(self.label);
         let mut images = vec![];
 
         while let Some(SortBySize { key, image }) = self.images.pop() {
@@ -159,15 +136,33 @@ where
         TextureAtlasMapBuilder::new()
     }
 
-    pub async fn convert(&self, target: &Target) -> TextureAtlasMapFile<K> {
-        let inner = self.inner.convert(target).await;
-        let map = self.map.clone();
-
-        TextureAtlasMapFile { inner, map }
-    }
-
     pub fn get(&self, key: &K) -> Option<TexturePosition> {
         self.map.get(key).copied()
+    }
+
+    pub async fn download(&self, target: &Target) -> SerializeableTextureAtlasMap<K> {
+        let inner = self.inner.download(target).await;
+        let map = self.map.clone();
+        SerializeableTextureAtlasMap { inner, map }
+    }
+
+    pub fn upload(from: &SerializeableTextureAtlasMap<K>, target: &Target) -> Self {
+        from.upload(target)
+    }
+}
+
+impl<K> SerializeableTextureAtlasMap<K>
+where
+    K: Eq + Hash + Clone,
+{
+    pub async fn download(from: &TextureAtlasMap<K>, target: &Target) -> Self {
+        from.download(target).await
+    }
+
+    pub fn upload(&self, target: &Target) -> TextureAtlasMap<K> {
+        let inner = self.inner.upload(target);
+        let map = self.map.clone();
+        TextureAtlasMap { inner, map }
     }
 }
 
@@ -182,14 +177,37 @@ where
     }
 }
 
-impl<K> TextureAtlasMapFile<K>
-where
-    K: Eq + Hash + Clone,
-{
-    pub fn convert(&self, target: &Target) -> TextureAtlasMap<K> {
-        let inner = self.inner.convert(target);
-        let map = self.map.clone();
+//
 
-        TextureAtlasMap { inner, map }
+#[derive(Debug, Clone)]
+struct SortBySize<K> {
+    key: K,
+    image: RgbaImage,
+}
+
+impl<K> SortBySize<K> {
+    fn size(&self) -> u64 {
+        let (w, h) = self.image.dimensions();
+        w as u64 * h as u64
+    }
+}
+
+impl<K> PartialEq for SortBySize<K> {
+    fn eq(&self, other: &Self) -> bool {
+        self.size() == other.size()
+    }
+}
+
+impl<K> Eq for SortBySize<K> {}
+
+impl<K> PartialOrd for SortBySize<K> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        self.size().partial_cmp(&other.size())
+    }
+}
+
+impl<K> Ord for SortBySize<K> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.size().cmp(&other.size())
     }
 }
