@@ -1,13 +1,14 @@
 use crate::{
     gui::geom::GuiGeom,
     prelude::{Gui, GuiDraw, GuiLayout, Widget, WidgetBuilder, WidgetCore, WidgetLayout},
+    style::{Style, StyleSheet},
 };
 use srs2dge_core::{
     color::Color,
     prelude::{QuadMesh, TexturePosition},
 };
 use std::any::Any;
-use taffy::{prelude::Node, style::Style};
+use taffy::prelude::Node;
 
 //
 
@@ -24,9 +25,9 @@ pub struct Fill {
 impl Fill {
     pub fn new(gui: &mut Gui, style: Style, children: &[Node]) -> Result<Self, taffy::Error> {
         Ok(Self {
-            col: Default::default(),
-            tex: Default::default(),
-            core: WidgetCore::new(gui, style, children)?,
+            col: style.widget.color.unwrap_or_default(),
+            tex: style.widget.texture.unwrap_or_default(),
+            core: WidgetCore::new(gui, style.layout, children)?,
         })
     }
 
@@ -76,11 +77,7 @@ impl Widget for Fill {
 }
 
 impl WidgetBuilder for Fill {
-    fn build(gui: &mut Gui, style: Style) -> Result<Self, taffy::Error> {
-        Ok(Self {
-            col: Default::default(),
-            tex: Default::default(),
-            core: WidgetCore::new(gui, style, &[])?,
-        })
+    fn build(gui: &mut Gui, style: Style, _: &StyleSheet) -> Result<Self, taffy::Error> {
+        Self::new(gui, style, &[])
     }
 }

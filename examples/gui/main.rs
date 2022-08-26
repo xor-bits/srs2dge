@@ -1,5 +1,4 @@
 use srs2dge::prelude::*;
-use std::sync::{Arc, RwLock};
 
 //
 
@@ -15,8 +14,11 @@ struct App {
 #[derive(Debug, Clone, Copy, PartialEq, Widget)]
 #[gui(builder)]
 struct Root {
+    #[gui(style = "flex_item")]
     left_panel: LeftPanel,
+    #[gui(style = "flex_item")]
     right_panel: RightPanel,
+    #[gui(style = "float_item")]
     float_panel: FloatPanel,
 
     #[gui(core)]
@@ -26,6 +28,7 @@ struct Root {
 #[derive(Debug, Clone, Copy, PartialEq, Widget)]
 #[gui(builder)]
 pub struct LeftPanel {
+    #[gui(style = "max_size fill_0")]
     fill: Fill,
 
     #[gui(core)]
@@ -35,6 +38,7 @@ pub struct LeftPanel {
 #[derive(Debug, Clone, Copy, PartialEq, Widget)]
 #[gui(builder)]
 pub struct RightPanel {
+    #[gui(style = "max_size fill_1")]
     fill: Fill,
 
     #[gui(core)]
@@ -44,6 +48,7 @@ pub struct RightPanel {
 #[derive(Debug, Clone, Copy, PartialEq, Widget)]
 #[gui(builder)]
 pub struct FloatPanel {
+    #[gui(style = "max_size fill_2")]
     fill: Fill,
 
     #[gui(core)]
@@ -70,7 +75,73 @@ impl App {
         let tex0 = texture.get(&0).unwrap_or_default();
         let tex1 = texture.get(&1).unwrap_or_default();
 
-        let col = Arc::new(RwLock::new(Color::AZURE));
+        let mut stylesheet = StyleSheet::default();
+        stylesheet.insert(
+            "fill_0".to_string(),
+            WidgetStyle {
+                color: Some(Color::CHARTREUSE),
+                texture: Some(tex0),
+                ..Default::default()
+            }
+            .into(),
+        );
+        stylesheet.insert(
+            "fill_1".to_string(),
+            WidgetStyle {
+                color: Some(Color::AZURE),
+                texture: Some(tex0),
+                ..Default::default()
+            }
+            .into(),
+        );
+        stylesheet.insert(
+            "fill_2".to_string(),
+            WidgetStyle {
+                color: Some(Color::WHITE),
+                texture: Some(tex1),
+                ..Default::default()
+            }
+            .into(),
+        );
+        stylesheet.insert(
+            "flex_item".to_owned(),
+            LayoutStyle {
+                flex_shrink: Some(1.0),
+                flex_grow: Some(1.0),
+                flex_basis: Some(Dimension::Points(5.0)),
+                ..Default::default()
+            }
+            .into(),
+        );
+        stylesheet.insert(
+            "float_item".to_owned(),
+            LayoutStyle {
+                position_type: Some(PositionType::Absolute),
+                position: Some(LayoutRect {
+                    start: Dimension::Points(0.0),
+                    end: Dimension::Auto,
+                    top: Dimension::Points(0.0),
+                    bottom: Dimension::Auto,
+                }),
+                size: Some(Size {
+                    width: Dimension::Points(350.0),
+                    height: Dimension::Points(350.0),
+                }),
+                ..Default::default()
+            }
+            .into(),
+        );
+        stylesheet.insert(
+            "max_size".to_owned(),
+            LayoutStyle {
+                size: Some(Size {
+                    width: Dimension::Percent(1.0),
+                    height: Dimension::Percent(1.0),
+                }),
+                ..Default::default()
+            }
+            .into(),
+        );
 
         // let panel = float_panel(tex0);
         // let left = left_panel(tex0, tex1, col.clone());
@@ -82,65 +153,7 @@ impl App {
 
         // panic!("{:#?}", gui.root());
 
-        let mut root: Root = Root::build(&mut gui, WidgetCore::root_style()).unwrap();
-        root.left_panel.fill.col = Color::CHARTREUSE;
-        root.left_panel.fill.tex = tex0;
-        root.right_panel.fill.col = Color::AZURE;
-        root.right_panel.fill.tex = tex0;
-        root.float_panel.fill.col = Color::ORANGE;
-        root.float_panel.fill.tex = tex0;
-
-        let layout = gui.layout_mut();
-        let style = Style {
-            display: Display::Flex,
-            size: Size {
-                width: Dimension::Percent(1.0),
-                height: Dimension::Percent(1.0),
-            },
-            ..Default::default()
-        };
-        layout.set_style(root.node(), style).unwrap();
-        let style = Style {
-            flex_shrink: 1.0,
-            flex_grow: 1.0,
-            flex_basis: Dimension::Points(5.0),
-            ..Default::default()
-        };
-        layout.set_style(root.left_panel.node(), style).unwrap();
-        layout.set_style(root.right_panel.node(), style).unwrap();
-        let style = Style {
-            position_type: PositionType::Absolute,
-            position: taffy::prelude::Rect {
-                start: Dimension::Points(0.0),
-                end: Dimension::Auto,
-                top: Dimension::Points(0.0),
-                bottom: Dimension::Auto,
-            },
-            size: Size {
-                width: Dimension::Points(200.0),
-                height: Dimension::Points(350.0),
-            },
-            ..Default::default()
-        };
-        layout.set_style(root.float_panel.node(), style).unwrap();
-        let style = Style {
-            size: Size {
-                width: Dimension::Percent(1.0),
-                height: Dimension::Percent(1.0),
-            },
-            // flex_grow: 1.0,
-            // flex_shrink: 1.0,
-            ..Default::default()
-        };
-        layout
-            .set_style(root.left_panel.fill.node(), style)
-            .unwrap();
-        layout
-            .set_style(root.right_panel.fill.node(), style)
-            .unwrap();
-        layout
-            .set_style(root.float_panel.fill.node(), style)
-            .unwrap();
+        let root: Root = Root::build(&mut gui, WidgetCore::root_style(), &stylesheet).unwrap();
 
         Self {
             target,

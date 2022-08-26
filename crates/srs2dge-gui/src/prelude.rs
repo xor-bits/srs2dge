@@ -1,1 +1,1 @@
-pub use super::{event::prelude::*, gui::prelude::*, widget::*, widgets::prelude::*, *};
+pub use super::{event::prelude::*, gui::prelude::*, style::*, widget::*, widgets::prelude::*, *};

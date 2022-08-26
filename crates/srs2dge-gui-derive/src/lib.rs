@@ -32,6 +32,10 @@ struct WidgetField {
     core: bool,
     #[darling(default)]
     skip: bool,
+    #[darling(default)]
+    style: Option<String>,
+    #[darling(default)]
+    id: Option<String>,
 }
 
 //
@@ -118,17 +122,25 @@ pub fn derive_widget(tokens: proc_macro::TokenStream) -> proc_macro::TokenStream
             .filter(|(_, field)| !(field.core || field.skip))
             .map(|(id, field)| {
                 let ty = &field.ty;
+                let part_merges = field
+                    .style
+                    .as_ref()
+                    .into_iter()
+                    .flat_map(|s| s.split_whitespace())
+                    .rev()
+                    .map(|style_part_name| quote! { .merge_opt(styles.get(#style_part_name).map(Clone::clone)) });
+
                 quote! {
-                    let #id: #ty = WidgetBuilder::build(gui, Default::default())?;
+                    let #id: #ty = WidgetBuilder::build(gui, Style::default() #(#part_merges)*, styles)?;
                 }
             });
 
         quote! {
             impl #imp WidgetBuilder for #ident #ty #wher {
-                fn build(gui: &mut Gui, style: taffy::style::Style) -> Result<Self, taffy::Error> {
+                fn build(gui: &mut Gui, style: Style, styles: &StyleSheet) -> Result<Self, taffy::Error> {
                     #(#field_builders)*
 
-                    let core = WidgetCore::new(gui, style, &[
+                    let core = WidgetCore::new(gui, style.layout, &[
                         #(#field_names_forward.node(),)*
                     ])?;
 

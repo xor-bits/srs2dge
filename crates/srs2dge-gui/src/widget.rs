@@ -1,9 +1,12 @@
-use crate::prelude::{Gui, GuiEvent, GuiGraphics, GuiLayout, WidgetLayout};
+use crate::{
+    prelude::{Gui, GuiEvent, GuiGraphics, GuiLayout, WidgetLayout},
+    style::{LayoutStyle, Style, StyleSheet},
+};
 use srs2dge_core::target::Target;
 use std::any::Any;
 use taffy::{
     prelude::{Node, Size},
-    style::{Dimension, Style},
+    style::Dimension,
 };
 
 //
@@ -58,7 +61,7 @@ pub trait Widget {
 }
 
 pub trait WidgetBuilder: Sized {
-    fn build(gui: &mut Gui, style: Style) -> Result<Self, taffy::Error>;
+    fn build(gui: &mut Gui, style: Style, stylesheet: &StyleSheet) -> Result<Self, taffy::Error>;
 }
 
 pub trait WidgetEventHandler {
@@ -95,9 +98,9 @@ impl WidgetCore {
     /// ```ignore
     /// let _: Node = subwidget.node();
     /// ```
-    pub fn new(gui: &mut Gui, style: Style, children: &[Node]) -> Result<Self, taffy::Error> {
+    pub fn new(gui: &mut Gui, style: LayoutStyle, children: &[Node]) -> Result<Self, taffy::Error> {
         Ok(Self {
-            node: gui.layout_mut().new_node(style, children)?,
+            node: gui.layout_mut().new_node(style.convert(), children)?,
         })
     }
 
@@ -109,14 +112,17 @@ impl WidgetCore {
     /// let _: Node = subwidget.node();
     /// ```
     pub fn new_root(gui: &mut Gui, children: &[Node]) -> Result<Self, taffy::Error> {
-        Self::new(gui, Self::root_style(), children)
+        Self::new(gui, Self::root_style().layout, children)
     }
 
     pub fn root_style() -> Style {
         Style {
-            size: Size {
-                width: Dimension::Percent(1.0),
-                height: Dimension::Percent(1.0),
+            layout: LayoutStyle {
+                size: Some(Size {
+                    width: Dimension::Percent(1.0),
+                    height: Dimension::Percent(1.0),
+                }),
+                ..Default::default()
             },
             ..Default::default()
         }
