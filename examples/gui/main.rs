@@ -20,7 +20,6 @@ struct Root {
     right_panel: RightPanel,
     #[gui(style = "float_item")]
     float_panel: FloatPanel,
-
     #[gui(core)]
     core: WidgetCore,
 }
@@ -28,8 +27,21 @@ struct Root {
 #[derive(Debug, Clone, Copy, PartialEq, Widget)]
 #[gui(builder)]
 pub struct LeftPanel {
+    #[gui(style = "max_size left_split")]
+    split: LeftSplit,
+
+    #[gui(inherit)]
     #[gui(style = "max_size fill_0")]
-    fill: Fill,
+    background: Fill,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Widget)]
+#[gui(builder)]
+pub struct LeftSplit {
+    #[gui(style = "split_block fill_3")]
+    top: Fill,
+    #[gui(style = "split_block texture")]
+    bottom: Fill,
 
     #[gui(core)]
     core: WidgetCore,
@@ -38,11 +50,9 @@ pub struct LeftPanel {
 #[derive(Debug, Clone, Copy, PartialEq, Widget)]
 #[gui(builder)]
 pub struct RightPanel {
+    #[gui(inherit)]
     #[gui(style = "max_size fill_1")]
-    fill: Fill,
-
-    #[gui(core)]
-    core: WidgetCore,
+    background: Fill,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Widget)]
@@ -75,73 +85,65 @@ impl App {
         let tex0 = texture.get(&0).unwrap_or_default();
         let tex1 = texture.get(&1).unwrap_or_default();
 
-        let mut stylesheet = StyleSheet::default();
-        stylesheet.insert(
-            "fill_0".to_string(),
-            WidgetStyle {
-                color: Some(Color::CHARTREUSE),
-                texture: Some(tex0),
-                ..Default::default()
+        let stylesheet = stylesheet! {
+            fill_0 => {
+                widget.color: Color::CHARTREUSE,
+                widget.texture: tex0,
             }
-            .into(),
-        );
-        stylesheet.insert(
-            "fill_1".to_string(),
-            WidgetStyle {
-                color: Some(Color::AZURE),
-                texture: Some(tex0),
-                ..Default::default()
+            fill_1 => {
+                widget.color: Color::AZURE,
+                widget.texture: tex0,
             }
-            .into(),
-        );
-        stylesheet.insert(
-            "fill_2".to_string(),
-            WidgetStyle {
-                color: Some(Color::WHITE),
-                texture: Some(tex1),
-                ..Default::default()
+            fill_2 => {
+                widget.color: Color::WHITE,
+                widget.texture: tex1,
             }
-            .into(),
-        );
-        stylesheet.insert(
-            "flex_item".to_owned(),
-            LayoutStyle {
-                flex_shrink: Some(1.0),
-                flex_grow: Some(1.0),
-                flex_basis: Some(Dimension::Points(5.0)),
-                ..Default::default()
+            fill_3 => {
+                widget.color: Color::ORANGE,
+                widget.texture: tex0,
             }
-            .into(),
-        );
-        stylesheet.insert(
-            "float_item".to_owned(),
-            LayoutStyle {
-                position_type: Some(PositionType::Absolute),
-                position: Some(LayoutRect {
+            flex_item => {
+                layout.flex_shrink: 1.0,
+                layout.flex_grow: 1.0,
+                layout.flex_basis: Dimension::Points(5.0),
+            }
+            float_item => {
+                layout.position_type: PositionType::Absolute,
+                layout.position: LayoutRect {
                     start: Dimension::Points(0.0),
                     end: Dimension::Auto,
                     top: Dimension::Points(0.0),
                     bottom: Dimension::Auto,
-                }),
-                size: Some(Size {
+                },
+                layout.size: Size {
                     width: Dimension::Points(350.0),
                     height: Dimension::Points(350.0),
-                }),
-                ..Default::default()
+                },
             }
-            .into(),
-        );
-        stylesheet.insert(
-            "max_size".to_owned(),
-            LayoutStyle {
-                size: Some(Size {
+            max_size => {
+                layout.size: Size {
                     width: Dimension::Percent(1.0),
                     height: Dimension::Percent(1.0),
-                }),
-                ..Default::default()
+                },
             }
-            .into(),
-        );
+            split_block => {
+                layout.flex_shrink: 1.0,
+                layout.flex_grow: 1.0,
+                layout.aspect_ratio: Number::Defined(1.0),
+                layout.max_size: Size {
+                    width: Dimension::Points(150.0),
+                    height: Dimension::Points(150.0),
+                },
+            }
+            texture => {
+                widget.color: Color::WHITE,
+                widget.texture: tex1,
+            }
+            left_split => {
+                layout.flex_direction: FlexDirection::Column,
+                layout.justify_content: JustifyContent::SpaceBetween,
+            }
+        };
 
         // let panel = float_panel(tex0);
         // let left = left_panel(tex0, tex1, col.clone());
@@ -153,7 +155,11 @@ impl App {
 
         // panic!("{:#?}", gui.root());
 
-        let root: Root = Root::build(&mut gui, WidgetCore::root_style(), &stylesheet).unwrap();
+        let root: Root = Root::build(&mut gui, WidgetCore::root_style(), &stylesheet, &[]).unwrap();
+
+        for name in stylesheet.check_unused() {
+            log::warn!("Unused style: '{name}'");
+        }
 
         Self {
             target,
@@ -192,6 +198,14 @@ impl Runnable for App {
             .draw_with(&mut self.root, &mut self.target, &mut frame, &self.texture)
             .unwrap();
         frame.primary_render_pass().draw_gui(&gui);
+
+        // println!("{:?}", self.gui.layout());
+        // println!(
+        // "{:?}",
+        // self.gui
+        // .layout()
+        // .layout(self.root.left_panel.split.top.node())
+        // );
 
         self.target.finish_frame(frame);
 

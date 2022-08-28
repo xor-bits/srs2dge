@@ -1,19 +1,45 @@
 use srs2dge_core::prelude::{Color, TexturePosition};
 use std::{
+    borrow::Cow,
     collections::HashMap,
-    ops::{Deref, DerefMut},
+    sync::atomic::{AtomicBool, Ordering},
 };
 
 //
 
 pub use taffy::{
     self,
-    prelude::{Number, Rect as LayoutRect, Size},
+    prelude::{Node, Number, Rect as LayoutRect, Size},
     style::{
         AlignContent, AlignItems, AlignSelf, Dimension, Display, FlexDirection, FlexWrap,
         JustifyContent, PositionType,
     },
 };
+
+//
+
+#[macro_export]
+macro_rules! stylesheet {
+    ($($rule_name:ident => {
+        $($container_name:ident . $field_name:ident : $field_val:expr),* $(,)?
+    })*) => {{
+        let mut stylesheet = StyleSheet::new();
+        $(
+            let mut style = Style::default();
+            $(style . $container_name . $field_name = Some($field_val);)*
+            stylesheet.insert(stringify!($rule_name), style);
+        )*
+
+        stylesheet
+    }};
+}
+
+#[macro_export]
+macro_rules! stylesheet_entry {
+    ($rule_name:ident => {
+        $($field_name:ident : $field_val:expr),*
+    }) => {};
+}
 
 //
 
@@ -82,26 +108,60 @@ pub struct Style {
     pub layout: LayoutStyle,
 }
 
-#[derive(Debug, Clone, PartialEq, Default)]
-pub struct StyleSheet {
-    map: HashMap<String, Style>,
+#[derive(Debug, Default)]
+pub struct StyleSheet<'a> {
+    map: HashMap<Cow<'a, str>, (AtomicBool, Style)>,
 }
 
 //
 
 pub trait MergeStyles: Sized {
     fn merge(self, other: Self) -> Self;
+}
 
-    fn merge_opt(self, other: Option<Self>) -> Self {
-        if let Some(other) = other {
-            self.merge(other)
+//
+
+impl Style {
+    pub fn merge_from_styles(self, styles: &StyleSheet, name: &str) -> Self {
+        if let Some(other) = styles.get(name) {
+            self.merge(*other)
         } else {
+            log::warn!("StyleSheet has no style for the name '{name}', using None as fallback.");
             self
         }
     }
 }
 
-//
+impl<'a> StyleSheet<'a> {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn insert<N: Into<Cow<'a, str>>, V: Into<Style>>(&mut self, name: N, value: V) {
+        self.map
+            .insert(name.into(), (AtomicBool::new(false), value.into()));
+    }
+
+    pub fn get(&self, name: &str) -> Option<&Style> {
+        self.map.get(name).map(|(used, s)| {
+            used.store(true, Ordering::SeqCst);
+            s
+        })
+    }
+
+    pub fn check_unused(&self) -> impl Iterator<Item = &str> + '_ {
+        self.map
+            .iter()
+            .filter(|(_, (used, _))| !used.load(Ordering::SeqCst))
+            .map(|(name, _)| name.as_ref())
+    }
+
+    pub fn reset_unused(&self) {
+        self.map
+            .values()
+            .for_each(|(used, _)| used.store(false, Ordering::SeqCst))
+    }
+}
 
 impl LayoutStyle {
     pub fn convert(self) -> taffy::prelude::Style {
@@ -175,19 +235,19 @@ impl MergeStyles for WidgetStyle {
     }
 }
 
-impl Deref for StyleSheet {
-    type Target = HashMap<String, Style>;
+// impl Deref for StyleSheet {
+//     type Target = HashMap<String, Style>;
 
-    fn deref(&self) -> &Self::Target {
-        &self.map
-    }
-}
+//     fn deref(&self) -> &Self::Target {
+//         &self.map
+//     }
+// }
 
-impl DerefMut for StyleSheet {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.map
-    }
-}
+// impl DerefMut for StyleSheet {
+//     fn deref_mut(&mut self) -> &mut Self::Target {
+//         &mut self.map
+//     }
+// }
 
 impl From<LayoutStyle> for Style {
     fn from(layout: LayoutStyle) -> Self {

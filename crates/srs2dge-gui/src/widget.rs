@@ -61,7 +61,12 @@ pub trait Widget {
 }
 
 pub trait WidgetBuilder: Sized {
-    fn build(gui: &mut Gui, style: Style, stylesheet: &StyleSheet) -> Result<Self, taffy::Error>;
+    fn build(
+        gui: &mut Gui,
+        style: Style,
+        stylesheet: &StyleSheet,
+        children: &[Node],
+    ) -> Result<Self, taffy::Error>;
 }
 
 pub trait WidgetEventHandler {

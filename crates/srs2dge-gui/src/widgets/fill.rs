@@ -77,7 +77,12 @@ impl Widget for Fill {
 }
 
 impl WidgetBuilder for Fill {
-    fn build(gui: &mut Gui, style: Style, _: &StyleSheet) -> Result<Self, taffy::Error> {
-        Self::new(gui, style, &[])
+    fn build(
+        gui: &mut Gui,
+        style: Style,
+        _: &StyleSheet,
+        children: &[Node],
+    ) -> Result<Self, taffy::Error> {
+        Self::new(gui, style, children)
     }
 }
