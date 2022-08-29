@@ -7,7 +7,7 @@ use srs2dge_core::{
     color::Color,
     prelude::{QuadMesh, TexturePosition},
 };
-use std::any::Any;
+use std::any::{type_name, Any};
 use taffy::prelude::Node;
 
 //
@@ -61,6 +61,10 @@ impl Widget for Fill {
             )));
 
         Ok(())
+    }
+
+    fn name(&self) -> &'static str {
+        type_name::<Self>()
     }
 
     fn core(&self) -> &WidgetCore {

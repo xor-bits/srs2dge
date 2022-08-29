@@ -1,11 +1,10 @@
-use core::slice;
-
-use taffy::prelude::Node;
-
 use crate::{
     prelude::{Gui, GuiDraw, GuiEvent, GuiLayout, Widget, WidgetBuilder, WidgetCore, WidgetLayout},
     style::{Style, StyleSheet},
 };
+use core::slice;
+use std::any::type_name;
+use taffy::prelude::Node;
 
 //
 
@@ -105,7 +104,7 @@ impl<T: Widget + 'static> Widget for WidgetVec<T> {
         event: &mut GuiEvent,
     ) -> Result<(), taffy::Error> {
         let layout = gui_layout.get(self)?.to_absolute(parent_layout);
-        for subwidget in self.vec.iter_mut() {
+        for subwidget in self.vec.iter_mut().rev() {
             subwidget.event(layout, gui_layout, event)?;
         }
         Ok(())
@@ -122,6 +121,14 @@ impl<T: Widget + 'static> Widget for WidgetVec<T> {
             subwidget.draw(layout, gui_layout, draw)?;
         }
         Ok(())
+    }
+
+    fn subwidgets(&self) -> Vec<&dyn Widget> {
+        self.vec.iter().map(|w| w as &dyn Widget).collect()
+    }
+
+    fn name(&self) -> &'static str {
+        type_name::<Self>()
     }
 
     fn core(&self) -> &WidgetCore {

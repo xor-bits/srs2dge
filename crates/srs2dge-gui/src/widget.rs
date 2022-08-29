@@ -48,8 +48,18 @@ pub trait Widget {
         Ok(())
     }
 
+    /// General but expensive iterable of
+    /// the subwidgets.
+    fn subwidgets(&self) -> Vec<&dyn Widget> {
+        vec![]
+    }
+
     /// returns a ref to the WidgetCore of this widget
     fn core(&self) -> &WidgetCore;
+
+    fn name(&self) -> &'static str {
+        "GenericWidget"
+    }
 
     fn as_any(&self) -> &dyn Any;
 

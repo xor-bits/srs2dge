@@ -5,7 +5,17 @@ use srs2dge::prelude::*;
 #[derive(Debug, Clone, Copy, PartialEq, Widget)]
 #[gui(builder)]
 pub struct Root {
+    items: WidgetArray<Item, 6>,
+
     #[gui(inherit)]
+    bg: Fill,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Widget)]
+#[gui(builder)]
+pub struct Item {
+    #[gui(inherit)]
+    #[gui(style = "item")]
     bg: Fill,
 }
 
@@ -31,6 +41,14 @@ fn gui_main(target: &Target, gui: &mut Gui) -> (TextureAtlasMap<u8>, Root) {
             },
             widget.color: Color::ORANGE,
             widget.texture: tex0,
+        }
+        "item" => {
+            layout.size: Size {
+                width: Dimension::Percent(1.0),
+                height: Dimension::Percent(1.0)
+            },
+            widget.color: Color::WHITE,
+            widget.texture: tex1,
         }
     );
 

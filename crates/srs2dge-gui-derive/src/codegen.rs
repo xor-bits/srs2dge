@@ -66,6 +66,7 @@ impl DeriveParsed {
             .iter()
             .filter(|field| matches!(field.inner, FieldParsedType::SubWidget { .. }))
             .map(|field| &field.ident);
+        let fields_2 = fields.clone();
         let fields_rev = fields.clone().rev();
 
         // actual impl
@@ -91,6 +92,14 @@ impl DeriveParsed {
                     #(Widget::draw(&mut self.#fields, layout, gui_layout, draw)?;)*
 
                     Ok(())
+                }
+
+                fn subwidgets(&self) -> Vec<&dyn Widget> {
+                    [#(&self.#fields_2 as &dyn Widget,)*].to_vec()
+                }
+
+                fn name(&self) -> &'static str {
+                    std::any::type_name::<Self>()
                 }
 
                 fn core(&self) -> &WidgetCore {

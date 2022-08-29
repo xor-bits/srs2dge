@@ -1,11 +1,12 @@
-use crate::prelude::{DrawGeneratedGui, Gui, Widget};
+use crate::prelude::{DrawGeneratedGui, Gui, GuiLayout, Widget};
 use srs2dge_core::{
     main_game_loop::{
         as_async, event::Event, event::EventLoopTarget, prelude::EventLoop, report::Reporter,
         runnable::Runnable,
     },
-    prelude::{ControlFlow, TextureAtlasMap},
+    prelude::{ControlFlow, TextureAtlasMap, VirtualKeyCode},
     target::Target,
+    winit::event::{ElementState, KeyboardInput, WindowEvent},
     Engine,
 };
 
@@ -52,6 +53,65 @@ impl<Root: Widget> Runnable for App<Root> {
             Some(some) => some,
             None => return,
         };
+
+        // debug keys
+        let pressed = if let Event::WindowEvent {
+            event:
+                WindowEvent::KeyboardInput {
+                    input:
+                        KeyboardInput {
+                            state: ElementState::Pressed,
+                            virtual_keycode,
+                            ..
+                        },
+                    ..
+                },
+            ..
+        } = &event
+        {
+            *virtual_keycode
+        } else {
+            None
+        };
+        if let Some(VirtualKeyCode::F22) = pressed {
+            log::debug!("F22 pressed, printing debug gui tree");
+            struct DebugTree<'a> {
+                layout: &'a GuiLayout,
+                this: &'a dyn Widget,
+                depth: usize,
+            }
+            impl<'a> DebugTree<'a> {
+                fn new(layout: &'a GuiLayout, widget: &'a dyn Widget, depth: usize) -> Self {
+                    Self {
+                        layout,
+                        this: widget,
+                        depth,
+                    }
+                }
+
+                fn print(self, buf: &mut String) {
+                    use std::fmt::Write;
+                    let spaces = " ".repeat(self.depth * 2);
+                    let name = self.this.name();
+                    let layout = self.layout.get(self.this);
+                    let layout = match layout {
+                        Ok(layout) => format!("Ok(o: {}, s: {})", layout.offset, layout.size),
+                        Err(err) => format!("Err({err})"),
+                    };
+                    writeln!(buf, "{spaces}{layout} = \"{name}\"").unwrap();
+
+                    for widget in self.this.subwidgets() {
+                        Self::new(self.layout, widget, self.depth + 1).print(buf);
+                    }
+                }
+            }
+
+            if log::log_enabled!(log::Level::Debug) {
+                let mut buf = String::new();
+                DebugTree::new(&self.gui.layout(), &self.root, 0).print(&mut buf);
+                log::debug!("Done:\n{buf}",);
+            }
+        }
 
         self.gui.event(&mut self.root, event).unwrap();
 

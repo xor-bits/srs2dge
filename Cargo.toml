@@ -44,7 +44,7 @@ crate-type = ["cdylib", "rlib"]
 # features
 
 [features]
-default = ["dynamic", "parallel-ecs", "gizmos", "gui", "gui-derive", "presets", "res", "text"]
+default = ["parallel-ecs", "gizmos", "gui", "gui-derive", "presets", "res", "text"]
 
 dynamic = ["srs2dge-link-dynamic"]
 

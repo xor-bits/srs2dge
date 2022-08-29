@@ -22,7 +22,7 @@ pub struct WidgetLayout {
 //
 
 impl GuiLayout {
-    pub fn get<T: Widget>(&self, widget: &T) -> Result<WidgetLayout, taffy::Error> {
+    pub fn get<T: Widget + ?Sized>(&self, widget: &T) -> Result<WidgetLayout, taffy::Error> {
         let layout = self.stretch.layout(widget.node())?;
 
         Ok(WidgetLayout {
@@ -30,6 +30,8 @@ impl GuiLayout {
             size: Vec2::new(layout.size.width, layout.size.height),
         })
     }
+
+    // pub fn get_dyn(&self, widget: &dyn Widget) -> Result<WidgetLayout, taffy::Error> {}
 }
 
 impl WidgetLayout {
