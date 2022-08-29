@@ -42,14 +42,20 @@ impl DeriveParsed {
         // event/draw handlers
         let self_event = if *event_handler {
             quote! { self.event_handler(layout, gui_layout, event)?; }
-        } else if let FieldParsedType::Inherit { .. } = self.main_field.inner {
-            quote! { Widget::event(&mut self.#main_field_ident, parent_layout, gui_layout, event)?; }
         } else {
             Default::default()
         };
         let self_draw = if *draw_handler {
             quote! { self.draw_handler(layout, gui_layout, draw)?; }
-        } else if let FieldParsedType::Inherit { .. } = self.main_field.inner {
+        } else {
+            Default::default()
+        };
+        let inherit_event = if let FieldParsedType::Inherit { .. } = self.main_field.inner {
+            quote! { Widget::event(&mut self.#main_field_ident, parent_layout, gui_layout, event)?; }
+        } else {
+            Default::default()
+        };
+        let inherit_draw = if let FieldParsedType::Inherit { .. } = self.main_field.inner {
             quote! { Widget::draw(&mut self.#main_field_ident, parent_layout, gui_layout, draw)?; }
         } else {
             Default::default()
@@ -71,6 +77,7 @@ impl DeriveParsed {
                     #(Widget::event(&mut self.#fields_rev, layout, gui_layout, event)?;)*
 
                     #self_event
+                    #inherit_event
 
                     Ok(())
                 }
@@ -79,6 +86,7 @@ impl DeriveParsed {
                     let layout = gui_layout.get(self)?.to_absolute(parent_layout);
 
                     #self_draw
+                    #inherit_draw
 
                     #(Widget::draw(&mut self.#fields, layout, gui_layout, draw)?;)*
 
@@ -151,7 +159,7 @@ impl DeriveParsed {
             FieldParsedType::Inherit { style } => {
                 let part_merges = Self::style_str_to_part_merges(style);
                 quote! {
-                    let #main_field_ident = WidgetBuilder::build(gui, Style::default() #(#part_merges)*, styles, &[
+                    let #main_field_ident = WidgetBuilder::build(gui, style #(#part_merges)*, styles, &[
                         #(#fields.node(),)*
                     ])?;
                 }

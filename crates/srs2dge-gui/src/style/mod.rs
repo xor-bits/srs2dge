@@ -20,14 +20,14 @@ pub use taffy::{
 
 #[macro_export]
 macro_rules! stylesheet {
-    ($($rule_name:ident => {
+    ($($rule_name:expr => {
         $($container_name:ident . $field_name:ident : $field_val:expr),* $(,)?
     })*) => {{
         let mut stylesheet = StyleSheet::new();
         $(
             let mut style = Style::default();
             $(style . $container_name . $field_name = Some($field_val);)*
-            stylesheet.insert(stringify!($rule_name), style);
+            stylesheet.insert($rule_name, style);
         )*
 
         stylesheet
@@ -129,6 +129,12 @@ impl Style {
             log::warn!("StyleSheet has no style for the name '{name}', using None as fallback.");
             self
         }
+    }
+
+    pub fn from_styles<'a, I: IntoIterator<Item = &'a str>>(styles: &StyleSheet, names: I) -> Self {
+        names.into_iter().fold(Style::default(), |s, name| {
+            s.merge_from_styles(styles, name)
+        })
     }
 }
 

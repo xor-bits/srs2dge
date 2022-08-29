@@ -1,4 +1,9 @@
-use srs2dge::prelude::*;
+use srs2dge::prelude::{widgets::vec::WidgetVec, *};
+use stylesheet::styles;
+
+//
+
+mod stylesheet;
 
 //
 
@@ -11,15 +16,15 @@ struct App {
     root: Root,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Widget)]
+#[derive(Debug, Clone, PartialEq, Widget)]
 #[gui(builder)]
 struct Root {
-    #[gui(style = "flex_item")]
+    #[gui(style = "flex_item bordered")]
     left_panel: LeftPanel,
-    #[gui(style = "flex_item")]
+    #[gui(style = "flex_item bordered")]
     right_panel: RightPanel,
-    #[gui(style = "float_item")]
-    float_panel: FloatPanel,
+    // #[gui(style = "float_item")]
+    // float_panel: FloatPanel,
     #[gui(core)]
     core: WidgetCore,
 }
@@ -38,10 +43,10 @@ pub struct LeftPanel {
 #[derive(Debug, Clone, Copy, PartialEq, Widget)]
 #[gui(builder)]
 pub struct LeftSplit {
-    #[gui(style = "split_block fill_3")]
-    top: Fill,
-    #[gui(style = "split_block texture")]
-    bottom: Fill,
+    #[gui(style = "split_block_lower")]
+    top: TopBlock,
+    #[gui(style = "split_block_lower")]
+    bottom: BottomBlock,
 
     #[gui(core)]
     core: WidgetCore,
@@ -49,7 +54,30 @@ pub struct LeftSplit {
 
 #[derive(Debug, Clone, Copy, PartialEq, Widget)]
 #[gui(builder)]
+pub struct TopBlock {
+    #[gui(style = "split_block_upper fill_3")]
+    fill: Fill,
+
+    #[gui(core)]
+    core: WidgetCore,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Widget)]
+#[gui(builder)]
+pub struct BottomBlock {
+    #[gui(style = "split_block_upper texture")]
+    fill: Fill,
+
+    #[gui(core)]
+    core: WidgetCore,
+}
+
+#[derive(Debug, Clone, PartialEq, Widget)]
+#[gui(builder)]
 pub struct RightPanel {
+    #[gui(style = "buttons")]
+    buttons: WidgetVec<Button>,
+
     #[gui(inherit)]
     #[gui(style = "max_size fill_1")]
     background: Fill,
@@ -57,13 +85,21 @@ pub struct RightPanel {
 
 #[derive(Debug, Clone, Copy, PartialEq, Widget)]
 #[gui(builder)]
+pub struct Button {
+    #[gui(inherit)]
+    #[gui(style = "button_fill fill_3")]
+    fill: Fill,
+}
+
+/*#[derive(Debug, Clone, Copy, PartialEq, Widget)]
+#[gui(builder)]
 pub struct FloatPanel {
     #[gui(style = "max_size fill_2")]
     fill: Fill,
 
     #[gui(core)]
     core: WidgetCore,
-}
+}*/
 
 //
 
@@ -85,65 +121,7 @@ impl App {
         let tex0 = texture.get(&0).unwrap_or_default();
         let tex1 = texture.get(&1).unwrap_or_default();
 
-        let stylesheet = stylesheet! {
-            fill_0 => {
-                widget.color: Color::CHARTREUSE,
-                widget.texture: tex0,
-            }
-            fill_1 => {
-                widget.color: Color::AZURE,
-                widget.texture: tex0,
-            }
-            fill_2 => {
-                widget.color: Color::WHITE,
-                widget.texture: tex1,
-            }
-            fill_3 => {
-                widget.color: Color::ORANGE,
-                widget.texture: tex0,
-            }
-            flex_item => {
-                layout.flex_shrink: 1.0,
-                layout.flex_grow: 1.0,
-                layout.flex_basis: Dimension::Points(5.0),
-            }
-            float_item => {
-                layout.position_type: PositionType::Absolute,
-                layout.position: LayoutRect {
-                    start: Dimension::Points(0.0),
-                    end: Dimension::Auto,
-                    top: Dimension::Points(0.0),
-                    bottom: Dimension::Auto,
-                },
-                layout.size: Size {
-                    width: Dimension::Points(350.0),
-                    height: Dimension::Points(350.0),
-                },
-            }
-            max_size => {
-                layout.size: Size {
-                    width: Dimension::Percent(1.0),
-                    height: Dimension::Percent(1.0),
-                },
-            }
-            split_block => {
-                layout.flex_shrink: 1.0,
-                layout.flex_grow: 1.0,
-                layout.aspect_ratio: Number::Defined(1.0),
-                layout.max_size: Size {
-                    width: Dimension::Points(150.0),
-                    height: Dimension::Points(150.0),
-                },
-            }
-            texture => {
-                widget.color: Color::WHITE,
-                widget.texture: tex1,
-            }
-            left_split => {
-                layout.flex_direction: FlexDirection::Column,
-                layout.justify_content: JustifyContent::SpaceBetween,
-            }
-        };
+        let stylesheet = styles(tex0, tex1);
 
         // let panel = float_panel(tex0);
         // let left = left_panel(tex0, tex1, col.clone());
@@ -155,7 +133,24 @@ impl App {
 
         // panic!("{:#?}", gui.root());
 
-        let root: Root = Root::build(&mut gui, WidgetCore::root_style(), &stylesheet, &[]).unwrap();
+        let mut root: Root =
+            Root::build(&mut gui, WidgetCore::root_style(), &stylesheet, &[]).unwrap();
+
+        let buttons = (0..9)
+            .map(|i| {
+                let mut btn: Button = Button::build(
+                    &mut gui,
+                    Style::from_styles(&stylesheet, ["button"]),
+                    &stylesheet,
+                    &[],
+                )?;
+                btn.fill.col = Color::new_mono(i as f32 / 9.0).powf(2.2);
+                Ok(btn)
+            })
+            .collect::<Result<Vec<_>, taffy::Error>>()
+            .unwrap();
+
+        root.right_panel.buttons.extend(&mut gui, buttons).unwrap();
 
         for name in stylesheet.check_unused() {
             log::warn!("Unused style: '{name}'");
@@ -199,13 +194,21 @@ impl Runnable for App {
             .unwrap();
         frame.primary_render_pass().draw_gui(&gui);
 
-        // println!("{:?}", self.gui.layout());
-        // println!(
-        // "{:?}",
-        // self.gui
-        // .layout()
-        // .layout(self.root.left_panel.split.top.node())
-        // );
+        if true {
+            // println!("{:?}", self.gui.layout());
+            fn print<T: Widget>(gui: &mut Gui, d: &str, widget: &T) {
+                println!(
+                    "{d} {:#?}",
+                    gui.layout().get(widget),
+                    // gui.layout().style(widget.node())
+                );
+            }
+            let buttons = &self.root.right_panel.buttons;
+            print(&mut self.gui, "buttons", buttons);
+            let button = buttons.get(1).unwrap();
+            print(&mut self.gui, "button[1]", button);
+            print(&mut self.gui, "button[1].fill", &button.fill);
+        }
 
         self.target.finish_frame(frame);
 
