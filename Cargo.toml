@@ -15,11 +15,15 @@ path = "examples/asteroids/main.rs"
 
 [[example]]
 name = "flexbox"
-path = "examples/flexbox/main.rs"
+path = "examples/gui/flexbox/main.rs"
 
 [[example]]
 name = "gui"
-path = "examples/gui/main.rs"
+path = "examples/gui/main/main.rs"
+
+[[example]]
+name = "loading_screen"
+path = "examples/gui/loading_screen/main.rs"
 
 # profiles
 
@@ -44,7 +48,7 @@ crate-type = ["cdylib", "rlib"]
 # features
 
 [features]
-default = ["parallel-ecs", "gizmos", "gui", "gui-derive", "presets", "res", "text"]
+default = ["dynamic", "parallel-ecs", "gizmos", "gui", "gui-derive", "gui-gizmos", "presets", "res", "text"]
 
 dynamic = ["srs2dge-link-dynamic"]
 
@@ -53,6 +57,7 @@ ecs = ["srs2dge-link-static/ecs"]
 gizmos = ["srs2dge-link-static/gizmos"]
 gui = ["srs2dge-link-static/gui"]
 gui-derive = ["srs2dge-link-static/gui-derive"]
+gui-gizmos = ["srs2dge-link-static/gui-gizmos"]
 presets = ["srs2dge-link-static/presets"]
 res = ["srs2dge-link-static/res"]
 text = ["srs2dge-link-static/text"]

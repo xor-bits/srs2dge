@@ -201,7 +201,6 @@ impl DeriveParsed {
             .as_ref()
             .into_iter()
             .flat_map(|s| s.split_whitespace())
-            .rev()
             .map(|style_part_name| quote! { .merge_from_styles(styles, #style_part_name) })
     }
 }

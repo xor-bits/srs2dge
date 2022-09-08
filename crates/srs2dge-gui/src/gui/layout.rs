@@ -11,6 +11,7 @@ use taffy::Taffy;
 #[derive(Default)]
 pub struct GuiLayout {
     pub stretch: Taffy,
+    pub height: f32,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
@@ -26,7 +27,11 @@ impl GuiLayout {
         let layout = self.stretch.layout(widget.node())?;
 
         Ok(WidgetLayout {
-            offset: Vec2::new(layout.location.x, layout.location.y),
+            offset: Vec2::new(
+                layout.location.x,
+                layout.location.y,
+                // self.height - layout.location.y - layout.size.height,
+            ),
             size: Vec2::new(layout.size.width, layout.size.height),
         })
     }

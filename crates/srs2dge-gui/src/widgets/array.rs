@@ -25,7 +25,7 @@ impl<T: WidgetBuilder + Widget + 'static, const LEN: usize> WidgetArray<T, LEN> 
         // TODO: array_try_map
         // let widgets = [()].try_map(|_|T::build(gui, style, stylesheet, children))?;
         let widgets: [T; LEN] = (0..LEN)
-            .map(|_| T::build(gui, style, stylesheet, children))
+            .map(|_| T::build(gui, Style::default(), stylesheet, children))
             .collect::<Result<Vec<_>, _>>()?
             .try_into()
             .map_err(|_| ())

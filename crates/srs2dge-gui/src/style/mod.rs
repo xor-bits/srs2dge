@@ -1,3 +1,4 @@
+use self::merge::MergeStyles;
 use srs2dge_core::prelude::{Color, TexturePosition};
 use std::{
     borrow::Cow,
@@ -18,28 +19,9 @@ pub use taffy::{
 
 //
 
-#[macro_export]
-macro_rules! stylesheet {
-    ($($rule_name:expr => {
-        $($container_name:ident . $field_name:ident : $field_val:expr),* $(,)?
-    })*) => {{
-        let mut stylesheet = StyleSheet::new();
-        $(
-            let mut style = Style::default();
-            $(style . $container_name . $field_name = Some($field_val);)*
-            stylesheet.insert($rule_name, style);
-        )*
-
-        stylesheet
-    }};
-}
-
-#[macro_export]
-macro_rules! stylesheet_entry {
-    ($rule_name:ident => {
-        $($field_name:ident : $field_val:expr),*
-    }) => {};
-}
+pub mod r#macro;
+pub mod merge;
+pub mod prelude;
 
 //
 
@@ -115,13 +97,9 @@ pub struct StyleSheet<'a> {
 
 //
 
-pub trait MergeStyles: Sized {
-    fn merge(self, other: Self) -> Self;
-}
-
-//
-
 impl Style {
+    /// The [`Style`] from `styles`
+    /// have a higher priority.
     pub fn merge_from_styles(self, styles: &StyleSheet, name: &str) -> Self {
         if let Some(other) = styles.get(name) {
             self.merge(*other)
@@ -131,6 +109,8 @@ impl Style {
         }
     }
 
+    /// [`Style`] items that come later
+    /// have a higher priority.
     pub fn from_styles<'a, I: IntoIterator<Item = &'a str>>(styles: &StyleSheet, names: I) -> Self {
         names.into_iter().fold(Style::default(), |s, name| {
             s.merge_from_styles(styles, name)
@@ -192,51 +172,6 @@ impl LayoutStyle {
             min_size: self.min_size.unwrap_or(default.min_size),
             max_size: self.max_size.unwrap_or(default.max_size),
             aspect_ratio: self.aspect_ratio.unwrap_or(default.aspect_ratio),
-        }
-    }
-}
-
-impl MergeStyles for Style {
-    fn merge(self, other: Self) -> Self {
-        Self {
-            widget: self.widget.merge(other.widget),
-            layout: self.layout.merge(other.layout),
-        }
-    }
-}
-
-impl MergeStyles for LayoutStyle {
-    fn merge(self, other: Self) -> Self {
-        Self {
-            display: self.display.or(other.display),
-            position_type: self.position_type.or(other.position_type),
-            flex_direction: self.flex_direction.or(other.flex_direction),
-            flex_wrap: self.flex_wrap.or(other.flex_wrap),
-            align_items: self.align_items.or(other.align_items),
-            align_self: self.align_self.or(other.align_self),
-            align_content: self.align_content.or(other.align_content),
-            justify_content: self.justify_content.or(other.justify_content),
-            position: self.position.or(other.position),
-            margin: self.margin.or(other.margin),
-            padding: self.padding.or(other.padding),
-            border: self.border.or(other.border),
-            flex_grow: self.flex_grow.or(other.flex_grow),
-            flex_shrink: self.flex_shrink.or(other.flex_shrink),
-            flex_basis: self.flex_basis.or(other.flex_basis),
-            size: self.size.or(other.size),
-            min_size: self.min_size.or(other.min_size),
-            max_size: self.max_size.or(other.max_size),
-            aspect_ratio: self.aspect_ratio.or(other.aspect_ratio),
-        }
-    }
-}
-
-impl MergeStyles for WidgetStyle {
-    fn merge(self, other: Self) -> Self {
-        Self {
-            color: self.color.or(other.color),
-            background_color: self.background_color.or(other.background_color),
-            texture: self.texture.or(other.texture),
         }
     }
 }

@@ -65,7 +65,7 @@ pub fn styles(tex0: TexturePosition, tex1: TexturePosition) -> StyleSheet<'stati
         }
         "split_block_upper" => {
             layout.size: Size {
-                width: Dimension::Auto,
+                width: Dimension::Points(150.0),
                 height: Dimension::Auto
             },
             layout.aspect_ratio: Number::Defined(1.0),

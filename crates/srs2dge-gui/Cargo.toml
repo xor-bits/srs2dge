@@ -7,11 +7,16 @@ license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = []
+gizmos = ["srs2dge-gizmos"]
+
 [dependencies]
 srs2dge-core = { path = "../srs2dge-core", version = "0.4" }
 srs2dge-presets = { path = "../srs2dge-presets", version = "0.4" }
 srs2dge-res = { path = "../srs2dge-res", version = "0.4" }
 srs2dge-text = { path = "../srs2dge-text", version = "0.4" }
+srs2dge-gizmos = { path = "../srs2dge-gizmos", version = "0.4", optional = true }
 log = "0.4.17"
 rand = "0.8.5"
 taffy = "0.1.0"

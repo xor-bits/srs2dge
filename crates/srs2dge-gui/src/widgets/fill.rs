@@ -51,6 +51,8 @@ impl Widget for Fill {
     ) -> Result<(), taffy::Error> {
         let layout = gui_layout.get(self)?.to_absolute(parent_layout);
 
+        // log::debug!("fill {layout:?}");
+
         draw.graphics
             .texture_batcher
             .push_with(GuiGeom::Quad(QuadMesh::new_top_left(

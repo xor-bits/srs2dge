@@ -46,13 +46,19 @@ pub struct Gui {
 
 impl Gui {
     pub fn new(target: &Target) -> Self {
+        let ws = WindowState::new(&target.get_window().unwrap()); // TODO: allow headless
+        let layout = GuiLayout {
+            height: ws.size.height as f32,
+            ..Default::default()
+        };
+
         Self {
-            ws: WindowState::new(&target.get_window().unwrap()), // TODO: allow headless
+            ws,
             pointers: Default::default(),
 
             graphics: GuiGraphics::new(target),
 
-            layout: GuiLayout::default(),
+            layout,
 
             state: Default::default(),
         }
@@ -134,6 +140,7 @@ impl Gui {
 
     fn event_inner(&mut self, event: Event<'static>) -> Option<GuiEvent> {
         self.ws.event(&event);
+        self.layout.height = self.ws.size.height as f32;
 
         match event {
             Event::DeviceEvent {
