@@ -116,6 +116,7 @@ impl Size {
             Size::PointsAbs(c) => *c,
             Size::Calc(c) => c.call((parent,)),
         }
+        .floor()
     }
 }
 
@@ -137,6 +138,7 @@ impl Offset {
             Offset::PointsAbs(c) => *c,
             Offset::Calc(c) => c.call((parent, self_size)),
         }
+        .floor()
     }
 }
 

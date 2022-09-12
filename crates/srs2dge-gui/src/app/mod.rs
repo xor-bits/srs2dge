@@ -16,30 +16,33 @@ mod debug;
 
 //
 
-struct App<Root: Widget> {
+struct App<Root: Widget, Fupd: FnMut(&mut Root)> {
     target: Target,
     reporter: Reporter,
     texture: TextureAtlasMap<u8>,
 
     gui: Gui,
     root: Root,
+    upd: Fupd,
 
     debug: AppDebug,
 }
 
 //
 
-impl<Root: Widget> App<Root> {
-    async fn init<F: FnOnce(&Target, &mut Gui) -> (TextureAtlasMap<u8>, Root)>(
+impl<Root: Widget, Fu: FnMut(&mut Root)> App<Root, Fu> {
+    async fn init<Fi: FnOnce(&Target, &mut Gui) -> (TextureAtlasMap<u8>, Root)>(
         target: &EventLoopTarget,
-        f: F,
+        fi: Fi,
+        fu: Fu,
     ) -> Self {
         let engine = Engine::new();
-        let target = engine.new_target_default(target).await.unwrap();
+        let mut target = engine.new_target_default(target).await.unwrap();
+        target.set_vsync(false);
 
         let mut gui = Gui::new(&target);
 
-        let (texture, root) = f(&target, &mut gui);
+        let (texture, root) = fi(&target, &mut gui);
 
         let debug = AppDebug::new(&target);
 
@@ -50,13 +53,14 @@ impl<Root: Widget> App<Root> {
 
             gui,
             root,
+            upd: fu,
 
             debug,
         }
     }
 }
 
-impl<Root: Widget> Runnable for App<Root> {
+impl<Root: Widget, Fu: FnMut(&mut Root)> Runnable for App<Root, Fu> {
     fn event(&mut self, event: Event, _: &EventLoopTarget, control: &mut ControlFlow) {
         let event = match event.to_static() {
             Some(some) => some,
@@ -78,6 +82,7 @@ impl<Root: Widget> Runnable for App<Root> {
         let mut frame = self.target.get_frame();
 
         // drawing
+        (self.upd)(&mut self.root);
         self.run_debug_pre_draw(&mut frame);
         let gui = self
             .gui
@@ -89,27 +94,34 @@ impl<Root: Widget> Runnable for App<Root> {
 
         self.reporter.end(timer);
         if self.reporter.should_report() {
-            self.reporter.reset();
+            log::info!(
+                "{}",
+                Reporter::report_all("GUI testbed perf report", [("FPS", &mut self.reporter)])
+            );
         }
     }
 }
 
 pub fn run_gui_app<
     Root: Widget + 'static,
-    F: FnOnce(&Target, &mut Gui) -> (TextureAtlasMap<u8>, Root) + 'static,
+    Fi: FnOnce(&Target, &mut Gui) -> (TextureAtlasMap<u8>, Root) + 'static,
+    Fu: FnMut(&mut Root) + 'static,
 >(
-    f: F,
+    fi: Fi,
+    fu: Fu,
 ) {
-    as_async(run_gui_app_async(f));
+    as_async(run_gui_app_async(fi, fu));
 }
 
 pub async fn run_gui_app_async<
     Root: Widget + 'static,
-    F: FnOnce(&Target, &mut Gui) -> (TextureAtlasMap<u8>, Root),
+    Fi: FnOnce(&Target, &mut Gui) -> (TextureAtlasMap<u8>, Root),
+    Fu: FnMut(&mut Root) + 'static,
 >(
-    f: F,
+    fi: Fi,
+    fu: Fu,
 ) {
     let target = EventLoop::new();
-    let app = App::<Root>::init(&target, f).await;
+    let app = App::<Root, Fu>::init(&target, fi, fu).await;
     target.runnable(app);
 }

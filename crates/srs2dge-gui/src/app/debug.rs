@@ -45,7 +45,7 @@ impl<'a> DebugTree<'a> {
     }
 }
 
-impl<T: Widget> App<T> {
+impl<T: Widget, Fu: FnMut(&mut T)> App<T, Fu> {
     pub fn run_debug_events(&mut self, event: &Event<'static>) {
         // debug keys
         let pressed = if let Event::WindowEvent {

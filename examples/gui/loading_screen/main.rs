@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use srs2dge::prelude::*;
 
 //
@@ -44,7 +46,7 @@ pub struct LoadingBar {
 
 //
 
-fn gui_main(target: &Target, gui: &mut Gui) -> (TextureAtlasMap<u8>, Root) {
+fn gui_main(target: &Target, _: &mut Gui) -> (TextureAtlasMap<u8>, Root) {
     let texture = TextureAtlasMap::builder()
         .with_bytes(0, res::texture::EMPTY)
         .unwrap()
@@ -52,6 +54,7 @@ fn gui_main(target: &Target, gui: &mut Gui) -> (TextureAtlasMap<u8>, Root) {
         .build(target);
 
     let tex = texture.get(&0).unwrap_or_default();
+    let now = Instant::now();
 
     let mut styles = StyleSheet::new();
     styles.insert(
@@ -105,7 +108,15 @@ fn gui_main(target: &Target, gui: &mut Gui) -> (TextureAtlasMap<u8>, Root) {
         Style {
             color: Color::WHITE,
             texture: tex,
-            size: Size::borders(3.0),
+            size: Size::Calc(Box::new(move |parent: WidgetLayout| {
+                Vec2::new(
+                    (parent.size.x - 6.0)
+                        * ((Instant::now() - now).as_secs_f32() * 0.2)
+                            .min(1.0)
+                            .max(0.0),
+                    parent.size.y - 6.0,
+                )
+            })),
             offset: Offset::borders(3.0),
             ..Default::default()
         },
@@ -120,7 +131,9 @@ fn gui_main(target: &Target, gui: &mut Gui) -> (TextureAtlasMap<u8>, Root) {
     (texture, root)
 }
 
+fn gui_upd(_: &mut Root) {}
+
 fn main() {
     init_log();
-    run_gui_app(gui_main);
+    run_gui_app(gui_main, gui_upd);
 }
