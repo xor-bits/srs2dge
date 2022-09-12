@@ -120,6 +120,8 @@ fn gui_main(target: &Target, gui: &mut Gui) -> (TextureAtlasMap<u8>, Root) {
     )
     .unwrap();
 
+    gui.layout_mut().set_measure();
+
     (texture, root)
 }
 

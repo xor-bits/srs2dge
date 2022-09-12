@@ -3,7 +3,7 @@ use crate::{
     style::{LayoutStyle, Style, StyleSheet},
 };
 use srs2dge_core::target::Target;
-use std::any::Any;
+use std::{any::Any, borrow::Cow};
 use taffy::{
     prelude::{Node, Size},
     style::Dimension,
@@ -23,35 +23,48 @@ pub struct GuiDraw<'a> {
 
 //
 
+#[allow(unused_variables)]
 pub trait Widget {
     /// Subwidgets are processed **before** the
     /// parent i.e. in backwards direction.
-    #[allow(unused_variables)]
     fn event(
         &mut self,
         parent_layout: WidgetLayout,
         gui_layout: &mut GuiLayout,
         event: &mut GuiEvent,
-    ) -> Result<(), taffy::Error> {
-        Ok(())
+    ) {
     }
 
     /// Subwidgets are processed **after** the
     /// parent i.e. in forward direction.
-    #[allow(unused_variables)]
     fn draw(
         &mut self,
         parent_layout: WidgetLayout,
         gui_layout: &mut GuiLayout,
         draw: &mut GuiDraw,
-    ) -> Result<(), taffy::Error> {
-        Ok(())
+    ) {
     }
 
-    /// General but expensive iterable of
-    /// the subwidgets.
-    fn subwidgets(&self) -> Vec<&dyn Widget> {
-        vec![]
+    /// General but potentially expensive
+    /// iterable of the subwidgets.
+    fn subwidgets(&self) -> Cow<'_, [&'_ dyn Widget]> {
+        Cow::Borrowed(&[])
+    }
+
+    /// The number of subwidgets
+    fn len(&self) -> usize {
+        0
+    }
+
+    /// Get subwidget with its index
+    fn get(&self, index: usize) -> Option<&dyn Widget> {
+        None
+    }
+
+    /// Get mutable subwidget with
+    /// its index
+    fn get_mut(&mut self, index: usize) -> Option<&mut dyn Widget> {
+        None
     }
 
     /// returns a ref to the WidgetCore of this widget
@@ -71,35 +84,28 @@ pub trait Widget {
 }
 
 pub trait WidgetBuilder: Sized {
-    fn build(
-        gui: &mut Gui,
-        style: Style,
-        stylesheet: &StyleSheet,
-        children: &[Node],
-    ) -> Result<Self, taffy::Error>;
+    fn build(gui: &mut Gui, style: Style, stylesheet: &StyleSheet, children: &[Node]) -> Self;
 }
 
+#[allow(unused_variables)]
 pub trait WidgetEventHandler {
-    #[allow(unused_variables)]
     fn event_handler(
         &mut self,
         widget_layout: WidgetLayout,
         gui_layout: &mut GuiLayout,
         event: &mut GuiEvent,
-    ) -> Result<(), taffy::Error> {
-        Ok(())
+    ) {
     }
 }
 
+#[allow(unused_variables)]
 pub trait WidgetDrawHandler {
-    #[allow(unused_variables)]
     fn draw_handler(
         &mut self,
         widget_layout: WidgetLayout,
         gui_layout: &mut GuiLayout,
         draw: &mut GuiDraw,
-    ) -> Result<(), taffy::Error> {
-        Ok(())
+    ) {
     }
 }
 
