@@ -1,9 +1,5 @@
-use self::{
-    generated::GeneratedGui,
-    graphics::GuiGraphics,
-    layout::{GuiLayout, WidgetLayout},
-};
-use crate::prelude::{GuiDraw, GuiEvent, GuiEventTy, PointerState, Widget};
+use self::{generated::GeneratedGui, graphics::GuiGraphics};
+use crate::prelude::{layout::WidgetLayout, GuiDraw, GuiEvent, GuiEventTy, PointerState, Widget};
 use srs2dge_core::{
     main_game_loop::{event::Event, prelude::WindowState},
     prelude::Frame,
@@ -17,14 +13,13 @@ use std::{
     any::{Any, TypeId},
     collections::HashMap,
 };
-use taffy::prelude::{Number, Size};
 
 //
 
 pub mod generated;
 pub mod geom;
 pub mod graphics;
-pub mod layout;
+// pub mod layout;
 pub mod prelude;
 pub mod renderer;
 
@@ -37,8 +32,7 @@ pub struct Gui {
 
     graphics: GuiGraphics,
 
-    layout: GuiLayout,
-
+    // layout: GuiLayout,
     state: HashMap<TypeId, Box<dyn Any>>,
 }
 
@@ -46,11 +40,8 @@ pub struct Gui {
 
 impl Gui {
     pub fn new(target: &Target) -> Self {
-        let ws = WindowState::new(&target.get_window().unwrap()); // TODO: allow headless
-        let layout = GuiLayout {
-            height: ws.size.height as f32,
-            ..Default::default()
-        };
+        let ws = WindowState::new(&target.get_window().unwrap());
+        // TODO: allow headless
 
         Self {
             ws,
@@ -58,8 +49,7 @@ impl Gui {
 
             graphics: GuiGraphics::new(target),
 
-            layout,
-
+            // layout,
             state: Default::default(),
         }
     }
@@ -75,25 +65,13 @@ impl Gui {
     }
 
     /// handle gui events
-    pub fn event<T: Widget>(
-        &mut self,
-        root: &mut T,
-        event: Event<'static>,
-    ) -> Result<(), taffy::Error> {
+    pub fn event<T: Widget>(&mut self, root: &mut T, event: Event<'static>) {
         if let Some(mut event) = self.event_inner(event) {
-            self.layout.compute_layout(
-                root.node(),
-                Size {
-                    width: Number::Defined(self.ws.size.width as f32),
-                    height: Number::Defined(self.ws.size.height as f32),
-                },
-            )?;
-            root.event(WidgetLayout::default(), &mut self.layout, &mut event)?;
+            root.layout(WidgetLayout::from_ws(&self.ws));
+            root.event(&mut event);
         }
 
         self.update_pointers();
-
-        Ok(())
     }
 
     /// generate drawable geometry
@@ -102,7 +80,7 @@ impl Gui {
         root: &mut T,
         target: &mut Target,
         frame: &mut Frame,
-    ) -> Result<GeneratedGui, taffy::Error> {
+    ) -> GeneratedGui {
         self.draw_inner(root, target, frame, None)
     }
 
@@ -113,7 +91,7 @@ impl Gui {
         target: &mut Target,
         frame: &mut Frame,
         texture: &TextureView,
-    ) -> Result<GeneratedGui, taffy::Error> {
+    ) -> GeneratedGui {
         self.draw_inner(root, target, frame, Some(texture))
     }
 
@@ -130,17 +108,8 @@ impl Gui {
             .unwrap()
     }
 
-    pub fn layout(&self) -> &GuiLayout {
-        &self.layout
-    }
-
-    pub fn layout_mut(&mut self) -> &mut GuiLayout {
-        &mut self.layout
-    }
-
     fn event_inner(&mut self, event: Event<'static>) -> Option<GuiEvent> {
         self.ws.event(&event);
-        self.layout.height = self.ws.size.height as f32;
 
         match event {
             Event::DeviceEvent {
@@ -196,30 +165,15 @@ impl Gui {
         target: &mut Target,
         frame: &mut Frame,
         texture: Option<&TextureView>,
-    ) -> Result<GeneratedGui, taffy::Error> {
-        self.layout.compute_layout(
-            root.node(),
-            Size {
-                width: Number::Defined(self.ws.size.width as f32),
-                height: Number::Defined(self.ws.size.height as f32),
-            },
-        )?;
+    ) -> GeneratedGui {
+        root.layout(WidgetLayout::from_ws(&self.ws));
+        root.event(&mut GuiEvent::default());
+        root.draw(&mut GuiDraw {
+            graphics: &mut self.graphics,
+            target,
+        });
 
-        root.event(
-            WidgetLayout::default(),
-            &mut self.layout,
-            &mut GuiEvent::default(),
-        )?;
-        root.draw(
-            WidgetLayout::default(),
-            &mut self.layout,
-            &mut GuiDraw {
-                graphics: &mut self.graphics,
-                target,
-            },
-        )?;
-
-        Ok(self.graphics.draw(target, frame, &self.ws, texture))
+        self.graphics.draw(target, frame, &self.ws, texture)
     }
 
     /// clear pointer `released` states

@@ -3,7 +3,7 @@ use crate::prelude::{DrawGeneratedGui, Gui, Widget};
 use srs2dge_core::{
     main_game_loop::{
         as_async, event::Event, event::EventLoopTarget, prelude::EventLoop, report::Reporter,
-        runnable::Runnable, state::window::WindowState,
+        runnable::Runnable,
     },
     prelude::{ControlFlow, TextureAtlasMap},
     target::Target,
@@ -65,7 +65,7 @@ impl<Root: Widget> Runnable for App<Root> {
 
         self.run_debug_events(&event);
 
-        self.gui.event(&mut self.root, event).unwrap();
+        self.gui.event(&mut self.root, event);
 
         if self.gui.window_state().should_close {
             *control = ControlFlow::Exit;
@@ -81,8 +81,7 @@ impl<Root: Widget> Runnable for App<Root> {
         self.run_debug_pre_draw(&mut frame);
         let gui = self
             .gui
-            .draw_with(&mut self.root, &mut self.target, &mut frame, &self.texture)
-            .unwrap();
+            .draw_with(&mut self.root, &mut self.target, &mut frame, &self.texture);
         let rp = frame.primary_render_pass().draw_gui(&gui);
         self.debug.run_debug_draw(rp);
 

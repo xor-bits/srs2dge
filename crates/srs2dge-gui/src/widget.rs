@@ -1,19 +1,16 @@
 use crate::{
-    prelude::{Gui, GuiEvent, GuiGraphics, GuiLayout, WidgetLayout},
-    style::{LayoutStyle, Style, StyleSheet},
+    prelude::{GuiEvent, GuiGraphics, StyleSheet, WidgetLayout},
+    style::Style,
 };
 use srs2dge_core::target::Target;
 use std::{any::Any, borrow::Cow};
-use taffy::{
-    prelude::{Node, Size},
-    style::Dimension,
-};
 
 //
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Default)]
 pub struct WidgetCore {
-    pub node: Node,
+    pub style: Style,
+    pub layout: WidgetLayout,
 }
 
 pub struct GuiDraw<'a> {
@@ -27,26 +24,20 @@ pub struct GuiDraw<'a> {
 pub trait Widget {
     /// Subwidgets are processed **before** the
     /// parent i.e. in backwards direction.
-    fn event(
-        &mut self,
-        parent_layout: WidgetLayout,
-        gui_layout: &mut GuiLayout,
-        event: &mut GuiEvent,
-    ) {
-    }
+    fn event(&mut self, event: &mut GuiEvent) {}
 
     /// Subwidgets are processed **after** the
     /// parent i.e. in forward direction.
-    fn draw(
-        &mut self,
-        parent_layout: WidgetLayout,
-        gui_layout: &mut GuiLayout,
-        draw: &mut GuiDraw,
-    ) {
+    fn draw(&mut self, draw: &mut GuiDraw) {}
+
+    /// Subwidgets are processed **after** the
+    /// parent i.e. in forward firection.
+    fn layout(&mut self, parent_layout: WidgetLayout) {
+        self.gen_layout(parent_layout);
     }
 
     /// General but potentially expensive
-    /// iterable of the subwidgets.
+    /// iterable of subwidgets.
     fn subwidgets(&self) -> Cow<'_, [&'_ dyn Widget]> {
         Cow::Borrowed(&[])
     }
@@ -70,6 +61,9 @@ pub trait Widget {
     /// returns a ref to the WidgetCore of this widget
     fn core(&self) -> &WidgetCore;
 
+    /// returns a mut ref to the WidgetCore of this widget
+    fn core_mut(&mut self) -> &mut WidgetCore;
+
     fn name(&self) -> &'static str {
         "GenericWidget"
     }
@@ -78,74 +72,46 @@ pub trait Widget {
 
     fn as_mut_any(&mut self) -> &mut dyn Any;
 
-    fn node(&self) -> Node {
-        self.core().node
+    fn style(&self) -> &Style {
+        &self.core().style
+    }
+
+    fn style_mut(&mut self) -> &mut Style {
+        &mut self.core_mut().style
+    }
+
+    fn gen_layout(&mut self, parent_layout: WidgetLayout) {
+        self.core_mut().layout = parent_layout.calc_with_style(self.style_mut());
     }
 }
 
 pub trait WidgetBuilder: Sized {
-    fn build(gui: &mut Gui, style: Style, stylesheet: &StyleSheet, children: &[Node]) -> Self;
+    fn build(style: Style, stylesheet: &StyleSheet) -> Self;
 }
 
 #[allow(unused_variables)]
 pub trait WidgetEventHandler {
-    fn event_handler(
-        &mut self,
-        widget_layout: WidgetLayout,
-        gui_layout: &mut GuiLayout,
-        event: &mut GuiEvent,
-    ) {
-    }
+    fn event_handler(&mut self, layout: WidgetLayout, event: &mut GuiEvent) {}
 }
 
 #[allow(unused_variables)]
 pub trait WidgetDrawHandler {
-    fn draw_handler(
-        &mut self,
-        widget_layout: WidgetLayout,
-        gui_layout: &mut GuiLayout,
-        draw: &mut GuiDraw,
-    ) {
-    }
+    fn draw_handler(&mut self, layout: WidgetLayout, draw: &mut GuiDraw) {}
 }
 
 //
 
 impl WidgetCore {
-    /// WidgetCore constructor for normal widgets
-    ///
-    /// [`taffy::prelude::Node`] is aquired from a widget with:
-    ///
-    /// ```ignore
-    /// let _: Node = subwidget.node();
-    /// ```
-    pub fn new(gui: &mut Gui, style: LayoutStyle, children: &[Node]) -> Result<Self, taffy::Error> {
-        Ok(Self {
-            node: gui.layout_mut().new_node(style.convert(), children)?,
-        })
+    pub fn new() -> Self {
+        Self::default()
     }
 
-    /// WidgetCore constructor for root widgets
-    ///
-    /// [`taffy::prelude::Node`] is aquired from a widget with:
-    ///
-    /// ```ignore
-    /// let _: Node = subwidget.node();
-    /// ```
-    pub fn new_root(gui: &mut Gui, children: &[Node]) -> Result<Self, taffy::Error> {
-        Self::new(gui, Self::root_style().layout, children)
+    pub fn new_root() -> Self {
+        Self::new()
     }
 
-    pub fn root_style() -> Style {
-        Style {
-            layout: LayoutStyle {
-                size: Some(Size {
-                    width: Dimension::Percent(1.0),
-                    height: Dimension::Percent(1.0),
-                }),
-                ..Default::default()
-            },
-            ..Default::default()
-        }
+    pub fn with_style(mut self, style: Style) -> Self {
+        self.style = style;
+        self
     }
 }

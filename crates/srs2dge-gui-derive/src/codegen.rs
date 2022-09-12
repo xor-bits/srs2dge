@@ -33,33 +33,39 @@ impl DeriveParsed {
         //
         // or take from the marked core
         let main_field_ident = &main_field.ident;
-        let core = match &main_field.inner {
-            FieldParsedType::Inherit { .. } => quote! { Widget::core(&self.#main_field_ident) },
-            FieldParsedType::Core => quote! { &self.#main_field_ident },
+        let (core, core_mut) = match &main_field.inner {
+            FieldParsedType::Inherit { .. } => (
+                quote! { Widget::core(&self.#main_field_ident) },
+                quote! { Widget::core_mut(&mut self.#main_field_ident) },
+            ),
+            FieldParsedType::Core => (
+                quote! { &self.#main_field_ident },
+                quote! { &mut self.#main_field_ident },
+            ),
             _ => unreachable!(),
         };
 
         // event/draw handlers
         let self_event = if *event_handler {
-            quote! { self.event_handler(layout, gui_layout, event)?; }
+            quote! { self.event_handler(layout, event); }
         } else {
             Default::default()
         };
         let self_draw = if *draw_handler {
-            quote! { self.draw_handler(layout, gui_layout, draw)?; }
+            quote! { self.draw_handler(layout, draw); }
         } else {
             Default::default()
         };
-        let inherit_event = if let FieldParsedType::Inherit { .. } = self.main_field.inner {
-            quote! { Widget::event(&mut self.#main_field_ident, parent_layout, gui_layout, event)?; }
-        } else {
-            Default::default()
-        };
-        let inherit_draw = if let FieldParsedType::Inherit { .. } = self.main_field.inner {
-            quote! { Widget::draw(&mut self.#main_field_ident, parent_layout, gui_layout, draw)?; }
-        } else {
-            Default::default()
-        };
+        let (inherit_event, inherit_draw, inherit_layout) =
+            if let FieldParsedType::Inherit { .. } = self.main_field.inner {
+                (
+                    quote! { Widget::event(&mut self.#main_field_ident, event); },
+                    quote! { Widget::draw(&mut self.#main_field_ident, draw); },
+                    quote! { Widget::layout(&mut self.#main_field_ident, parent_layout); },
+                )
+            } else {
+                Default::default()
+            };
 
         // subwidget fields
         let fields = fields
@@ -67,35 +73,43 @@ impl DeriveParsed {
             .filter(|field| matches!(field.inner, FieldParsedType::SubWidget { .. }))
             .map(|field| &field.ident);
         let fields_2 = fields.clone();
+        let fields_3 = fields.clone();
         let fields_rev = fields.clone().rev();
 
         // actual impl
         let new_tokens = quote! {
             impl #imp Widget for #ident #ty #wher {
-                fn event(&mut self, parent_layout: WidgetLayout, gui_layout: &mut GuiLayout, event: &mut GuiEvent) -> Result<(), taffy::Error> {
-                    let layout = gui_layout.get(self)?.to_absolute(parent_layout);
+                fn event(&mut self, event: &mut GuiEvent) {
+                    let layout = self.core().layout;
 
-                    #(Widget::event(&mut self.#fields_rev, layout, gui_layout, event)?;)*
+                    #(Widget::event(&mut self.#fields_rev, event);)*
 
                     #self_event
                     #inherit_event
-
-                    Ok(())
                 }
 
-                fn draw(&mut self, parent_layout: WidgetLayout, gui_layout: &mut GuiLayout, draw: &mut GuiDraw) -> Result<(), taffy::Error> {
-                    let layout = gui_layout.get(self)?.to_absolute(parent_layout);
+                fn draw(&mut self, draw: &mut GuiDraw) {
+                    let layout = self.core().layout;
 
                     #self_draw
                     #inherit_draw
 
-                    #(Widget::draw(&mut self.#fields, layout, gui_layout, draw)?;)*
-
-                    Ok(())
+                    #(Widget::draw(&mut self.#fields, draw);)*
                 }
 
-                fn subwidgets(&self) -> Vec<&dyn Widget> {
-                    [#(&self.#fields_2 as &dyn Widget,)*].to_vec()
+                fn layout(&mut self, parent_layout: WidgetLayout) {
+
+                    // TODO: self_layout
+                    self.gen_layout(parent_layout);
+                    #inherit_layout
+
+                    let layout = self.core().layout;
+
+                    #(Widget::layout(&mut self.#fields_2, layout);)*
+                }
+
+                fn subwidgets(&self) -> std::borrow::Cow<'_, [&dyn Widget]> {
+                    [#(&self.#fields_3 as &dyn Widget,)*].to_vec().into()
                 }
 
                 fn name(&self) -> &'static str {
@@ -104,6 +118,10 @@ impl DeriveParsed {
 
                 fn core(&self) -> &WidgetCore {
                     #core
+                }
+
+                fn core_mut(&mut self) -> &mut WidgetCore {
+                    #core_mut
                 }
 
                 fn as_any(&self) -> &dyn std::any::Any {
@@ -141,17 +159,15 @@ impl DeriveParsed {
         let fields_2 = fields.clone();
 
         // all subwidget builders
-        let field_builders =
-            subwidgets
-            .map(|( field, style)| {
-                let id = &field.ident;
-                let ty = &field.ty;
-                let part_merges = Self::style_str_to_part_merges(style);
+        let field_builders = subwidgets.map(|(field, style)| {
+            let id = &field.ident;
+            let ty = &field.ty;
+            let style = Self::style_str(style);
 
-                quote! {
-                    let #id: #ty = WidgetBuilder::build(gui, Style::default() #(#part_merges)*, styles, &[])?;
-                }
-            });
+            quote! {
+                let #id: #ty = WidgetBuilder::build(#style, styles);
+            }
+        });
 
         // convert core or inherit to builder
         //
@@ -160,17 +176,13 @@ impl DeriveParsed {
         let main_field_setup = match &main_field.inner {
             FieldParsedType::Core => {
                 quote! {
-                    let #main_field_ident = WidgetCore::new(gui, style.layout, &[
-                        #(#fields.node(),)*
-                    ])?;
+                    let #main_field_ident = WidgetCore::new().with_style(style);
                 }
             }
             FieldParsedType::Inherit { style } => {
-                let part_merges = Self::style_str_to_part_merges(style);
+                // let style = Self::style_str(style);
                 quote! {
-                    let #main_field_ident = WidgetBuilder::build(gui, style #(#part_merges)*, styles, &[
-                        #(#fields.node(),)*
-                    ])?;
+                    let #main_field_ident = WidgetBuilder::build(style, styles);
                 }
             }
             _ => unreachable!(),
@@ -178,29 +190,29 @@ impl DeriveParsed {
 
         let new_tokens = quote! {
             impl #imp WidgetBuilder for #ident #ty #wher {
-                fn build(gui: &mut Gui, style: Style, styles: &StyleSheet, children: &[Node]) -> Result<Self, taffy::Error> {
+                fn build(style: Style, styles: &StyleSheet) -> Self {
                     #(#field_builders)*
 
                     #main_field_setup
 
-                    Ok(Self {
+                    Self {
                         #(#fields_2,)*
 
                         #main_field_ident
-                    })
+                    }
                 }
             }
         };
         tokens.extend(new_tokens);
     }
 
-    fn style_str_to_part_merges<'s>(
-        style: &'s Option<String>,
-    ) -> impl Iterator<Item = TokenStream> + 's {
-        style
-            .as_ref()
-            .into_iter()
-            .flat_map(|s| s.split_whitespace())
-            .map(|style_part_name| quote! { .merge_from_styles(styles, #style_part_name) })
+    fn style_str(style: &Option<String>) -> TokenStream {
+        if let Some(style) = style {
+            quote! {
+                Style::from_styles(#style, styles)
+            }
+        } else {
+            Default::default()
+        }
     }
 }

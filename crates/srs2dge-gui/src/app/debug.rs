@@ -1,5 +1,5 @@
 use super::App;
-use crate::prelude::{GuiLayout, Widget, WidgetLayout};
+use crate::prelude::Widget;
 use srs2dge_core::{
     glam::Mat4,
     main_game_loop::event::Event,
@@ -19,7 +19,6 @@ pub struct AppDebug {
 }
 
 struct DebugTree<'a> {
-    layout: &'a GuiLayout,
     this: &'a dyn Widget,
     depth: usize,
 }
@@ -38,9 +37,8 @@ impl AppDebug {
 }
 
 impl<'a> DebugTree<'a> {
-    fn new(layout: &'a GuiLayout, widget: &'a dyn Widget, depth: usize) -> Self {
+    fn new(widget: &'a dyn Widget, depth: usize) -> Self {
         Self {
-            layout,
             this: widget,
             depth,
         }
@@ -69,18 +67,14 @@ impl<T: Widget> App<T> {
             None
         };
         match pressed {
-            Some(VirtualKeyCode::F22) => {
+            Some(VirtualKeyCode::F22 | VirtualKeyCode::F9) => {
                 log::debug!("F22 pressed, printing debug gui tree");
 
                 impl<'a> DebugTree<'a> {
-                    fn print_debug_tree(self, buf: &mut String, parent_layout: WidgetLayout) {
+                    fn print_debug_tree(self, buf: &mut String) {
                         let spaces = " ".repeat(self.depth * 2);
                         let name = self.this.name();
-                        let layout = match self.layout.get(self.this) {
-                            Ok(o) => o,
-                            _ => return,
-                        }
-                        .to_absolute(parent_layout);
+                        let layout = self.this.core().layout;
 
                         writeln!(
                             buf,
@@ -89,22 +83,20 @@ impl<T: Widget> App<T> {
                         )
                         .unwrap();
 
-                        for widget in self.this.subwidgets() {
-                            Self::new(self.layout, widget, self.depth + 1)
-                                .print_debug_tree(buf, layout);
+                        for widget in self.this.subwidgets().iter().copied() {
+                            Self::new(widget, self.depth + 1).print_debug_tree(buf);
                         }
                     }
                 }
 
                 if log::log_enabled!(log::Level::Debug) {
                     let mut buf = String::new();
-                    DebugTree::new(&self.gui.layout(), &self.root, 0)
-                        .print_debug_tree(&mut buf, Default::default());
+                    DebugTree::new(&self.root, 0).print_debug_tree(&mut buf);
                     log::debug!("Done:\n{buf}",);
                 }
             }
             #[cfg(feature = "gizmos")]
-            Some(VirtualKeyCode::F21) => {
+            Some(VirtualKeyCode::F21 | VirtualKeyCode::F8) => {
                 self.debug.gizmo = !self.debug.gizmo;
                 log::debug!(
                     "F21 pressed, gui debug gizmo toggled {}",
@@ -120,12 +112,8 @@ impl<T: Widget> App<T> {
         {
             use srs2dge_gizmos::prelude::*;
             impl<'a> DebugTree<'a> {
-                fn debug_gizmo(self, gizmos: &mut Gizmos, parent_layout: WidgetLayout) {
-                    let layout = match self.layout.get(self.this) {
-                        Ok(o) => o,
-                        _ => return,
-                    }
-                    .to_absolute(parent_layout);
+                fn debug_gizmo(self, gizmos: &mut Gizmos) {
+                    let layout = self.this.core().layout;
 
                     let colors = [
                         Color::AZURE,
@@ -148,15 +136,14 @@ impl<T: Widget> App<T> {
                         colors[self.depth % colors.len()],
                     ));
 
-                    for widget in self.this.subwidgets() {
-                        Self::new(self.layout, widget, self.depth + 1).debug_gizmo(gizmos, layout);
+                    for widget in self.this.subwidgets().iter().copied() {
+                        Self::new(widget, self.depth + 1).debug_gizmo(gizmos);
                     }
                 }
             }
 
             if self.debug.gizmo {
-                DebugTree::new(self.gui.layout(), &self.root, 0)
-                    .debug_gizmo(&mut self.debug.gizmos, Default::default());
+                DebugTree::new(&self.root, 0).debug_gizmo(&mut self.debug.gizmos);
                 self.debug.gizmos.set_mvp(Mat4::orthographic_rh(
                     0.0,
                     self.gui.window_state().size.width as f32,

@@ -129,6 +129,11 @@ impl Surface {
             match self.surface.get_current_texture() {
                 // got texture
                 Ok(texture) => {
+                    if texture.suboptimal {
+                        drop(texture);
+                        self.configure();
+                        continue;
+                    }
                     // log::debug!("Success");
                     return texture;
                 }

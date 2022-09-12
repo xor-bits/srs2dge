@@ -2,7 +2,7 @@ use srs2dge::prelude::*;
 
 //
 
-#[derive(Debug, Clone, Copy, PartialEq, Widget)]
+#[derive(Debug, Clone, Widget)]
 #[gui(builder)]
 pub struct Root {
     #[gui(style = "div")]
@@ -12,7 +12,7 @@ pub struct Root {
     bg: Fill,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Widget)]
+#[derive(Debug, Clone, Widget)]
 #[gui(builder)]
 pub struct Middle {
     #[gui(style = "status")]
@@ -22,7 +22,7 @@ pub struct Middle {
     core: WidgetCore,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Widget)]
+#[derive(Debug, Clone, Widget)]
 #[gui(builder)]
 pub struct LoadingStatus {
     #[gui(style = "bar")]
@@ -32,7 +32,7 @@ pub struct LoadingStatus {
     core: WidgetCore,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Widget)]
+#[derive(Debug, Clone, Widget)]
 #[gui(builder)]
 pub struct LoadingBar {
     #[gui(style = "bar_fill")]
@@ -53,74 +53,69 @@ fn gui_main(target: &Target, gui: &mut Gui) -> (TextureAtlasMap<u8>, Root) {
 
     let tex = texture.get(&0).unwrap_or_default();
 
-    let styles = stylesheet!(
-        "root" => {
-            layout.size: Size {
-                width: Dimension::Percent(1.0),
-                height: Dimension::Percent(1.0),
-            },
-            // layout.justify_content: JustifyContent::Center,
-            layout.justify_content: JustifyContent::FlexStart,
-            layout.align_content: AlignContent::Stretch,
-            layout.align_items: AlignItems::Stretch,
-            widget.color: Color::BLACK,
-            widget.texture: tex,
-        }
-        "status" => {
-            layout.flex_direction: FlexDirection::Column,
-            layout.align_content: AlignContent::Stretch,
-            layout.align_items: AlignItems::Stretch,
-        }
-        "bar" => {
-            layout.min_size: Size {
-                width: Dimension::Points(50.0),
-                height: Dimension::Points(25.0),
-            },
-            layout.max_size: Size {
-                width: Dimension::Points(500.0),
-                height: Dimension::Points(25.0),
-            },
-            layout.flex_shrink: 0.0,
-            layout.flex_grow: 1.0,
-            layout.flex_basis: Dimension::Points(500.0),
-            layout.margin: LayoutRect {
-                start: Dimension::Points(20.0),
-                end: Dimension::Points(20.0),
-                ..Default::default()
-            },
-            // layout.flex_shrink: 1.0,
-            // layout.flex_basis: Dimension::Points(500.0),
-            //layout.max_size: Size {
-            //    width: Dimension::Points(500.0),
-            //    height: Dimension::Points(25.0)
-            //},
-        }
-        "bar_bg" => {
-            widget.color: Color::WHITE,
-            widget.texture: tex,
-        }
-        "bar_fill" => {
-            layout.margin: LayoutRect {
-                start: Dimension::Points(3.0),
-                end: Dimension::Points(3.0),
-                top: Dimension::Points(3.0),
-                bottom: Dimension::Points(3.0),
-            },
-            layout.flex_grow: 1.0,
-            widget.color: Color::RED,
-            widget.texture: tex,
-        }
+    let mut styles = StyleSheet::new();
+    styles.insert(
+        "root",
+        Style {
+            color: Color::BLACK,
+            texture: tex,
+            ..Default::default()
+        },
+    );
+    styles.insert(
+        "div",
+        Style {
+            size: Size::Calc(Box::new(|parent: WidgetLayout| {
+                Vec2::new((parent.size.x - 50.0).min(500.0).max(0.0), parent.size.y)
+            })),
+            offset: Offset::Calc(Box::new(|parent: WidgetLayout, size: Vec2| {
+                Vec2::new(
+                    parent.offset.x + (parent.size.x - size.x) * 0.5,
+                    parent.offset.y,
+                )
+            })),
+            ..Default::default()
+        },
+    );
+    styles.insert(
+        "status",
+        Style {
+            size: Size::Calc(Box::new(|parent: WidgetLayout| {
+                Vec2::new(parent.size.x, parent.size.y.min(25.0).max(0.0))
+            })),
+            offset: Offset::Calc(Box::new(|parent: WidgetLayout, size: Vec2| {
+                Vec2::new(
+                    parent.offset.x,
+                    parent.offset.y + (parent.size.y - size.y) * 0.5,
+                )
+            })),
+            ..Default::default()
+        },
+    );
+    styles.insert(
+        "bar",
+        Style {
+            color: Color::RED,
+            texture: tex,
+            ..Default::default()
+        },
+    );
+    styles.insert(
+        "bar_fill",
+        Style {
+            color: Color::WHITE,
+            texture: tex,
+            size: Size::borders(3.0),
+            offset: Offset::borders(3.0),
+            ..Default::default()
+        },
     );
 
-    let root: Root = Root::build(
-        gui,
-        Style::from_styles(&styles, ["max_size", "root"]),
-        &styles,
-        &[],
-    )
-    .unwrap();
+    let root: Root = WidgetBuilder::build(Style::from_styles("root", &styles), &styles);
 
-    gui.layout_mut().set_measure();
+    for unused in styles.check_unused() {
+        log::warn!("Unused style '{unused}'")
+    }
 
     (texture, root)
 }

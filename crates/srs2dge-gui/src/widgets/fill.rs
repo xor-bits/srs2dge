@@ -1,68 +1,45 @@
 use crate::{
     gui::geom::GuiGeom,
-    prelude::{Gui, GuiDraw, GuiLayout, Widget, WidgetBuilder, WidgetCore, WidgetLayout},
-    style::{Style, StyleSheet},
+    prelude::{GuiDraw, StyleSheet, Widget, WidgetBuilder, WidgetCore},
+    style::Style,
 };
-use srs2dge_core::{
-    color::Color,
-    prelude::{QuadMesh, TexturePosition},
-};
+use srs2dge_core::prelude::QuadMesh;
 use std::any::{type_name, Any};
-use taffy::prelude::Node;
 
 //
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct Fill {
-    pub col: Color,
-    pub tex: TexturePosition,
-
     core: WidgetCore,
 }
 
 //
 
 impl Fill {
-    pub fn new(gui: &mut Gui, style: Style, children: &[Node]) -> Result<Self, taffy::Error> {
-        Ok(Self {
-            col: style.widget.color.unwrap_or_default(),
-            tex: style.widget.texture.unwrap_or_default(),
-            core: WidgetCore::new(gui, style.layout, children)?,
-        })
+    pub fn new() -> Self {
+        Self {
+            core: WidgetCore::default(),
+        }
     }
 
-    pub fn with_texture(mut self, tex: TexturePosition) -> Self {
-        self.tex = tex;
-        self
-    }
-
-    pub fn with_color(mut self, col: Color) -> Self {
-        self.col = col;
+    pub fn with_style(mut self, style: Style) -> Self {
+        self.core.style = style;
         self
     }
 }
 
 impl Widget for Fill {
-    fn draw(
-        &mut self,
-        parent_layout: WidgetLayout,
-        gui_layout: &mut GuiLayout,
-        draw: &mut GuiDraw,
-    ) -> Result<(), taffy::Error> {
-        let layout = gui_layout.get(self)?.to_absolute(parent_layout);
-
+    fn draw(&mut self, draw: &mut GuiDraw) {
         // log::debug!("fill {layout:?}");
 
         draw.graphics
             .texture_batcher
             .push_with(GuiGeom::Quad(QuadMesh::new_top_left(
-                layout.offset,
-                layout.size,
-                self.col,
-                self.tex,
+                self.core.layout.offset,
+                self.core.layout.size,
+                self.core.style.color,
+                self.core.style.texture,
             )));
-
-        Ok(())
     }
 
     fn name(&self) -> &'static str {
@@ -71,6 +48,10 @@ impl Widget for Fill {
 
     fn core(&self) -> &WidgetCore {
         &self.core
+    }
+
+    fn core_mut(&mut self) -> &mut WidgetCore {
+        &mut self.core
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -83,12 +64,7 @@ impl Widget for Fill {
 }
 
 impl WidgetBuilder for Fill {
-    fn build(
-        gui: &mut Gui,
-        style: Style,
-        _: &StyleSheet,
-        children: &[Node],
-    ) -> Result<Self, taffy::Error> {
-        Self::new(gui, style, children)
+    fn build(style: Style, _: &StyleSheet) -> Self {
+        Self::new().with_style(style)
     }
 }
