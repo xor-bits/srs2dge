@@ -1,7 +1,6 @@
+use super::BakedStyle;
 use srs2dge_core::{glam::Vec2, main_game_loop::state::window::WindowState};
 use std::{any::Any, fmt::Debug};
-
-use super::Style;
 
 //
 
@@ -28,6 +27,13 @@ pub enum Size {
         bottom: f32,
     },
 
+    /* VerticalStack {
+        stretch: f32,
+    },
+
+    HorizontalStack {
+        stretch: f32,
+    }, */
     /// Fixed pixel size
     ///
     /// relative to the parent
@@ -72,6 +78,12 @@ pub enum Offset {
     Calc(Box<dyn Calc<Offset>>),
 }
 
+/* #[derive(PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum StretchId {
+    Vertical(u8),
+    Horizontal(u8),
+} */
+
 //
 
 impl WidgetLayout {
@@ -88,7 +100,7 @@ impl WidgetLayout {
         Self { size, offset }
     }
 
-    pub fn calc_with_style(self, style: &mut Style) -> Self {
+    pub fn calc_with_style(self, style: &mut BakedStyle) -> Self {
         Self::calc(self, &mut style.size, &mut style.offset)
     }
 }
@@ -105,16 +117,18 @@ impl Size {
 
     pub fn calc(&mut self, parent: WidgetLayout) -> Vec2 {
         match self {
-            Size::Inherit => parent.size,
-            Size::Border {
+            Self::Inherit => parent.size,
+            Self::Border {
                 left,
                 right,
                 top,
                 bottom,
             } => parent.size - Vec2::new(*left + *right, *top + *bottom),
-            Size::PointsRel(c) => parent.size + *c,
-            Size::PointsAbs(c) => *c,
-            Size::Calc(c) => c.call((parent,)),
+            /* Self::VerticalStack { stretch } => todo!(),
+            Self::HorizontalStack { stretch } => todo!(), */
+            Self::PointsRel(c) => parent.size + *c,
+            Self::PointsAbs(c) => *c,
+            Self::Calc(c) => c.call((parent,)),
         }
         .floor()
     }
@@ -132,11 +146,11 @@ impl Offset {
 
     pub fn calc(&mut self, parent: WidgetLayout, self_size: Vec2) -> Vec2 {
         match self {
-            Offset::Inherit => parent.offset,
-            Offset::Border { left, bottom, .. } => parent.offset + Vec2::new(*left, *bottom),
-            Offset::PointsRel(c) => parent.offset + *c,
-            Offset::PointsAbs(c) => *c,
-            Offset::Calc(c) => c.call((parent, self_size)),
+            Self::Inherit => parent.offset,
+            Self::Border { left, bottom, .. } => parent.offset + Vec2::new(*left, *bottom),
+            Self::PointsRel(c) => parent.offset + *c,
+            Self::PointsAbs(c) => *c,
+            Self::Calc(c) => c.call((parent, self_size)),
         }
         .floor()
     }

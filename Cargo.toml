@@ -14,10 +14,6 @@ name = "asteroids"
 path = "examples/asteroids/main.rs"
 
 [[example]]
-name = "flexbox"
-path = "examples/gui/flexbox/main.rs"
-
-[[example]]
 name = "gui"
 path = "examples/gui/main/main.rs"
 
@@ -67,6 +63,7 @@ text = ["srs2dge-link-static/text"]
 [dependencies]
 srs2dge-link-static = { path = "crates/srs2dge-link-static", version = "0.4" }
 srs2dge-link-dynamic = { path = "crates/srs2dge-link-dynamic", version = "0.4", optional = true }
+
 
 [dev-dependencies]
 instant = "0.1"

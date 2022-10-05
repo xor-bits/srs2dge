@@ -38,7 +38,7 @@ impl DeriveParsed {
                 quote! { Widget::core(&self.#main_field_ident) },
                 quote! { Widget::core_mut(&mut self.#main_field_ident) },
             ),
-            FieldParsedType::Core => (
+            FieldParsedType::Core { .. } => (
                 quote! { &self.#main_field_ident },
                 quote! { &mut self.#main_field_ident },
             ),
@@ -137,7 +137,7 @@ impl DeriveParsed {
     }
 
     fn derive_widget_builder(&self, tokens: &mut TokenStream) {
-        if !self.builder {
+        if self.no_builder {
             return;
         }
 
@@ -152,7 +152,7 @@ impl DeriveParsed {
         } = self;
 
         let subwidgets = fields.iter().filter_map(|field| match &field.inner {
-            FieldParsedType::SubWidget { style } => Some((field, style)),
+            FieldParsedType::SubWidget { styles } => Some((field, styles)),
             _ => None,
         });
         let fields = subwidgets.clone().map(|(f, _)| &f.ident);
@@ -162,10 +162,12 @@ impl DeriveParsed {
         let field_builders = subwidgets.map(|(field, style)| {
             let id = &field.ident;
             let ty = &field.ty;
-            let style = Self::style_str(style);
 
             quote! {
-                let #id: #ty = WidgetBuilder::build(#style, styles);
+                let #id: #ty = WidgetBuilder::build(
+                    StyleRef::from_styles(#style, __style_sheet),
+                    __style_sheet
+                );
             }
         });
 
@@ -174,15 +176,22 @@ impl DeriveParsed {
         // inherit needs its style also
         let main_field_ident = &main_field.ident;
         let main_field_setup = match &main_field.inner {
-            FieldParsedType::Core => {
+            FieldParsedType::Core { styles } => {
+                // `style` is the style given to the builder
+                // `styles` are the styles marked with #[gui(style = "...")]
                 quote! {
-                    let #main_field_ident = WidgetCore::new().with_style(style);
+                    let #main_field_ident = WidgetCore::new()
+                        .with_style(__style.merge(StyleRef::from_styles(#styles, __style_sheet)));
                 }
             }
-            FieldParsedType::Inherit { style } => {
-                // let style = Self::style_str(style);
+            FieldParsedType::Inherit { styles } => {
+                // `style` is the style given to the builder
+                // `styles` are the styles marked with #[gui(style = "...")]
                 quote! {
-                    let #main_field_ident = WidgetBuilder::build(style, styles);
+                    let #main_field_ident = WidgetBuilder::build(
+                        __style.merge(StyleRef::from_styles(#styles, __style_sheet)),
+                        __style_sheet
+                    );
                 }
             }
             _ => unreachable!(),
@@ -190,7 +199,7 @@ impl DeriveParsed {
 
         let new_tokens = quote! {
             impl #imp WidgetBuilder for #ident #ty #wher {
-                fn build(style: Style, styles: &StyleSheet) -> Self {
+                fn build(__style: StyleRef, __style_sheet: &StyleSheet) -> Self {
                     #(#field_builders)*
 
                     #main_field_setup
@@ -204,15 +213,5 @@ impl DeriveParsed {
             }
         };
         tokens.extend(new_tokens);
-    }
-
-    fn style_str(style: &Option<String>) -> TokenStream {
-        if let Some(style) = style {
-            quote! {
-                Style::from_styles(#style, styles)
-            }
-        } else {
-            Default::default()
-        }
     }
 }

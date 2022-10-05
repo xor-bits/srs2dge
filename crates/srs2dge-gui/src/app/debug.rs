@@ -29,7 +29,8 @@ impl AppDebug {
     pub fn new(target: &Target) -> Self {
         Self {
             #[cfg(feature = "gizmos")]
-            gizmo: cfg!(debug_assertions),
+            // gizmo: cfg!(debug_assertions),
+            gizmo: false,
             #[cfg(feature = "gizmos")]
             gizmos: srs2dge_gizmos::Gizmos::new(target),
         }
@@ -67,7 +68,7 @@ impl<T: Widget, Fu: FnMut(&mut T)> App<T, Fu> {
             None
         };
         match pressed {
-            Some(VirtualKeyCode::F22 | VirtualKeyCode::F9) => {
+            Some(VirtualKeyCode::F22 /* | VirtualKeyCode::F9 */) => {
                 log::debug!("F22 pressed, printing debug gui tree");
 
                 impl<'a> DebugTree<'a> {
@@ -96,7 +97,7 @@ impl<T: Widget, Fu: FnMut(&mut T)> App<T, Fu> {
                 }
             }
             #[cfg(feature = "gizmos")]
-            Some(VirtualKeyCode::F21 | VirtualKeyCode::F8) => {
+            Some(VirtualKeyCode::F21 /* | VirtualKeyCode::F8 */) => {
                 self.debug.gizmo = !self.debug.gizmo;
                 log::debug!(
                     "F21 pressed, gui debug gizmo toggled {}",

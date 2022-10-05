@@ -1,1 +1,1 @@
-pub use super::{layout::*, *};
+pub use super::{layout::*, merge::*, *};

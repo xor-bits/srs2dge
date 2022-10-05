@@ -13,7 +13,7 @@ pub struct DeriveParsed {
 
     pub event_handler: bool,
     pub draw_handler: bool,
-    pub builder: bool,
+    pub no_builder: bool,
 
     pub fields: Vec<FieldParsed>,
     pub main_field: FieldParsed,
@@ -31,17 +31,24 @@ pub struct FieldParsed {
 
 #[derive(Clone)]
 pub enum FieldParsedType {
-    Core,
-    Inherit { style: Option<String> },
-    SubWidget { style: Option<String> },
+    // Widget core
+    Core { styles: String },
+
+    // Widget core also
+    Inherit { styles: String },
+
+    // Subwidget
+    SubWidget { styles: String },
+
+    // Ignored field
     Skip,
 }
 
 //
 
 impl DeriveParsed {
-    pub fn new(input: DeriveInput) -> Result<Self, Error> {
-        let input: DerivePreParsed = DerivePreParsed::from_derive_input(&input)?;
+    pub fn new(input: &DeriveInput) -> Result<Self, Error> {
+        let input: DerivePreParsed = DerivePreParsed::from_derive_input(input)?;
 
         let DerivePreParsed {
             ident,
@@ -49,7 +56,7 @@ impl DeriveParsed {
             data,
             event_handler,
             draw_handler,
-            builder,
+            no_builder,
         } = input;
         let (imp, ty, wher) = generics.split_for_impl();
         let (imp, ty, wher) = (
@@ -67,24 +74,26 @@ impl DeriveParsed {
             .map(FieldParsed::new)
             .collect::<Result<Vec<FieldParsed>, Error>>()?;
 
-        let mut main_fields = fields.iter().cloned().filter(|field| {
-            matches!(
-                field.inner,
-                FieldParsedType::Core | FieldParsedType::Inherit { .. }
-            )
-        });
-        let main_field_err = || {
-            Error::new(
-                Span::call_site(),
-                format!(
-                    "Exactly one field marked with `#[gui(core)]` OR `#[gui(inherit)]` is allowed"
-                ),
-            )
+        // make sure there is exactly one 'core' or 'inherit'
+        let main_fields: Vec<&FieldParsed> = fields
+            .iter()
+            .filter(|field| {
+                matches!(
+                    field.inner,
+                    FieldParsedType::Core { .. } | FieldParsedType::Inherit { .. }
+                )
+            })
+            .collect();
+
+        let main_field = match main_fields[..] {
+            [the_only_main_field] => the_only_main_field.clone(),
+            _ => {
+                return Err(Error::new(
+                    Span::call_site(),
+                    "Exactly one field marked with `#[gui(core)]` OR `#[gui(inherit)]` is allowed",
+                ));
+            }
         };
-        let main_field = main_fields.next().ok_or_else(main_field_err)?;
-        if main_fields.next().is_some() {
-            return Err(main_field_err());
-        }
 
         Ok(Self {
             ident,
@@ -93,7 +102,7 @@ impl DeriveParsed {
             wher,
             event_handler,
             draw_handler,
-            builder,
+            no_builder,
             fields,
             main_field,
         })
@@ -121,22 +130,19 @@ impl FieldParsed {
                 quote! {#i}
             });
 
+        // process different types of fields
         let inner = match (core, inherit, skip, style) {
             (true, true, _, _) => {
                 return Err(Error::new(
                     span,
                     format!(
-                    "Exactly one field marked with `#[gui(core)]` OR `#[gui(inherit)]` is allowed"
-                ),
+                        "Exactly one field marked with `#[gui(core)]` OR `#[gui(inherit)]` (not both) is allowed"
+                    ),
                 ));
             }
             (true, false, true, _) | (false, true, true, _) => {
                 return Err(Error::new(
                     span,format!("Fields marked with `#[gui(core)]` OR `#[gui(inherit)]` should not be skipped as a widget.\n`#[gui(skip)]` is only for non-widget and non-core fields")));
-            }
-            (true, false, _, Some(_)) => {
-                return Err(Error::new(
-                    span,format!("Fields marked with `#[gui(core)]` CANNOT have a style. However fields marked with `#[gui(inherit)]` CAN have a style.")));
             }
             (false, false, true, Some(_)) => {
                 return Err(Error::new(
@@ -145,10 +151,16 @@ impl FieldParsed {
                 ))
             }
 
-            (true, false, false, None) => FieldParsedType::Core,
-            (false, true, false, style) => FieldParsedType::Inherit { style },
+            (true, false, false, style) => FieldParsedType::Core {
+                styles: style.unwrap_or_default(),
+            },
+            (false, true, false, style) => FieldParsedType::Inherit {
+                styles: style.unwrap_or_default(),
+            },
+            (false, false, false, style) => FieldParsedType::SubWidget {
+                styles: style.unwrap_or_default(),
+            },
             (false, false, true, None) => FieldParsedType::Skip,
-            (false, false, false, style) => FieldParsedType::SubWidget { style },
         };
 
         Ok(Self {
@@ -175,7 +187,7 @@ struct DerivePreParsed {
     #[darling(default)]
     draw_handler: bool,
     #[darling(default)]
-    builder: bool,
+    no_builder: bool,
 }
 
 #[derive(FromField)]

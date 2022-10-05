@@ -1,5 +1,4 @@
-use srs2dge::prelude::{widgets::vec::WidgetVec, *};
-use stylesheet::styles;
+use srs2dge::prelude::*;
 
 //
 
@@ -16,90 +15,16 @@ struct App {
     root: Root,
 }
 
-#[derive(Debug, Clone, PartialEq, Widget)]
-#[gui(builder)]
+#[derive(Debug, Clone, Widget)]
 struct Root {
-    #[gui(style = "flex_item bordered")]
-    left_panel: LeftPanel,
-    #[gui(style = "flex_item bordered")]
-    right_panel: RightPanel,
-    // #[gui(style = "float_item")]
-    // float_panel: FloatPanel,
-    #[gui(core)]
+    #[gui(style = "bordered fill_0")]
+    left_panel: Fill,
+    #[gui(style = "bordered fill_1")]
+    right_panel: Fill,
+
+    #[gui(core, style = "root")]
     core: WidgetCore,
 }
-
-#[derive(Debug, Clone, Copy, PartialEq, Widget)]
-#[gui(builder)]
-pub struct LeftPanel {
-    #[gui(style = "max_size left_split")]
-    split: LeftSplit,
-
-    #[gui(inherit)]
-    #[gui(style = "max_size fill_0")]
-    background: Fill,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Widget)]
-#[gui(builder)]
-pub struct LeftSplit {
-    #[gui(style = "split_block_lower")]
-    top: TopBlock,
-    #[gui(style = "split_block_lower")]
-    bottom: BottomBlock,
-
-    #[gui(core)]
-    core: WidgetCore,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Widget)]
-#[gui(builder)]
-pub struct TopBlock {
-    #[gui(style = "split_block_upper fill_3")]
-    fill: Fill,
-
-    #[gui(core)]
-    core: WidgetCore,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Widget)]
-#[gui(builder)]
-pub struct BottomBlock {
-    #[gui(style = "split_block_upper texture")]
-    fill: Fill,
-
-    #[gui(core)]
-    core: WidgetCore,
-}
-
-#[derive(Debug, Clone, PartialEq, Widget)]
-#[gui(builder)]
-pub struct RightPanel {
-    #[gui(style = "buttons")]
-    buttons: WidgetVec<Button>,
-
-    #[gui(inherit)]
-    #[gui(style = "max_size fill_1")]
-    background: Fill,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Widget)]
-#[gui(builder)]
-pub struct Button {
-    #[gui(inherit)]
-    #[gui(style = "button_fill fill_3")]
-    fill: Fill,
-}
-
-/*#[derive(Debug, Clone, Copy, PartialEq, Widget)]
-#[gui(builder)]
-pub struct FloatPanel {
-    #[gui(style = "max_size fill_2")]
-    fill: Fill,
-
-    #[gui(core)]
-    core: WidgetCore,
-}*/
 
 //
 
@@ -108,8 +33,10 @@ impl App {
         let engine = Engine::new();
         let target = engine.new_target_default(target).await.unwrap();
 
-        let mut gui = Gui::new(&target);
+        // gui base
+        let gui = Gui::new(&target);
 
+        // main texture atlas
         let texture = TextureAtlasMap::builder()
             .with_bytes(0, res::texture::EMPTY)
             .unwrap()
@@ -118,40 +45,15 @@ impl App {
             .with_label(Some("Atlas".to_string()))
             .build(&target);
 
+        // style sheet setup
         let tex0 = texture.get(&0).unwrap_or_default();
         let tex1 = texture.get(&1).unwrap_or_default();
+        let stylesheet = stylesheet::styles(tex0, tex1);
 
-        let stylesheet = styles(tex0, tex1);
+        // root widget (and all of its subwidgets)
+        let root: Root = WidgetBuilder::build(StyleRef::default(), &stylesheet);
 
-        // let panel = float_panel(tex0);
-        // let left = left_panel(tex0, tex1, col.clone());
-        // let right = right_panel(tex0, col);
-        // let grid = Grid::new_row([left, right])
-        //     .with_size(border_size(BORDER))
-        //     .with_offset(border_offset(BORDER));
-        // gui.root().extend([grid, panel]);
-
-        // panic!("{:#?}", gui.root());
-
-        let mut root: Root =
-            Root::build(&mut gui, WidgetCore::root_style(), &stylesheet, &[]).unwrap();
-
-        let buttons = (0..9)
-            .map(|i| {
-                let mut btn: Button = Button::build(
-                    &mut gui,
-                    Style::from_styles(&stylesheet, ["button"]),
-                    &stylesheet,
-                    &[],
-                )?;
-                btn.fill.col = Color::new_mono(i as f32 / 9.0).powf(2.2);
-                Ok(btn)
-            })
-            .collect::<Result<Vec<_>, taffy::Error>>()
-            .unwrap();
-
-        root.right_panel.buttons.extend(&mut gui, buttons).unwrap();
-
+        // warn about unused style sheet entries
         for name in stylesheet.check_unused() {
             log::warn!("Unused style: '{name}'");
         }
@@ -175,7 +77,7 @@ impl Runnable for App {
             None => return,
         };
 
-        self.gui.event(&mut self.root, event).unwrap();
+        self.gui.event(&mut self.root, event);
 
         if self.gui.window_state().should_close {
             *control = ControlFlow::Exit;
@@ -187,28 +89,11 @@ impl Runnable for App {
 
         let mut frame = self.target.get_frame();
 
-        // drawing
+        // draw gui
         let gui = self
             .gui
-            .draw_with(&mut self.root, &mut self.target, &mut frame, &self.texture)
-            .unwrap();
+            .draw_with(&mut self.root, &mut self.target, &mut frame, &self.texture);
         frame.primary_render_pass().draw_gui(&gui);
-
-        if true {
-            // println!("{:?}", self.gui.layout());
-            fn print<T: Widget>(gui: &mut Gui, d: &str, widget: &T) {
-                println!(
-                    "{d} {:#?}",
-                    gui.layout().get(widget),
-                    // gui.layout().style(widget.node())
-                );
-            }
-            let buttons = &self.root.right_panel.buttons;
-            print(&mut self.gui, "buttons", buttons);
-            let button = buttons.get(1).unwrap();
-            print(&mut self.gui, "button[1]", button);
-            print(&mut self.gui, "button[1].fill", &button.fill);
-        }
 
         self.target.finish_frame(frame);
 
@@ -218,175 +103,5 @@ impl Runnable for App {
         }
     }
 }
-
-// fn left_panel(tex0: TexturePosition, tex1: TexturePosition, col: Arc<RwLock<Color>>) -> WidgetBase {
-//     // top and bottom quad base
-//     let quad_base_size = (BaseSize * Const(Vec2::splat(0.5))) // half the size of parent
-//         .min(Const(Vec2::splat(200.0))) // 200x200 px at max
-//         .force_ratio_with_x(1.0) // modify x to force square
-//         .min(BaseSize) // size of parent at max
-//         .force_ratio_with_y(1.0); // modify y to force square
-//     let top_quad = Fill::new()
-//         .with_color(Color::WHITE)
-//         .with_texture(tex1)
-//         .into_widget()
-//         .with_size(quad_base_size)
-//         .with_offset(align(Vec2::new(0.5, 1.0))); // x center, y top
-//     let bottom_quad = Fill::new()
-//         .with_color(Color::CHARTREUSE)
-//         .with_texture(tex0)
-//         .into_widget()
-//         .with_size(quad_base_size)
-//         .with_offset(align(Vec2::new(0.5, 0.0))); // x center, y bottom;
-
-//     // background
-//     Fill::new()
-//         .with_color(col)
-//         .with_texture(tex0)
-//         .into_widget_with([top_quad, bottom_quad])
-//         .with_size(border_size(BORDER))
-//         .with_offset(border_offset(BORDER))
-// }
-
-// fn right_panel(tex0: TexturePosition, col: Arc<RwLock<Color>>) -> WidgetBase {
-//     let grid = [[0, 1, 2], [3, 4, 5], [6, 7, 8]].map(|row| {
-//         row.map(|i| {
-//             let button_col = Color::new_mono((i as f32 / 8.0).powf(2.2));
-//             let text_col = button_col.foreground();
-//             let col = col.clone();
-
-//             // buttons
-//             let animator = Animator::new();
-//             let button = Trigger::new()
-//                 .with_handler(TriggerFilter::OnEnter, {
-//                     let animator = animator.clone();
-//                     move |_| animator.trigger()
-//                 })
-//                 .with_handler(TriggerFilter::OnExit, {
-//                     let animator = animator.clone();
-//                     move |_| animator.trigger_rev()
-//                 })
-//                 .with_handler(TriggerFilter::OnPressButton(MouseButton::Left), {
-//                     let animator = animator.clone();
-//                     move |_| animator.trigger_rev()
-//                 })
-//                 .with_handler(TriggerFilter::OnReleaseButton(MouseButton::Left), {
-//                     let animator = animator.clone();
-//                     move |_| animator.trigger()
-//                 })
-//                 .with_handler(TriggerFilter::OnClickButton(MouseButton::Left), move |_| {
-//                     // set left side bg color to match
-//                     // the color of the clicked button
-//                     *col.write().unwrap() = button_col;
-//                 })
-//                 .into_widget();
-
-//             // button texts
-//             let label = Text::new()
-//                 .with_text(
-//                     FormatString::builder()
-//                         .with(text_col)
-//                         .with(18.0)
-//                         .with(format!("{button_col:#}")),
-//                 )
-//                 .with_config(
-//                     Animated::new(Text::default_config(), animator.clone()).then(
-//                         Duration::from_millis(100),
-//                         AnimationCurve::Poly,
-//                         TextConfig {
-//                             scale: 1.05,
-//                             ..Text::default_config()
-//                         },
-//                     ),
-//                 )
-//                 .into_widget();
-
-//             // button backgrounds
-//             Fill::new()
-//                 .with_color(button_col)
-//                 .with_texture(tex0)
-//                 .into_widget_with([button, label])
-//                 .with_size(
-//                     Animated::new(border_size(6.0).into(), animator.clone()).then(
-//                         Duration::from_millis(100),
-//                         AnimationCurve::Poly,
-//                         border_size(1.0).into(),
-//                     ),
-//                 )
-//                 .with_offset(Animated::new(border_offset(6.0).into(), animator).then(
-//                     Duration::from_millis(100),
-//                     AnimationCurve::Poly,
-//                     border_offset(1.0).into(),
-//                 ))
-//         })
-//     });
-
-//     let grid = Grid::new_grid(grid);
-
-//     // background
-//     Fill::new()
-//         .with_color(Color::ROSE)
-//         .with_texture(tex0)
-//         .into_widget_with([grid])
-//         .with_size(border_size(BORDER))
-//         .with_offset(border_offset(BORDER))
-// }
-
-// fn float_panel(tex0: TexturePosition) -> WidgetBase {
-//     // perf text
-//     let text = Text::new()
-//         .with_text(FormatString::from_iter([
-//             Color::MINT.foreground().into(),
-//             20.0.into(),
-//             format!("FPS: {fps}\n", fps = 0.0).into(),
-//             16.0.into(),
-//             format!("Frametime: {ft}", ft = 0.0).into(),
-//         ]))
-//         .into_widget();
-
-//     let offset = Arc::new(RwLock::new(GuiCalcOffset::Const(Const(
-//         Vec2::splat(10.0), /* + drag */
-//     ))));
-//     let position = Arc::new(RwLock::new(Vec2::splat(10.0)));
-
-//     // top and bottom draggers
-//     let drag_fill = Fill::new()
-//         .with_color(Color::new_mono_a(0.0, 0.2))
-//         .with_texture(tex0);
-//     let drag_0 = DragZone::new()
-//         .with_handler(
-//             DragZoneFilter::OnDrag,
-//             captures! {[offset, position] move |_, d| {
-//                 let mut lock = offset.write().unwrap();
-//                 match &mut *lock {
-//                     GuiCalcOffset::Const(c) => c.0 = d + *position.read().unwrap(),
-//                     _ => unreachable!()
-//                 };
-//             }},
-//         )
-//         .with_handler(
-//             DragZoneFilter::OnRelease,
-//             captures! {[position] move |_, d| {
-//                 let mut lock = position.write().unwrap();
-//                 *lock += d;
-//             }},
-//         )
-//         .into_widget_with([drag_fill.clone().into_widget()])
-//         .with_size(BaseSize * Const(Vec2::splat(0.25)));
-//     let drag_1 = DragZone::new()
-//         .into_widget_with([drag_fill.into_widget()])
-//         .with_size(BaseSize * Const(Vec2::splat(0.25)))
-//         .with_offset(align(Vec2::ONE));
-
-//     // draggable tile/window/frame/whatever
-//     Fill::new()
-//         .with_color(Color::MINT)
-//         .with_texture(tex0)
-//         .into_widget_with([text, drag_0, drag_1])
-//         .with_size(Const(Vec2::new(200.0, 300.0)))
-//         .with_offset(offset)
-// }
-
-//
 
 main_app!(async App);
