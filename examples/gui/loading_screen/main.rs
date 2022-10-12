@@ -133,6 +133,5 @@ fn gui_main(target: &Target, _: &mut Gui) -> (TextureAtlasMap<u8>, Root) {
 fn gui_upd(_: &mut Root) {}
 
 fn main() {
-    init_log();
-    run_gui_app(gui_main, gui_upd);
+    gui_app(gui_main, gui_upd);
 }

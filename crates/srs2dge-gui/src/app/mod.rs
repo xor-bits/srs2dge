@@ -2,8 +2,7 @@ use self::debug::AppDebug;
 use crate::prelude::{DrawGeneratedGui, Gui, Widget};
 use srs2dge_core::{
     main_game_loop::{
-        event::Event, event::EventLoopTarget, prelude::EventLoop, report::Reporter,
-        runnable::Runnable,
+        event::Event, event::EventLoopTarget, prelude::EventLoop, report::Reporter, should_draw,
     },
     prelude::{ControlFlow, TextureAtlasMap},
     target::Target,
@@ -58,10 +57,8 @@ impl<Root: Widget, Fu: FnMut(&mut Root)> App<Root, Fu> {
             debug,
         }
     }
-}
 
-impl<Root: Widget, Fu: FnMut(&mut Root)> Runnable for App<Root, Fu> {
-    fn event(&mut self, event: Event, _: &EventLoopTarget, control: &mut ControlFlow) {
+    async fn event(&mut self, event: Event<'_>, _: &EventLoopTarget, control: &mut ControlFlow) {
         let event = match event.to_static() {
             Some(some) => some,
             None => return,
@@ -76,7 +73,7 @@ impl<Root: Widget, Fu: FnMut(&mut Root)> Runnable for App<Root, Fu> {
         }
     }
 
-    fn draw(&mut self) {
+    async fn draw(&mut self) {
         let timer = self.reporter.begin();
 
         let mut frame = self.target.get_frame();
@@ -102,7 +99,7 @@ impl<Root: Widget, Fu: FnMut(&mut Root)> Runnable for App<Root, Fu> {
     }
 }
 
-pub async fn run_gui_app<
+pub fn gui_app<
     Root: Widget + 'static,
     Fi: FnOnce(&Target, &mut Gui) -> (TextureAtlasMap<u8>, Root),
     Fu: FnMut(&mut Root) + 'static,
@@ -110,7 +107,9 @@ pub async fn run_gui_app<
     fi: Fi,
     fu: Fu,
 ) {
-    let target = EventLoop::new();
-    let app = App::<Root, Fu>::init(&target, fi, fu).await;
-    target.runnable(app);
+    srs2dge_core::app!(
+        |t| App::<Root, Fu>::init(t, fi, fu),
+        App::<Root, Fu>::event,
+        App::<Root, Fu>::draw
+    );
 }

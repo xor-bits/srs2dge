@@ -68,10 +68,8 @@ impl App {
             root,
         }
     }
-}
 
-impl Runnable for App {
-    fn event(&mut self, event: Event, _: &EventLoopTarget, control: &mut ControlFlow) {
+    async fn event(&mut self, event: Event<'_>, _: &EventLoopTarget, control: &mut ControlFlow) {
         let event = match event.to_static() {
             Some(some) => some,
             None => return,
@@ -84,7 +82,7 @@ impl Runnable for App {
         }
     }
 
-    fn draw(&mut self) {
+    async fn draw(&mut self) {
         let timer = self.reporter.begin();
 
         let mut frame = self.target.get_frame();
@@ -104,4 +102,8 @@ impl Runnable for App {
     }
 }
 
-main_app!(async App);
+//
+
+fn main() {
+    app!(App);
+}

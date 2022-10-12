@@ -53,7 +53,7 @@ pub type DeviceStorage = Arc<RwLock<Vec<(Arc<Adapter>, Arc<Device>, Arc<Queue>)>
 
 #[macro_export]
 macro_rules! app {
-    ($app:ident) => {
+    ($app:tt) => {
         $crate::app!($app::init, $app::event, $app::draw)
     };
 

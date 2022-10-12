@@ -74,10 +74,6 @@ categories = ["game-engines", "graphics"]
 # examples
 
 [[example]]
-name = "asteroids"
-path = "examples/asteroids/main.rs"
-
-[[example]]
 name = "gui"
 path = "examples/gui/main/main.rs"
 

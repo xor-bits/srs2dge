@@ -160,12 +160,11 @@ where
                                     font.inner().horizontal_kern(last_c, character, px)
                                 })
                                 .unwrap_or(0.0);
-                            self.config.x_origin += (metrics.advance_width + kern);
-                            //.round();
+                            self.config.x_origin += metrics.advance_width + kern;
                             // println!("{} {}", metrics.advance_width, kern);
                         }
                         TextDirection::Down => {
-                            self.config.y_origin += (metrics.advance_height) //.round()
+                            self.config.y_origin += metrics.advance_height;
                         }
                     };
 
