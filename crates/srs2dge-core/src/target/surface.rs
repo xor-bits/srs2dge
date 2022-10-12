@@ -4,8 +4,8 @@ use std::{
     sync::Arc,
 };
 use wgpu::{
-    Adapter, Device, Instance, PresentMode, SurfaceConfiguration, SurfaceError, SurfaceTexture,
-    TextureFormat, TextureUsages,
+    Adapter, CompositeAlphaMode, Device, Instance, PresentMode, SurfaceConfiguration, SurfaceError,
+    SurfaceTexture, TextureFormat, TextureUsages,
 };
 use winit::window::Window;
 
@@ -114,6 +114,7 @@ impl Surface {
                 width,
                 height,
                 present_mode: self.present_mode,
+                alpha_mode: CompositeAlphaMode::Auto,
             },
         );
     }

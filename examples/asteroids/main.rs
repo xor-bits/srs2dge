@@ -42,7 +42,7 @@ struct Settings {
 //
 
 impl App {
-    pub async fn init(target: &EventLoopTarget) -> Self {
+    async fn init(target: &EventLoopTarget) -> Self {
         let engine = Engine::new();
         let target = engine.new_target_default(target).await.unwrap();
 
@@ -104,10 +104,8 @@ impl App {
             world,
         }
     }
-}
 
-impl Runnable for App {
-    fn event(&mut self, event: Event, _: &EventLoopTarget, control: &mut ControlFlow) {
+    async fn event(&mut self, event: Event<'_>, _: &EventLoopTarget, control: &mut ControlFlow) {
         self.ws.event(&event);
         self.ks.event(&event);
         self.gs.event(&event);
@@ -117,7 +115,7 @@ impl Runnable for App {
         }
     }
 
-    fn draw(&mut self) {
+    async fn draw(&mut self) {
         let mvp = Mat4::orthographic_rh(-self.ws.aspect, self.ws.aspect, -1.0, 1.0, -1.0, 1.0);
 
         // update
@@ -162,4 +160,6 @@ impl Runnable for App {
 
 //
 
-main_app!(async App);
+fn main() {
+    app!(App::init, App::event, App::draw);
+}

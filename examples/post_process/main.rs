@@ -40,6 +40,7 @@ impl App {
             &target,
             Rect::new(ws.size.width, ws.size.height),
             target.get_format(), // secondary target format set to same as primary target format to be able to use a single pipeline
+            None,
         );
 
         let texture = Texture::new_rgba_with(
@@ -47,6 +48,7 @@ impl App {
             &image::load_from_memory(res::texture::RUST)
                 .unwrap()
                 .to_rgba8(),
+            None,
         );
 
         let quad_a = QuadMesh::new_centered(
@@ -106,10 +108,8 @@ impl App {
             custom_shader,
         }
     }
-}
 
-impl Runnable for App {
-    fn event(&mut self, event: Event, _: &EventLoopTarget, control: &mut ControlFlow) {
+    async fn event(&mut self, event: Event<'_>, _: &EventLoopTarget, control: &mut ControlFlow) {
         let old = self.ws.size;
         self.ws.event(&event);
         let changed = self.ws.size != old;
@@ -123,11 +123,12 @@ impl Runnable for App {
                 &self.target,
                 self.ws.size.into(),
                 self.target.get_format(),
+                None,
             );
         }
     }
 
-    fn draw(&mut self) {
+    async fn draw(&mut self) {
         let mut frame = self.target.get_frame();
 
         self.ubo.upload(
@@ -170,4 +171,6 @@ impl Runnable for App {
 
 //
 
-main_app!(async App);
+fn main() {
+    app!(App);
+}

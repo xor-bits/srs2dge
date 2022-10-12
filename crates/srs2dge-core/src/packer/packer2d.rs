@@ -74,7 +74,7 @@ impl Packer {
 
     /// The resulting rect will be the sums the rectangles (**sides**, not area)
     ///
-    /// ```ignore
+    /// ```text
     /// +----------+-------+
     /// | original | new   |
     /// +----------+-------+
@@ -240,13 +240,17 @@ impl Packer {
             (false, _) => {
                 let a = Space {
                     x: x + rect.width + pad,
-                    width: w - rect.width + pad,
+                    width: w - rect.width - pad,
                 };
                 self.rows[row].free_spaces[col] = a;
             }
         }
 
-        Some(rect.positioned(x, y))
+        let rect = rect.positioned(x, y);
+
+        // assert!(rect.x + rect.width <= self.rect.width && rect.y + rect.height <= self.rect.height);
+
+        Some(rect)
     }
 
     /// Repeatedly pushes a rect until it succeeds.
@@ -627,6 +631,21 @@ mod test {
         gen_test! { packer, 10, 10 => 20, 0 };
         gen_test! { packer, 10, 10 => 20, 10 };
         gen_test! { packer, 10, 10 };
+    }
+
+    #[test]
+    pub fn test_padding() {
+        let mut packer = Packer::new(Rect::new(20, 20)).with_padding(2);
+        gen_test! { packer, 8, 8 => 0, 0 };
+        gen_test! { packer, 8, 8 => 10, 0 };
+        gen_test! { packer, 8, 8 => 0, 10 };
+        gen_test! { packer, 8, 8 => 10, 10 };
+        gen_test! { packer, 8, 8 };
+        gen_test! { packer, 1, 1 };
+
+        let mut packer = Packer::new(Rect::new(8, 8)).with_padding(2);
+        gen_test! { packer, 1, 1 => 0, 0 };
+        gen_test! { packer, 1, 1 => 3, 0 };
     }
 
     /* #[bench]

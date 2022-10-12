@@ -1,17 +1,14 @@
 use logic::{Board, Move};
 use std::sync::Arc;
-#[cfg(not(target_arch = "wasm32"))]
-use std::{
-    fs::File,
-    io::{Read, Write},
-};
 use winit::dpi::PhysicalSize;
 
+use saveload::*;
 use srs2dge::prelude::*;
 
 //
 
 mod logic;
+mod saveload;
 mod tetromino;
 
 //
@@ -69,6 +66,7 @@ impl App {
             Rect::new(1024, 1024),
             Some(32),
             res::font::FIRA,
+            None,
         )
         .unwrap();
         let screen_ubo = UniformBuffer::new(&target, 1);
@@ -79,19 +77,7 @@ impl App {
 
         let board = Board::new(&mut batcher, &mut rand::thread_rng());
 
-        #[cfg(target_arch = "wasm32")]
-        let highscore = 0;
-        #[cfg(not(target_arch = "wasm32"))]
-        let highscore = (|| -> Result<usize, ()> {
-            let mut highscore_file = File::options()
-                .read(true)
-                .open("highscore")
-                .map_err(|_| ())?;
-            let mut buf = String::new();
-            highscore_file.read_to_string(&mut buf).map_err(|_| ())?;
-            ron::from_str(&buf).map_err(|_| ())
-        })()
-        .unwrap_or(0);
+        let highscore = load_highscore();
 
         Self {
             target,
@@ -117,10 +103,8 @@ impl App {
             game_over: false,
         }
     }
-}
 
-impl Runnable for App {
-    fn event(&mut self, event: Event, _: &EventLoopTarget, control: &mut ControlFlow) {
+    async fn event(&mut self, event: Event<'_>, _: &EventLoopTarget, control: &mut ControlFlow) {
         self.ws.event(&event);
         self.ks.event(&event);
         self.gs.event(&event);
@@ -128,27 +112,11 @@ impl Runnable for App {
         if self.ws.should_close {
             *control = ControlFlow::Exit;
 
-            #[cfg(not(target_arch = "wasm32"))]
-            if let Err(err) = (|| -> Result<_, String> {
-                let mut highscore_file = File::options()
-                    .create(true)
-                    .write(true)
-                    .open("highscore")
-                    .map_err(|err| err.to_string())?;
-                write!(
-                    highscore_file,
-                    "{}",
-                    ron::to_string(&self.highscore).map_err(|err| err.to_string())?
-                )
-                .map_err(|err| err.to_string())?;
-                Ok(())
-            })() {
-                log::warn!("Failed to write highscore file: {err}");
-            }
+            save_highscore(self.highscore);
         }
     }
 
-    fn draw(&mut self) {
+    async fn draw(&mut self) {
         // manual moves
         if self.ks.just_pressed(VirtualKeyCode::Left)
             || self.ks.just_pressed(VirtualKeyCode::A)
@@ -333,4 +301,6 @@ impl Runnable for App {
 
 //
 
-main_app!(async App);
+fn main() {
+    app!(App);
+}

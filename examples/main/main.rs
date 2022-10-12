@@ -107,9 +107,14 @@ impl App {
         // STATIC TEXT
         // -----------
 
-        let mut glyphs =
-            Glyphs::new_with_fallback_bytes(&target, Rect::new(512, 512), None, res::font::ROBOTO)
-                .unwrap();
+        let mut glyphs = Glyphs::new_with_fallback_bytes(
+            &target,
+            Rect::new(512, 512),
+            None,
+            res::font::ROBOTO,
+            None,
+        )
+        .unwrap();
 
         let fonts = FontIds {
             roboto: 0,
@@ -375,10 +380,8 @@ impl App {
             )],
         );
     }
-}
 
-impl Runnable for App {
-    fn draw(&mut self) {
+    async fn draw(&mut self) {
         // updates
 
         let delta = self.updates();
@@ -438,7 +441,7 @@ impl Runnable for App {
         }
     }
 
-    fn event(&mut self, event: Event<'_>, _: &EventLoopTarget, control: &mut ControlFlow) {
+    async fn event(&mut self, event: Event<'_>, _: &EventLoopTarget, control: &mut ControlFlow) {
         *control = ControlFlow::Poll;
         self.ws.event(&event);
         self.is.event(&event);
@@ -451,4 +454,6 @@ impl Runnable for App {
 
 //
 
-main_app!(async App);
+fn main() {
+    app!(App);
+}

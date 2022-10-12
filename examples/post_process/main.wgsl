@@ -1,20 +1,15 @@
 struct FragmentInput {
-	// @builtin(position) pos: vec4<f32>,
-	// @location(0) col: vec4<f32>,
-	// @location(1) uv: vec2<f32>,
-	[[builtin(position)]] pos: vec4<f32>;
-	[[location(0)]] col: vec4<f32>;
-	[[location(1)]] uv: vec2<f32>;
+	@builtin(position) pos: vec4<f32>,
+	@location(0) col: vec4<f32>,
+	@location(1) uv: vec2<f32>,
 };
 
-// @group(0)
-// @binding(1)
-[[group(0), binding(1)]]
+@group(0)
+@binding(1)
 var t_texture: texture_2d<f32>;
 
-// @group(0)
-// @binding(2)
-[[group(0), binding(2)]]
+@group(0)
+@binding(2)
 var s_texture: sampler;
 
 fn process(base: vec2<i32>, kernel: mat3x3<f32>) -> vec3<f32> {
@@ -29,14 +24,15 @@ fn process(base: vec2<i32>, kernel: mat3x3<f32>) -> vec3<f32> {
 	val = val + textureLoad(t_texture, base + vec2<i32>( 0,  1), 0).rgb * kernel[2][1];
 	val = val + textureLoad(t_texture, base + vec2<i32>( 1,  1), 0).rgb * kernel[2][2];
 	// for(var c: i32 = 0; c < 3; c++) { for(var r: i32 = 0; r < 3; r++) {
-	//  val += textureLoad(t_texture, base + vec2<i32>(c - 1, r - 1), 0).rgb * kernel[c + 3 * r];
+	//     val += textureLoad(t_texture, base + vec2<i32>(c - 1, r - 1), 0).rgb * kernel[c + 3 * r];
 	// } }
+
+    for(var c: i32 = 0; c < 3; c++) {}
 	return val;
 }
 
-// @fragment
-[[stage(fragment)]]
-fn main(fin: FragmentInput) -> [[location(0)]] vec4<f32> { // @location(0)
+@fragment
+fn main(fin: FragmentInput) -> @location(0) vec4<f32> {
 	let dim = textureDimensions(t_texture);
 	let pix = vec2<f32>(dim);
 	let base = vec2<i32>(pix * fin.uv);

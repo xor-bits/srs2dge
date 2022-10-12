@@ -56,10 +56,8 @@ impl App {
             shader,
         }
     }
-}
 
-impl Runnable for App {
-    fn event(&mut self, event: Event, _: &EventLoopTarget, control: &mut ControlFlow) {
+    async fn event(&mut self, event: Event<'_>, _: &EventLoopTarget, control: &mut ControlFlow) {
         self.ws.event(&event);
 
         if self.ws.should_close {
@@ -67,7 +65,7 @@ impl Runnable for App {
         }
     }
 
-    fn draw(&mut self) {
+    async fn draw(&mut self) {
         let mut frame = self.target.get_frame();
 
         self.ubo.upload(
@@ -97,4 +95,6 @@ impl Runnable for App {
 
 //
 
-main_app!(async App);
+fn main() {
+    app!(App);
+}

@@ -28,10 +28,8 @@ impl App {
             debug,
         }
     }
-}
 
-impl Runnable for App {
-    fn event(&mut self, event: Event, _: &EventLoopTarget, control: &mut ControlFlow) {
+    async fn event(&mut self, event: Event<'_>, _: &EventLoopTarget, control: &mut ControlFlow) {
         self.ws.event(&event);
 
         if let Event::WindowEvent {
@@ -43,7 +41,7 @@ impl Runnable for App {
         }
     }
 
-    fn draw(&mut self) {
+    async fn draw(&mut self) {
         let t = self.timer.elapsed().as_secs_f32();
 
         let r_a = Vec2::ONE * 0.5;
@@ -111,4 +109,6 @@ impl Runnable for App {
 
 //
 
-main_app!(async App);
+fn main() {
+    app!(App);
+}

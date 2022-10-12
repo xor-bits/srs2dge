@@ -9,6 +9,7 @@
 use main_game_loop::event::EventLoopTarget;
 use std::sync::{Arc, RwLock};
 use target::Target;
+use tokio::runtime::{Builder, Runtime};
 use wgpu::{util::backend_bits_from_env, Adapter, Backends, Device, Instance, Queue};
 use winit::{
     error::OsError,
@@ -17,23 +18,19 @@ use winit::{
 
 //
 
+pub use bytemuck;
 pub use colorful;
-pub use log;
-
 pub use glam;
+pub use image;
+pub use integer_sqrt;
+pub use log;
 pub use main_game_loop;
 pub use naga;
+pub use rand;
+pub use rapid_qoi;
+pub use serde;
 pub use wgpu;
 pub use winit;
-
-pub use image;
-pub use rapid_qoi;
-
-pub use bytemuck;
-pub use rand;
-pub use serde;
-
-pub use integer_sqrt;
 
 //
 
@@ -51,6 +48,69 @@ pub mod util;
 //
 
 pub type DeviceStorage = Arc<RwLock<Vec<(Arc<Adapter>, Arc<Device>, Arc<Queue>)>>>;
+
+//
+
+#[macro_export]
+macro_rules! app {
+    ($app:ident) => {
+        $crate::app!($app::init, $app::event, $app::draw)
+    };
+
+    ($init:expr, $event:expr, $draw:expr) => {
+        $crate::init_log();
+
+        let rt = $crate::init_tokio();
+
+        let target = EventLoop::new();
+        let mut app = rt.block_on($init(&target));
+
+        target.run(move |e, t, c| {
+            rt.block_on(async {
+                if should_draw(&e) {
+                    ($draw(&mut app)).await;
+                }
+
+                ($event(&mut app, e, t, c)).await;
+            })
+        });
+    };
+}
+
+pub fn init_tokio() -> Runtime {
+    #[cfg(not(target_arch = "wasm32"))]
+    let mut builder = Builder::new_multi_thread();
+    #[cfg(target_arch = "wasm32")]
+    let mut builder = Builder::new_current_thread();
+    builder
+        .enable_all()
+        .build()
+        .expect("Failed to start a tokio runtime")
+}
+
+pub fn init_log() {
+    #[cfg(target_os = "android")]
+    {
+        use android_logger::{init_once, Config, FilterBuilder};
+
+        init_once(
+            Config::default().with_min_level(Level::Debug).with_filter(
+                FilterBuilder::new()
+                    .parse("debug,winit=info,wgpu_core=info,wgpu_hal=info,naga=info,gilrs=info")
+                    .build(),
+            ),
+        );
+    }
+    #[cfg(target_arch = "wasm32")]
+    {
+        std::panic::set_hook(Box::new(console_error_panic_hook::hook));
+        console_log::init_with_level(log::Level::Debug).unwrap();
+    }
+    #[cfg(not(any(target_os = "android", target_arch = "wasm32")))]
+    {
+        env_logger::init();
+    }
+}
 
 //
 

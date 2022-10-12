@@ -4,7 +4,8 @@ pub use crate::{
 };
 
 pub use winit::{
-    event::VirtualKeyCode,
+    self,
+    event::{VirtualKeyCode, WindowEvent},
     event_loop::ControlFlow,
     window::{Window, WindowBuilder},
 };

@@ -1,142 +1,117 @@
 {
     entities: {
-        "9e61d12d-ea69-4f64-95e8-72c7a915760b": {
-            "RigidBody2D": (
-                linear_velocity: (0, 0),
-                angular_velocity: 0,
+        "6cf64d07-a1fe-489e-aeda-55e7948913a5": {
+            "srs2dge_ecs::rigidbody::RigidBody2D": (
+                linear_velocity: (0.0, 0.0),
+                angular_velocity: 0.0,
             ),
-            "Transform2D": (
-                translation: (0, 0),
-                rotation: 0,
+            "srs2dge_ecs::transform::Transform2D": (
+                translation: (0.0, 0.0),
+                rotation: 0.0,
                 scale: (0.1, 0.1),
             ),
-            "Sprite": (
+            "srs2dge_ecs::sprite::Sprite": (
                 sprite: (
-                    top_left: (0, 0),
+                    top_left: (0.0, 0.0),
                     bottom_right: (0.5, 0.5),
                 ),
                 color: (
-                    r: 1,
-                    g: 1,
-                    b: 1,
-                    a: 1,
+                    r: 1.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 1.0,
                 ),
                 idx: None,
-                lerp_transform: (
-                    translation: (0, 0),
-                    rotation: 0,
-                    scale: (0, 0),
-                ),
             ),
-            "Player": (
+            "platformer::components::Player": (
                 can_jump: false,
             ),
-            "Collider": (),
-            "CollisionResolver": ((0, 0)),
+            "platformer::components::Collider": (),
+            "platformer::components::CollisionResolver": ((0.0, 0.0)),
         },
-        "8ab95116-3a90-4bae-af2c-e324bd614d42": {
-            "Transform2D": (
-                translation: (0, -0.5),
-                rotation: 0,
+        "e0969a7d-8f03-47c4-8098-7152d899a39f": {
+            "srs2dge_ecs::transform::Transform2D": (
+                translation: (0.0, -0.5),
+                rotation: 0.0,
                 scale: (1.5, 0.2),
             ),
-            "Sprite": (
+            "srs2dge_ecs::sprite::Sprite": (
                 sprite: (
-                    top_left: (0, 0.5),
-                    bottom_right: (0.03125, 0.53125),
+                    top_left: (0.0, 0.5625),
+                    bottom_right: (0.03125, 0.59375),
                 ),
                 color: (
-                    r: 1,
+                    r: 1.0,
                     g: 0.5,
-                    b: 0,
-                    a: 1,
+                    b: 0.0,
+                    a: 1.0,
                 ),
                 idx: None,
-                lerp_transform: (
-                    translation: (0, 0),
-                    rotation: 0,
-                    scale: (0, 0),
-                ),
             ),
-            "Collider": (),
+            "platformer::components::Collider": (),
         },
-        "ba19359e-8d13-4032-b8a8-a0996e7db6d3": {
-            "Transform2D": (
+        "e683b502-6604-4568-89de-b87daeb85213": {
+            "srs2dge_ecs::transform::Transform2D": (
                 translation: (0.4, -0.2),
-                rotation: 0,
+                rotation: 0.0,
                 scale: (0.3, 0.2),
             ),
-            "Sprite": (
+            "srs2dge_ecs::sprite::Sprite": (
                 sprite: (
-                    top_left: (0, 0.5),
-                    bottom_right: (0.03125, 0.53125),
+                    top_left: (0.0, 0.5625),
+                    bottom_right: (0.03125, 0.59375),
                 ),
                 color: (
-                    r: 0,
-                    g: 1,
-                    b: 1,
-                    a: 1,
+                    r: 0.0,
+                    g: 1.0,
+                    b: 1.0,
+                    a: 1.0,
                 ),
                 idx: None,
-                lerp_transform: (
-                    translation: (0, 0),
-                    rotation: 0,
-                    scale: (0, 0),
-                ),
             ),
-            "Collider": (),
+            "platformer::components::Collider": (),
         },
-        "8f55266b-a035-493a-ab3f-f653f7799d9e": {
-            "Transform2D": (
-                translation: (0.8, 0),
-                rotation: 0,
+        "ef35b150-1ea3-49cc-93d8-9cd2b299e00b": {
+            "srs2dge_ecs::transform::Transform2D": (
+                translation: (0.8, 0.0),
+                rotation: 0.0,
                 scale: (0.2, 0.4),
             ),
-            "Sprite": (
+            "srs2dge_ecs::sprite::Sprite": (
                 sprite: (
-                    top_left: (0, 0.5),
-                    bottom_right: (0.03125, 0.53125),
+                    top_left: (0.0, 0.5625),
+                    bottom_right: (0.03125, 0.59375),
                 ),
                 color: (
                     r: 0.5,
-                    g: 1,
-                    b: 0,
-                    a: 1,
+                    g: 1.0,
+                    b: 0.0,
+                    a: 1.0,
                 ),
                 idx: None,
-                lerp_transform: (
-                    translation: (0, 0),
-                    rotation: 0,
-                    scale: (0, 0),
-                ),
             ),
-            "Collider": (),
+            "platformer::components::Collider": (),
         },
-        "03079b9e-9582-4a37-b341-61a7f416a24b": {
-            "Transform2D": (
-                translation: (-0.95, 1),
-                rotation: 0,
+        "c4c7bb69-8c3e-49f9-a403-1f121f24b6cb": {
+            "srs2dge_ecs::transform::Transform2D": (
+                translation: (-0.95, 1.0),
+                rotation: 0.0,
                 scale: (0.2, 3.4),
             ),
-            "Sprite": (
+            "srs2dge_ecs::sprite::Sprite": (
                 sprite: (
-                    top_left: (0, 0.5),
-                    bottom_right: (0.03125, 0.53125),
+                    top_left: (0.0, 0.5625),
+                    bottom_right: (0.03125, 0.59375),
                 ),
                 color: (
-                    r: 0,
+                    r: 0.0,
                     g: 0.5,
-                    b: 1,
-                    a: 1,
+                    b: 1.0,
+                    a: 1.0,
                 ),
                 idx: None,
-                lerp_transform: (
-                    translation: (0, 0),
-                    rotation: 0,
-                    scale: (0, 0),
-                ),
             ),
-            "Collider": (),
+            "platformer::components::Collider": (),
         },
     },
 }

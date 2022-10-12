@@ -53,6 +53,7 @@ impl App {
             &image::load_from_memory(res::texture::RUST)
                 .unwrap()
                 .to_rgba8(),
+            None,
         );
 
         let ubo = UniformBuffer::new(&target, 1);
@@ -60,7 +61,7 @@ impl App {
 
         let mut world = World::new().with_plugin(DefaultClientPlugins(&target));
         world.updates.insert(random_movement_system);
-        for _ in 0..1_000_000 {
+        for _ in 0..100_000 {
             world.push((
                 RigidBody2D::default(),
                 Transform2D {
@@ -89,10 +90,8 @@ impl App {
             world,
         }
     }
-}
 
-impl Runnable for App {
-    fn event(&mut self, event: Event, _: &EventLoopTarget, control: &mut ControlFlow) {
+    async fn event(&mut self, event: Event<'_>, _: &EventLoopTarget, control: &mut ControlFlow) {
         self.ws.event(&event);
 
         if self.ws.should_close {
@@ -100,7 +99,7 @@ impl Runnable for App {
         }
     }
 
-    fn draw(&mut self) {
+    async fn draw(&mut self) {
         self.world.run();
 
         if self.frame_report.should_report() {
@@ -149,4 +148,6 @@ impl Runnable for App {
 
 //
 
-main_app!(async App);
+fn main() {
+    app!(App);
+}

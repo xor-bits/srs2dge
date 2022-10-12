@@ -2,7 +2,7 @@ use self::debug::AppDebug;
 use crate::prelude::{DrawGeneratedGui, Gui, Widget};
 use srs2dge_core::{
     main_game_loop::{
-        as_async, event::Event, event::EventLoopTarget, prelude::EventLoop, report::Reporter,
+        event::Event, event::EventLoopTarget, prelude::EventLoop, report::Reporter,
         runnable::Runnable,
     },
     prelude::{ControlFlow, TextureAtlasMap},
@@ -102,18 +102,7 @@ impl<Root: Widget, Fu: FnMut(&mut Root)> Runnable for App<Root, Fu> {
     }
 }
 
-pub fn run_gui_app<
-    Root: Widget + 'static,
-    Fi: FnOnce(&Target, &mut Gui) -> (TextureAtlasMap<u8>, Root) + 'static,
-    Fu: FnMut(&mut Root) + 'static,
->(
-    fi: Fi,
-    fu: Fu,
-) {
-    as_async(run_gui_app_async(fi, fu));
-}
-
-pub async fn run_gui_app_async<
+pub async fn run_gui_app<
     Root: Widget + 'static,
     Fi: FnOnce(&Target, &mut Gui) -> (TextureAtlasMap<u8>, Root),
     Fu: FnMut(&mut Root) + 'static,

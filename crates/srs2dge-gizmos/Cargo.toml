@@ -1,13 +1,17 @@
 [package]
 name = "srs2dge-gizmos"
-version = "0.4.0"
-edition = "2021"
-description = "Simple Rust 2D Game Engine"
-license = "MIT"
+edition.workspace = true
+version.workspace = true
+description.workspace = true
+license.workspace = true
+repository.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-srs2dge-core = { path = "../srs2dge-core", version = "0.4" }
-srs2dge-presets = { path = "../srs2dge-presets", version = "0.4" }
-srs2dge-text = { path = "../srs2dge-text", version = "0.4" }
+srs2dge-core = { path = "../srs2dge-core" }
+srs2dge-presets = { path = "../srs2dge-presets" }
+srs2dge-text = { path = "../srs2dge-text" }

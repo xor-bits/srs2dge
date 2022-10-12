@@ -118,6 +118,7 @@ where
     for s in chars.by_ref() {
         let line = fonts
             .get_font(s.format.font)
+            .inner()
             .horizontal_line_metrics(s.format.px)
             .unwrap();
         max_ascender = max_ascender.max(line.ascent);

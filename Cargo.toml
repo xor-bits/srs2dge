@@ -1,42 +1,15 @@
 [package]
 name = "srs2dge"
-version = "0.4.0"
-edition = "2021"
-description = "Simple Rust 2D Game Engine"
-license = "MIT"
-repository = "https://github.com/Overpeek/srs2dge"
-documentation = "https://docs.rs/srs2dge"
+edition.workspace = true
+version.workspace = true
+description.workspace = true
+license.workspace = true
+repository.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[[example]]
-name = "asteroids"
-path = "examples/asteroids/main.rs"
-
-[[example]]
-name = "gui"
-path = "examples/gui/main/main.rs"
-
-[[example]]
-name = "loading_screen"
-path = "examples/gui/loading_screen/main.rs"
-
-# profiles
-
-[profile.release-wasm]
-inherits = "release"
-lto = true
-codegen-units = 1
-opt-level = 'z'
-
-[profile.release]
-debug = true
-
-[profile.release-opt]
-inherits = "release"
-lto = true
-codegen-units = 1
-opt-level = 3
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -44,9 +17,10 @@ crate-type = ["cdylib", "rlib"]
 # features
 
 [features]
-default = ["dynamic", "parallel-ecs", "gizmos", "gui", "gui-derive", "gui-gizmos", "presets", "res", "text"]
+default = ["dynamic", "all"]
 
 dynamic = ["srs2dge-link-dynamic"]
+all = ["parallel-ecs", "gizmos", "gui", "gui-derive", "gui-gizmos", "presets", "res", "text"]
 
 parallel-ecs = ["srs2dge-link-static/parallel-ecs"]
 ecs = ["srs2dge-link-static/ecs"]
@@ -61,9 +35,8 @@ text = ["srs2dge-link-static/text"]
 # deps
 
 [dependencies]
-srs2dge-link-static = { path = "crates/srs2dge-link-static", version = "0.4" }
-srs2dge-link-dynamic = { path = "crates/srs2dge-link-dynamic", version = "0.4", optional = true }
-
+srs2dge-link-static = { path = "crates/srs2dge-link-static" }
+srs2dge-link-dynamic = { path = "crates/srs2dge-link-dynamic", optional = true }
 
 [dev-dependencies]
 instant = "0.1"
@@ -79,7 +52,56 @@ ron = "0.8"
 fastrand = "1.7"
 # rapier2d = "0.11"
 
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+web-sys = { version = "0.3.60", default-features = false, features = ["Window", "Storage"] }
+
+# workspace
 
 [workspace]
 members = ["crates/*"]
 resolver = "2"
+
+[workspace.package]
+edition = "2021"
+version = "0.5.0"
+description = "Simple Rust 2D Game Engine"
+license = "MIT"
+repository = "https://github.com/Overpeek/srs2dge"
+documentation = "https://docs.rs/srs2dge"
+keywords = ["game", "engine"]
+categories = ["game-engines", "graphics"]
+
+# examples
+
+[[example]]
+name = "asteroids"
+path = "examples/asteroids/main.rs"
+
+[[example]]
+name = "gui"
+path = "examples/gui/main/main.rs"
+
+[[example]]
+name = "loading_screen"
+path = "examples/gui/loading_screen/main.rs"
+
+[profile.release-wasm]
+inherits = "release"
+lto = true
+codegen-units = 1
+opt-level = 'z'
+debug = false
+
+[profile.release]
+debug = true
+rpath = true
+
+[profile.dev]
+rpath = true
+
+[profile.release-opt]
+inherits = "release"
+lto = true
+codegen-units = 1
+opt-level = 3
+debug = false

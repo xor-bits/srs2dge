@@ -40,8 +40,8 @@ impl Default for SdfUniform {
         Self {
             mvp: Mat4::IDENTITY.to_cols_array_2d(),
             weight: 0.0,
-            anti_alias: 0.01,
-            border: 0.15,
+            anti_alias: 0.1,
+            border: 0.2,
             _pad: 0.0,
         }
     }

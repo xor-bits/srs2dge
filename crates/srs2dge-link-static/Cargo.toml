@@ -1,9 +1,13 @@
 [package]
 name = "srs2dge-link-static"
-version = "0.4.0"
-edition = "2021"
-description = "Simple Rust 2D Game Engine"
-license = "MIT"
+edition.workspace = true
+version.workspace = true
+description.workspace = true
+license.workspace = true
+repository.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -25,11 +29,11 @@ spirv = ["srs2dge-core/spirv"]
 
 
 [dependencies]
-srs2dge-core = { path = "../srs2dge-core", version = "0.4" }
-srs2dge-ecs = { path = "../srs2dge-ecs", version = "0.4", optional = true }
-srs2dge-gizmos = { path = "../srs2dge-gizmos", version = "0.4", optional = true }
-srs2dge-gui = { path = "../srs2dge-gui", version = "0.4", optional = true }
-srs2dge-gui-derive = { path = "../srs2dge-gui-derive", version = "0.4", optional = true }
-srs2dge-presets = { path = "../srs2dge-presets", version = "0.4", optional = true }
-srs2dge-res = { path = "../srs2dge-res", version = "0.4", optional = true }
-srs2dge-text = { path = "../srs2dge-text", version = "0.4", optional = true }
+srs2dge-core = { path = "../srs2dge-core" }
+srs2dge-ecs = { path = "../srs2dge-ecs", optional = true }
+srs2dge-gizmos = { path = "../srs2dge-gizmos", optional = true }
+srs2dge-gui = { path = "../srs2dge-gui", optional = true }
+srs2dge-gui-derive = { path = "../srs2dge-gui-derive", optional = true }
+srs2dge-presets = { path = "../srs2dge-presets", optional = true }
+srs2dge-res = { path = "../srs2dge-res", optional = true }
+srs2dge-text = { path = "../srs2dge-text", optional = true }

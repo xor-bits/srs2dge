@@ -86,7 +86,7 @@ fn set_sprite(sprite: &mut Sprite, #[resource] batcher: &mut BatchRenderer) {
                 .abs()
                 .cmpgt(Vec2::splat(f32::EPSILON))
                 .any()
-            || (mesh.col.to_vec4() - sprite.color.to_vec4())
+            || (mesh.col.into_vec4() - sprite.color.into_vec4())
                 .abs()
                 .cmpgt(Vec4::splat(f32::EPSILON))
                 .any()

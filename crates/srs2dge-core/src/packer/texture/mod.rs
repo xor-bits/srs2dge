@@ -1,23 +1,22 @@
+use self::serde::SerializeableTextureAtlas;
 use super::{
     packer2d::Packer,
     rect::{PositionedRect, Rect},
 };
-use crate::{
-    target::Target,
-    texture::{serde::SerializeableTexture, Texture},
-};
+use crate::{target::Target, texture::Texture};
 use image::RgbaImage;
-use serde::{Deserialize, Serialize};
-use std::{any::type_name, ops::Deref};
+use std::{borrow::Borrow, ops::Deref};
 use wgpu::TextureUsages;
 
 //
 
+pub use self::serde::*;
 pub use map::*;
 
 //
 
 mod map;
+mod serde;
 
 //
 
@@ -27,48 +26,33 @@ const USAGE: u32 = TextureUsages::TEXTURE_BINDING.bits()
 
 //
 
+/// A builder for the texture atlas.
 #[derive(Debug, Clone)]
 pub struct TextureAtlasBuilder {
+    /// the inner packer to pack
+    /// texture ([`Rect`]:s) with
     packer: Packer,
 
-    // side length limit
+    /// texture side length limit
     limit: u16,
 
+    /// a padding for each texture
     padding: u8,
 
+    /// optional label used for debugging
     label: Option<String>,
 }
 
+/// A texture atlas handler.
+///
+/// This is on the GPU and is not serializeable.
 #[derive(Debug)]
 pub struct TextureAtlas {
     texture: Texture<USAGE>,
     label: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
-pub struct SerializeableTextureAtlas {
-    inner: SerializeableTexture,
-}
-
 //
-
-pub trait Reference<T> {
-    fn reference(&self) -> &'_ T;
-}
-
-//
-
-impl<T> Reference<T> for T {
-    fn reference(&self) -> &'_ T {
-        self
-    }
-}
-
-impl<T> Reference<T> for &T {
-    fn reference(&self) -> &'_ T {
-        self
-    }
-}
 
 impl<'a> Default for TextureAtlasBuilder {
     fn default() -> Self {
@@ -96,31 +80,37 @@ impl TextureAtlasBuilder {
         }
     } */
 
-    /// side length limit
+    /// texture side length limit
     pub fn with_limit(mut self, limit: u16) -> Self {
         self.limit = limit;
         self
     }
 
-    /// texture padding
+    /// a padding for each texture
     pub fn with_padding(mut self, padding: u8) -> Self {
         self.padding = padding;
         self.packer.padding = padding;
         self
     }
 
+    /// a label for the resulting texture
+    ///
+    /// used in debugging
     pub fn with_label(mut self, label: Option<String>) -> Self {
         self.label = label;
         self
     }
 
+    /// push a new image (its size)
+    /// to this texture atlas builder
     pub fn push(&mut self, rect: Rect) -> Option<PositionedRect> {
         self.packer.push_until(rect, self.limit)
     }
 
-    pub fn build<I, R>(self, target: &Target, iter: I) -> TextureAtlas
+    /// build the texture atlas headlessly
+    pub fn build_serializeable<I, R>(self, iter: I) -> SerializeableTextureAtlas
     where
-        R: Reference<RgbaImage>,
+        R: Borrow<RgbaImage>,
         I: IntoIterator<Item = (R, PositionedRect)>,
     {
         let dim = self.packer.area();
@@ -129,50 +119,28 @@ impl TextureAtlasBuilder {
         // combine all images into one
         let mut combined = RgbaImage::new(dim.width, dim.height);
         for (image, pos) in iter {
-            for (xo, yo, pixel) in image.reference().enumerate_pixels() {
+            for (xo, yo, pixel) in image.borrow().enumerate_pixels() {
                 combined.put_pixel(pos.x + xo, pos.y + yo, *pixel);
             }
         }
 
-        let texture = Texture::new_rgba_with(
-            target,
-            &combined,
-            Some(
-                label
-                    .as_ref()
-                    .map(|s| s.as_str())
-                    .unwrap_or(type_name::<Self>()),
-            ),
-        );
+        SerializeableTextureAtlas::new(combined, label)
+    }
 
-        TextureAtlas { texture, label }
+    /// build the texture atlas and upload
+    /// it to the GPU
+    pub fn build<I, R>(self, target: &Target, iter: I) -> TextureAtlas
+    where
+        R: Borrow<RgbaImage>,
+        I: IntoIterator<Item = (R, PositionedRect)>,
+    {
+        self.build_serializeable(iter).upload(&target)
     }
 }
 
 impl TextureAtlas {
     pub fn builder() -> TextureAtlasBuilder {
         TextureAtlasBuilder::new()
-    }
-
-    pub async fn download(&self, target: &Target) -> SerializeableTextureAtlas {
-        let inner = self.texture.download(target, self.label.clone()).await;
-        SerializeableTextureAtlas { inner }
-    }
-
-    pub fn upload(from: &SerializeableTextureAtlas, target: &Target) -> Self {
-        from.upload(target)
-    }
-}
-
-impl SerializeableTextureAtlas {
-    pub async fn download(from: &TextureAtlas, target: &Target) -> Self {
-        from.download(target).await
-    }
-
-    pub fn upload(&self, target: &Target) -> TextureAtlas {
-        let texture = self.inner.upload(target);
-        let label = self.inner.label.clone();
-        TextureAtlas { texture, label }
     }
 }
 

@@ -1,9 +1,13 @@
 [package]
 name = "srs2dge-core"
-version = "0.4.0"
-edition = "2021"
-description = "Simple Rust 2D Game Engine"
-license = "MIT"
+edition.workspace = true
+version.workspace = true
+description.workspace = true
+license.workspace = true
+repository.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+categories.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -18,31 +22,40 @@ colorful = "0.2"
 log = "0.4"
 # graphics
 glam = { version = "0.21", features = ["serde", "bytemuck"] }
-main_game_loop = "0.4.6"
-naga = { version = "0.9", features = ["wgsl-in", "validate"] }
-wgpu = { version = "0.13", features = ["webgl"] }
+main_game_loop = { git = "https://github.com/Overpeek/main_game_loop", rev = "a1b43876d1ad7ec84227f98c35a4f9ca408b4966" }
+naga = { version = "0.10", features = ["wgsl-in", "validate"] }
+wgpu = { version = "0.14", features = ["webgl"] }
 # naga = { git = "https://github.com/gfx-rs/naga", rev = "1aa91549", features = [
-# 	"wgsl-in",
-# 	"validate",
+#   "wgsl-in",
+#   "validate",
 # ] }
 # wgpu = { git = "https://github.com/gfx-rs/wgpu", rev = "af259aa1", features = [
-# 	"webgl",
+#   "webgl",
 # ] }
 winit = "0.27"
 # resources
 image = "0.24"
 rapid-qoi = "0.6"
 # data
-bytemuck = { version = "1.9", features = ["derive"] }
+bytemuck = { version = "1.12", features = ["derive"] }
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 # opt
 integer-sqrt = "0.1"
-tokio = { version = "1.19", features = ["sync"] }
 
-
+# init logging
+[target.'cfg(target_os = "android")'.dependencies]
+android_logger = "0.11"
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+env_logger = "0.9"
+# fut
+tokio = { version = "1.21", features = ["rt-multi-thread", "sync"] }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+# init logging
+console_log = { version = "0.2", features = ["color"] }
+# wasm panic hook
+console_error_panic_hook = "0.1"
+# canvas
 web-sys = "0.3"
-
-[dev-dependencies]
-rand = "0.8"
+# fut
+tokio = { version = "1.21", features = ["rt", "sync"] }

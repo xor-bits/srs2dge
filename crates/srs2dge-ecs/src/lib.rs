@@ -1,7 +1,13 @@
 use atomic_refcell::{AtomicRef, AtomicRefMut};
-use legion::Resources;
+use legion::{
+    query::LayoutFilter,
+    serialize::{AutoTypeKey, Canon, TypeKey},
+    storage::Component,
+    Registry, Resources,
+};
 use plugin::Plugin;
 use prelude::{systems::Systems, time::Time};
+use serde::{de::DeserializeSeed, Deserialize, Serialize};
 use srs2dge_core::{
     batch::BatchRenderer,
     main_game_loop::{
@@ -10,6 +16,7 @@ use srs2dge_core::{
     },
 };
 use std::{
+    any::type_name,
     fmt::Debug,
     ops::{Deref, DerefMut},
 };
@@ -112,6 +119,69 @@ impl World {
                 self.frame_plugin
                     .then_some(("ECS Frames", &mut self.frames.reporter)),
             )
+    }
+
+    pub fn serialize_builder<T: TypeKey>(&self) -> WorldSerializeBuilder<&'_ World, T> {
+        WorldSerializeBuilder::new(self)
+    }
+
+    pub fn deserialize_builder<T: TypeKey>(&mut self) -> WorldSerializeBuilder<&'_ mut World, T> {
+        WorldSerializeBuilder::new(self)
+    }
+}
+
+pub struct WorldSerializeBuilder<W, T: TypeKey = String> {
+    reg: Registry<T>,
+    ent: Canon,
+    world: W,
+}
+
+impl<W, T: TypeKey> WorldSerializeBuilder<W, T> {
+    pub fn new(world: W) -> Self {
+        Self {
+            reg: Registry::new(),
+            ent: Canon::default(),
+            world,
+        }
+    }
+
+    pub fn with_component<C: Component + Serialize + for<'de> Deserialize<'de>>(
+        &mut self,
+        mapped_type_id: T,
+    ) -> &mut Self {
+        self.reg.register::<C>(mapped_type_id);
+        self
+    }
+
+    pub fn with_component_auto<C: Component + Serialize + for<'de> Deserialize<'de>>(
+        &mut self,
+    ) -> &mut Self
+    where
+        T: AutoTypeKey<C>,
+    {
+        self.reg.register_auto_mapped::<C>();
+        self
+    }
+}
+
+impl<W> WorldSerializeBuilder<W, String> {
+    pub fn with_named_component<C: Component + Serialize + for<'de> Deserialize<'de>>(
+        &mut self,
+    ) -> &mut Self {
+        self.reg.register::<C>(type_name::<C>().to_string());
+        self
+    }
+}
+
+impl<'a, T: TypeKey> WorldSerializeBuilder<&'a World, T> {
+    pub fn serialize<'b>(&'b mut self, filter: impl LayoutFilter + 'b) -> impl Serialize + 'b {
+        self.world.as_serializable(filter, &self.reg, &self.ent)
+    }
+}
+
+impl<'a, T: TypeKey> WorldSerializeBuilder<&'a mut World, T> {
+    pub fn deserialize(&mut self) -> impl DeserializeSeed {
+        self.reg.as_deserialize_into_world(self.world, &self.ent)
     }
 }
 

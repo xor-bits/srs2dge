@@ -57,7 +57,7 @@ impl App {
 
         let ws = WindowState::new(&target.get_window().unwrap());
 
-        let mut glyphs = Glyphs::new(&target, Rect::new(130, 130), Some(48), fonts);
+        let mut glyphs = Glyphs::new(&target, Rect::new(150, 150), Some(48), fonts, None);
 
         let (v, i) = vbo::text(&target, text.chars(), &mut glyphs, config)
             .unwrap()
@@ -80,10 +80,8 @@ impl App {
             sdf_shader,
         }
     }
-}
 
-impl Runnable for App {
-    fn event(&mut self, event: Event, _: &EventLoopTarget, control: &mut ControlFlow) {
+    async fn event(&mut self, event: Event<'_>, _: &EventLoopTarget, control: &mut ControlFlow) {
         self.ws.event(&event);
 
         if self.ws.should_close {
@@ -91,7 +89,7 @@ impl Runnable for App {
         }
     }
 
-    fn draw(&mut self) {
+    async fn draw(&mut self) {
         self.target.get_window().unwrap().set_visible(true);
 
         let mut frame = self.target.get_frame();
@@ -123,4 +121,6 @@ impl Runnable for App {
 
 //
 
-main_app!(async App);
+fn main() {
+    app!(App);
+}

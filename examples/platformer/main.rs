@@ -1,7 +1,8 @@
 use components::{Collider, CollisionResolver, CustomPlugin, Player};
-use legion::{component, serialize::Canon, IntoQuery};
+use legion::{component, IntoQuery};
+use ron::ser::{to_string_pretty, PrettyConfig};
 use serde::de::DeserializeSeed;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 use srs2dge::prelude::*;
 
@@ -41,9 +42,23 @@ impl App {
         let ks = KeyboardState::new();
         let gs = GamepadState::new();
 
-        let texture_atlas = ron::de::from_str::<TextureAtlasMapFile<_>>(include_str!("atlas.ron"))
-            .unwrap()
-            .convert(&target);
+        let texture_atlas = if false {
+            // generate the texture atlas and print it
+            let texture_atlas = TextureAtlasMap::builder()
+                .with_bytes(0, res::texture::SPRITE)
+                .unwrap()
+                .with_bytes(1, res::texture::EMPTY)
+                .unwrap()
+                .build_serializeable();
+            let s = to_string_pretty(&texture_atlas, PrettyConfig::default()).unwrap();
+            println!("{s}",);
+            texture_atlas.upload(&target)
+        } else {
+            // or load the texture atlas baked into this binary
+            ron::de::from_str::<SerializeableTextureAtlasMap<_>>(include_str!("atlas.ron"))
+                .unwrap()
+                .upload(&target)
+        };
 
         let ubo = UniformBuffer::new(&target, 1);
         let shader = Texture2DShader::new(&target);
@@ -52,90 +67,108 @@ impl App {
             .with_plugin(DefaultClientPlugins(&target))
             .with_plugin(CustomPlugin);
 
-        // generate
-        /* world.push((
-            RigidBody2D::default(),
-            Transform2D {
-                translation: Vec2::ZERO,
-                scale: Vec2::ONE * 0.1,
-                ..Default::default()
-            },
-            Sprite {
-                sprite: texture_atlas.get(&0).unwrap(),
-                color: Color::WHITE,
-                ..Default::default()
-            },
-            Player::default(),
-            Collider,
-            CollisionResolver::default(),
-        ));
-        world.push((
-            Transform2D {
-                translation: Vec2::new(0.0, -0.5),
-                scale: Vec2::new(1.5, 0.2),
-                ..Default::default()
-            },
-            Sprite {
-                sprite: texture_atlas.get(&1).unwrap(),
-                color: Color::ORANGE,
-                ..Default::default()
-            },
-            Collider,
-        ));
-        world.push((
-            Transform2D {
-                translation: Vec2::new(0.4, -0.2),
-                scale: Vec2::new(0.3, 0.2),
-                ..Default::default()
-            },
-            Sprite {
-                sprite: texture_atlas.get(&1).unwrap(),
-                color: Color::CYAN,
-                ..Default::default()
-            },
-            Collider,
-        ));
-        world.push((
-            Transform2D {
-                translation: Vec2::new(0.8, 0.0),
-                scale: Vec2::new(0.2, 0.4),
-                ..Default::default()
-            },
-            Sprite {
-                sprite: texture_atlas.get(&1).unwrap(),
-                color: Color::CHARTREUSE,
-                ..Default::default()
-            },
-            Collider,
-        ));
-        world.push((
-            Transform2D {
-                translation: Vec2::new(-0.95, 1.0),
-                scale: Vec2::new(0.2, 3.4),
-                ..Default::default()
-            },
-            Sprite {
-                sprite: texture_atlas.get(&1).unwrap(),
-                color: Color::AZURE,
-                ..Default::default()
-            },
-            Collider,
-        )); */
+        if false {
+            // generate the scene and print it
+            world.push((
+                RigidBody2D::default(),
+                Transform2D {
+                    translation: Vec2::ZERO,
+                    scale: Vec2::ONE * 0.1,
+                    ..Default::default()
+                },
+                Sprite {
+                    // TODO: texture manager
+                    sprite: texture_atlas.get(&0).unwrap(),
+                    color: Color::WHITE,
+                    ..Default::default()
+                },
+                Player::default(),
+                Collider,
+                CollisionResolver::default(),
+            ));
+            world.push((
+                Transform2D {
+                    translation: Vec2::new(0.0, -0.5),
+                    scale: Vec2::new(1.5, 0.2),
+                    ..Default::default()
+                },
+                Sprite {
+                    sprite: texture_atlas.get(&1).unwrap(),
+                    color: Color::ORANGE,
+                    ..Default::default()
+                },
+                Collider,
+            ));
+            world.push((
+                Transform2D {
+                    translation: Vec2::new(0.4, -0.2),
+                    scale: Vec2::new(0.3, 0.2),
+                    ..Default::default()
+                },
+                Sprite {
+                    sprite: texture_atlas.get(&1).unwrap(),
+                    color: Color::CYAN,
+                    ..Default::default()
+                },
+                Collider,
+            ));
+            world.push((
+                Transform2D {
+                    translation: Vec2::new(0.8, 0.0),
+                    scale: Vec2::new(0.2, 0.4),
+                    ..Default::default()
+                },
+                Sprite {
+                    sprite: texture_atlas.get(&1).unwrap(),
+                    color: Color::CHARTREUSE,
+                    ..Default::default()
+                },
+                Collider,
+            ));
+            world.push((
+                Transform2D {
+                    translation: Vec2::new(-0.95, 1.0),
+                    scale: Vec2::new(0.2, 3.4),
+                    ..Default::default()
+                },
+                Sprite {
+                    sprite: texture_atlas.get(&1).unwrap(),
+                    color: Color::AZURE,
+                    ..Default::default()
+                },
+                Collider,
+            ));
 
-        // load
-        let mut reg = legion::Registry::<String>::default();
-        reg.register::<RigidBody2D>("RigidBody2D".to_owned());
-        reg.register::<Transform2D>("Transform2D".to_owned());
-        reg.register::<Sprite>("Sprite".to_owned());
-        reg.register::<Collider>("Collider".to_owned());
-        reg.register::<Player>("Player".to_owned());
-        reg.register::<CollisionResolver>("CollisionResolver".to_owned());
-        let entity_serializer = Canon::default();
-        let w = world.deref_mut();
-        *w = reg
-            .as_deserialize(&entity_serializer)
-            .deserialize(&mut ron::de::Deserializer::from_str(include_str!("scene.ron")).unwrap())
+            let s = to_string_pretty(
+                &world
+                    .serialize_builder::<String>()
+                    .with_named_component::<RigidBody2D>()
+                    .with_named_component::<Transform2D>()
+                    .with_named_component::<Sprite>()
+                    .with_named_component::<Player>()
+                    .with_named_component::<Collider>()
+                    .with_named_component::<CollisionResolver>()
+                    .serialize(legion::passthrough()),
+                PrettyConfig::default(),
+            )
             .unwrap();
+            println!("{s}");
+        } else {
+            // or load the scene
+            world
+                .deserialize_builder::<String>()
+                .with_named_component::<RigidBody2D>()
+                .with_named_component::<Transform2D>()
+                .with_named_component::<Sprite>()
+                .with_named_component::<Player>()
+                .with_named_component::<Collider>()
+                .with_named_component::<CollisionResolver>()
+                .deserialize()
+                .deserialize(
+                    &mut ron::de::Deserializer::from_str(include_str!("scene.ron")).unwrap(),
+                )
+                .unwrap();
+        }
 
         Self {
             target,
@@ -152,10 +185,8 @@ impl App {
             world,
         }
     }
-}
 
-impl Runnable for App {
-    fn event(&mut self, event: Event, _: &EventLoopTarget, control: &mut ControlFlow) {
+    async fn event(&mut self, event: Event<'_>, _: &EventLoopTarget, control: &mut ControlFlow) {
         self.ws.event(&event);
         self.ks.event(&event);
         self.gs.event(&event);
@@ -165,7 +196,7 @@ impl Runnable for App {
         }
     }
 
-    fn draw(&mut self) {
+    async fn draw(&mut self) {
         self.world.resources.insert(self.ks.clone());
         self.world.resources.insert(self.gs.clone());
         if self.world.run() {
@@ -218,15 +249,6 @@ impl Runnable for App {
 
 //
 
-async fn __main_run() {
-    let target = main_game_loop::event::EventLoop::new();
-    let app = App::init(&target).await;
-    target.runnable(app);
-}
-
 fn main() {
-    // main_game_loop::init_log();
-    main_game_loop::as_async(__main_run());
+    app!(App);
 }
-
-// main_app!(async App);

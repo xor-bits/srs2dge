@@ -115,12 +115,12 @@ impl Color {
 
     #[inline]
     pub fn lerp(self, other: Self, s: f32) -> Self {
-        Self::from(self.to_vec4().lerp(other.to_vec4(), s))
+        Self::from(self.into_vec4().lerp(other.into_vec4(), s))
     }
 
     #[inline]
     // TODO: const
-    pub fn to_u32(self) -> u32 {
+    pub fn into_u32(self) -> u32 {
         u32::from_be_bytes([
             0,
             (self.r * 255.0) as u8,
@@ -131,7 +131,7 @@ impl Color {
 
     #[inline]
     // TODO: const
-    pub fn to_u32_alpha(self) -> u32 {
+    pub fn into_u32_alpha(self) -> u32 {
         u32::from_be_bytes([
             (self.r * 255.0) as u8,
             (self.g * 255.0) as u8,
@@ -141,7 +141,7 @@ impl Color {
     }
 
     #[inline]
-    pub const fn to_vec4(self) -> Vec4 {
+    pub const fn into_vec4(self) -> Vec4 {
         Vec4::from_array([self.r, self.g, self.b, self.a])
     }
 
@@ -184,9 +184,9 @@ impl Color {
 impl Display for Color {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if f.alternate() {
-            write!(f, "{:06x}", self.to_u32())
+            write!(f, "{:06x}", self.into_u32())
         } else {
-            write!(f, "{:08x}", self.to_u32_alpha())
+            write!(f, "{:08x}", self.into_u32_alpha())
         }
     }
 }
@@ -413,7 +413,7 @@ impl From<[f32; 3]> for Color {
 
 impl From<Color> for u32 {
     fn from(col: Color) -> Self {
-        col.to_u32()
+        col.into_u32()
     }
 }
 

@@ -1,4 +1,7 @@
-use super::{prelude::Target, Texture};
+use super::{
+    prelude::{Rect, Target},
+    Texture,
+};
 use image::RgbaImage;
 use rapid_qoi::{Colors, Qoi};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -18,6 +21,8 @@ pub struct SerializeableTexture {
     pub label: Option<String>,
 }
 
+/// A helper struct to serialize an rgba image
+/// compressed with QOI.
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct RgbaQoiImage {
     pub image: RgbaImage,
@@ -26,6 +31,20 @@ pub struct RgbaQoiImage {
 //
 
 impl SerializeableTexture {
+    /// Conststruct a new [`SerializeableTexture`]
+    /// headlessly.
+    pub fn new(image: RgbaImage, label: Option<String>) -> Self {
+        Self {
+            image: RgbaQoiImage { image },
+            label,
+        }
+    }
+
+    /// Split this texture to its image and label parts.
+    pub fn split(self) -> (RgbaImage, Option<String>) {
+        (self.image.image, self.label)
+    }
+
     /// Download this texture from VRAM to RAM
     /// (GPU to CPU) handled by [`Self`].
     pub async fn download<const USAGE: u32>(
@@ -44,6 +63,10 @@ impl SerializeableTexture {
             &self.image.image,
             self.label.as_ref().map(String::as_str),
         )
+    }
+
+    pub fn get_dim(&self) -> Rect {
+        self.image.image.dimensions().into()
     }
 }
 

@@ -1,4 +1,5 @@
 use instant::Instant;
+use srs2dge::winit::event::WindowEvent;
 
 use srs2dge::prelude::*;
 
@@ -28,12 +29,18 @@ impl App {
 
         Self { targets, timer }
     }
-}
 
-impl Runnable for App {
-    fn event(&mut self, _: Event, _: &EventLoopTarget, _: &mut ControlFlow) {}
+    async fn event(&mut self, e: Event<'_>, _: &EventLoopTarget, c: &mut ControlFlow) {
+        if let Event::WindowEvent {
+            event: WindowEvent::CloseRequested,
+            ..
+        } = e
+        {
+            *c = ControlFlow::Exit;
+        }
+    }
 
-    fn draw(&mut self) {
+    async fn draw(&mut self) {
         let t = self.timer.elapsed().as_secs_f32();
         const PHASE_OFFS: f32 = 2.0 / 3.0 * std::f32::consts::PI;
         let phase_a = t;
@@ -55,4 +62,6 @@ impl Runnable for App {
 
 //
 
-main_app!(async App);
+fn main() {
+    app!(App);
+}

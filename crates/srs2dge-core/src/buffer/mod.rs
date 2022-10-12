@@ -1,10 +1,9 @@
 use crate::{
-    packer::prelude::Reference,
     prelude::{label, Frame, Target},
     unwrap_or_return,
 };
 use bytemuck::Pod;
-use std::{marker::PhantomData, mem, num::NonZeroU64, ops::RangeBounds};
+use std::{borrow::Borrow, marker::PhantomData, mem, num::NonZeroU64, ops::RangeBounds};
 use wgpu::{
     util::{BufferInitDescriptor, DeviceExt},
     BufferAddress, BufferDescriptor, BufferUsages, BufferViewMut,
@@ -90,14 +89,14 @@ where
         new_data: I,
     ) where
         I: IntoIterator<Item = R>,
-        R: Reference<T>,
+        R: Borrow<T>,
     {
         let mut map = unwrap_or_return!(self.map(target, frame, offset, count));
 
         // copy
         let mut map = &mut map[..];
         for from in new_data.into_iter() {
-            let x = bytemuck::bytes_of(from.reference());
+            let x = bytemuck::bytes_of(from.borrow());
             let (copy, split) = map.split_at_mut(x.len());
             copy.copy_from_slice(x);
             map = split;

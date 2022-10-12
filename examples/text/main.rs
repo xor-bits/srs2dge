@@ -78,9 +78,14 @@ impl App {
 
         let ws = WindowState::new(&target.get_window().unwrap());
 
-        let mut glyphs =
-            Glyphs::new_with_fallback_bytes(&target, Rect::new(128, 156), None, res::font::ROBOTO)
-                .unwrap();
+        let mut glyphs = Glyphs::new_with_fallback_bytes(
+            &target,
+            Rect::new(128, 156),
+            None,
+            res::font::ROBOTO,
+            None,
+        )
+        .unwrap();
 
         let (v, i) = vbo::text(&target, text.chars(), &mut glyphs, config)
             .unwrap()
@@ -103,10 +108,8 @@ impl App {
             shader,
         }
     }
-}
 
-impl Runnable for App {
-    fn event(&mut self, event: Event, _: &EventLoopTarget, control: &mut ControlFlow) {
+    async fn event(&mut self, event: Event<'_>, _: &EventLoopTarget, control: &mut ControlFlow) {
         self.ws.event(&event);
 
         if self.ws.should_close {
@@ -114,7 +117,7 @@ impl Runnable for App {
         }
     }
 
-    fn draw(&mut self) {
+    async fn draw(&mut self) {
         let mut frame = self.target.get_frame();
 
         self.ubo.upload(
@@ -144,4 +147,6 @@ impl Runnable for App {
 
 //
 
-main_app!(async App);
+fn main() {
+    app!(App);
+}
