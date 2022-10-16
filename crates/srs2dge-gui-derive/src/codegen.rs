@@ -199,7 +199,7 @@ impl DeriveParsed {
 
         let new_tokens = quote! {
             impl #imp WidgetBuilder for #ident #ty #wher {
-                fn build(__style: StyleRef, __style_sheet: &StyleSheet) -> Self {
+                fn build<'__builder>(__style: StyleRef<'__builder>, __style_sheet: &'__builder StyleSheet<'__builder>) -> Self {
                     #(#field_builders)*
 
                     #main_field_setup

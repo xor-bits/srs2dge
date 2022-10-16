@@ -80,7 +80,7 @@ impl<'a> FormatString<'a> {
 impl Default for Format {
     fn default() -> Self {
         Self {
-            color: Color::WHITE,
+            color: Color::BLACK,
             font: 0,
             px: 18.0,
         }

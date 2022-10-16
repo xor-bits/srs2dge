@@ -11,10 +11,17 @@ pub fn styles(tex0: TexturePosition, tex1: TexturePosition) -> StyleSheet<'stati
             color: Color::CHARTREUSE,
         }
         "fill_1" => {
-            color: Color::AZURE,
+            color: Color::DARK_GREY,
         }
         "fill_2" => {
-            color: Color::ORANGE,
+            color: Color::GREY,
+        }
+        "text_box" => {
+            size: Size::Max(Vec2::new(400.0, 120.0)),
+            offset: Offset::Centered,
+        }
+        "text_box_text" => {
+            text_align: TextAlign::centered(),
         }
         "texture" => {
             color: Color::WHITE,

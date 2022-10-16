@@ -1,4 +1,4 @@
-use super::BakedStyle;
+use super::{Baked, Style};
 use srs2dge_core::{glam::Vec2, main_game_loop::state::window::WindowState};
 use std::{any::Any, fmt::Debug};
 
@@ -26,6 +26,9 @@ pub enum Size {
         top: f32,
         bottom: f32,
     },
+
+    /// 100% of the parent size clamped
+    Max(Vec2),
 
     /* VerticalStack {
         stretch: f32,
@@ -64,6 +67,8 @@ pub enum Offset {
         bottom: f32,
     },
 
+    Centered,
+
     /// Fixed pixel offset
     ///
     /// relative to the parent
@@ -100,8 +105,38 @@ impl WidgetLayout {
         Self { size, offset }
     }
 
-    pub fn calc_with_style(self, style: &mut BakedStyle) -> Self {
+    pub fn calc_with_style(self, style: &mut Style<Baked>) -> Self {
         Self::calc(self, &mut style.size, &mut style.offset)
+    }
+
+    pub fn split_vertical<'s>(self, stretch: &'s [f32]) -> impl Iterator<Item = Self> + 's {
+        let stretch_sum_inv = 1.0 / stretch.iter().copied().sum::<f32>();
+
+        let mut y = 0.0;
+        stretch.iter().copied().map(move |s| {
+            let size_y = self.size.y * s * stretch_sum_inv;
+            let off_y = y;
+            y += size_y;
+            Self {
+                size: Vec2::new(self.size.x, size_y),
+                offset: Vec2::new(self.offset.x, off_y),
+            }
+        })
+    }
+
+    pub fn split_horizontal<'s>(self, stretch: &'s [f32]) -> impl Iterator<Item = Self> + 's {
+        let stretch_sum_inv = 1.0 / stretch.iter().copied().sum::<f32>();
+
+        let mut x = 0.0;
+        stretch.iter().copied().map(move |s| {
+            let size_x = self.size.x * s * stretch_sum_inv;
+            let off_x = x;
+            x += size_x;
+            Self {
+                size: Vec2::new(size_x, self.size.y),
+                offset: Vec2::new(off_x, self.offset.y),
+            }
+        })
     }
 }
 
@@ -124,6 +159,7 @@ impl Size {
                 top,
                 bottom,
             } => parent.size - Vec2::new(*left + *right, *top + *bottom),
+            Self::Max(c) => parent.size.min(*c),
             /* Self::VerticalStack { stretch } => todo!(),
             Self::HorizontalStack { stretch } => todo!(), */
             Self::PointsRel(c) => parent.size + *c,
@@ -148,6 +184,7 @@ impl Offset {
         match self {
             Self::Inherit => parent.offset,
             Self::Border { left, bottom, .. } => parent.offset + Vec2::new(*left, *bottom),
+            Self::Centered => parent.offset + (parent.size - self_size) * 0.5,
             Self::PointsRel(c) => parent.offset + *c,
             Self::PointsAbs(c) => *c,
             Self::Calc(c) => c.call((parent, self_size)),

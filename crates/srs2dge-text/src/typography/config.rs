@@ -2,6 +2,8 @@
 // COMBINED CONFIG
 // ---------------
 
+use srs2dge_core::glam::Vec2;
+
 /// Text rendering configuration
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TextConfig {
@@ -33,6 +35,36 @@ pub struct TextConfig {
     pub sdf: bool,
 }
 
+/*#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SimpleTextConfig {
+    /// initial x position, defaults to `0.0`
+    pub x_origin: f32,
+
+    /// initial y position, defaults to `0.0`
+    pub y_origin: f32,
+
+    /// formatting (color, size, font) for the text
+    pub format: Format,
+
+    /// text alignment
+    pub align: TextAlign,
+
+    // TODO:
+    /// see [`TextDirection`], text direction, defaults to `Right`
+    ///
+    /// WORK IN PROGRESS
+    pub dir: TextDirection,
+
+    /// maximum tab width in `' '` _("space")_ characters, defaults to `4`
+    pub tab_width: u8,
+
+    /// line gap, `None` uses what the font suggests, defaults to `None`
+    pub line_gap: Option<f32>,
+
+    /// sdf or simple raster, defaults to `true`
+    pub sdf: bool,
+}*/
+
 impl Default for TextConfig {
     fn default() -> Self {
         Self {
@@ -47,6 +79,21 @@ impl Default for TextConfig {
         }
     }
 }
+
+/*impl Default for SimpleTextConfig {
+    fn default() -> Self {
+        Self {
+            x_origin: 0.0,
+            y_origin: 0.0,
+            format: Default::default(),
+            align: Default::default(),
+            dir: Default::default(),
+            tab_width: 4,
+            line_gap: None,
+            sdf: true,
+        }
+    }
+}*/
 
 // ------------------------------------------
 // COMBINED (TEXT ALIGNMENT / ORIGIN OFFSETS)
@@ -93,6 +140,10 @@ impl TextAlign {
     impl_text_align! { baseline_left: (Left, Baseline) }
     impl_text_align! { baseline: (Middle, Baseline) }
     impl_text_align! { baseline_right: (Right, Baseline) }
+
+    pub fn to_vec2(self) -> Vec2 {
+        Vec2::new(self.x.to_f32(), self.y.to_f32())
+    }
 }
 
 // --------------------
@@ -170,6 +221,16 @@ impl Default for XOrigin {
     }
 }
 
+impl XOrigin {
+    pub fn to_f32(self) -> f32 {
+        match self {
+            XOrigin::Left => 0.0,
+            XOrigin::Middle => 0.5,
+            XOrigin::Right => 1.0,
+        }
+    }
+}
+
 /// Text Y alignment
 ///
 /// Y line that the `y` in [`TextAlign`] points to
@@ -237,5 +298,16 @@ pub enum YOrigin {
 impl Default for YOrigin {
     fn default() -> Self {
         Self::Baseline
+    }
+}
+
+impl YOrigin {
+    pub fn to_f32(self) -> f32 {
+        match self {
+            YOrigin::Baseline => 0.5,
+            YOrigin::Top => 0.0,
+            YOrigin::Bottom => 1.0,
+            YOrigin::Middle => 0.5,
+        }
     }
 }

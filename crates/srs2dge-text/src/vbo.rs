@@ -17,6 +17,8 @@ pub fn text<'i>(
     config.sdf = glyphs.is_sdf();
 
     // setup glyphs
+    glyphs.queue_all(chars.clone());
+    glyphs.flush(&target)?;
 
     for FormatChar { character, format } in chars.clone() {
         glyphs.queue(character, format.px as _, format.font);
@@ -33,6 +35,25 @@ pub fn text<'i>(
         QuadMesh::new_top_left(Vec2::new(c.x as _, c.y as _), size, c.format.color, tex)
     }))
 }
+
+/*pub fn simple_text<'s>(
+    target: &Target,
+    chars: &'s str,
+    glyphs: &'s mut Glyphs,
+    mut config: SimpleTextConfig,
+) -> Result<impl Iterator<Item = QuadMesh> + 's, &'static str> {
+    config.sdf = glyphs.is_sdf();
+
+    // setup glyphs
+    glyphs.queue_all(chars.chars().map(|c| FormatChar {
+        character: c,
+        format: config.format,
+    }));
+    glyphs.flush(&target)?;
+
+    // gen quads
+    Ok(TextChars::new(chars, fonts, config))
+}*/
 
 pub fn baked_text(_: FormatChars, _: &Fonts, _: TextConfig) -> Option<RgbaImage> {
     todo!()

@@ -1,6 +1,6 @@
 use crate::{
     gui::geom::GuiGeom,
-    prelude::{GuiDraw, StyleRef, StyleSheet, Widget, WidgetBuilder, WidgetCore},
+    prelude::{GuiDraw, Ref, Style, StyleSheet, Widget, WidgetBuilder, WidgetCore},
 };
 use srs2dge_core::prelude::QuadMesh;
 use std::any::{type_name, Any};
@@ -21,7 +21,7 @@ impl Fill {
         }
     }
 
-    pub fn with_style(mut self, style: StyleRef) -> Self {
+    pub fn with_style(mut self, style: Style<Ref>) -> Self {
         self.core.style = style.into();
         self
     }
@@ -63,7 +63,7 @@ impl Widget for Fill {
 }
 
 impl WidgetBuilder for Fill {
-    fn build(style: StyleRef, _: &StyleSheet) -> Self {
+    fn build(style: Style<Ref>, _: &StyleSheet) -> Self {
         Self::new().with_style(style)
     }
 }

@@ -1,6 +1,8 @@
 use std::{
     borrow::Cow,
     collections::HashMap,
+    fmt::Debug,
+    marker::PhantomData,
     mem::swap,
     sync::atomic::{AtomicBool, Ordering},
 };
@@ -10,6 +12,7 @@ use self::{
     merge::MergeStyles,
 };
 use srs2dge_core::prelude::{Color, TexturePosition};
+use srs2dge_text::prelude::TextAlign;
 
 //
 
@@ -20,84 +23,61 @@ pub mod prelude;
 
 //
 
-/// Style with baked in values
-///
-/// Common style settings for widgets
+pub trait StyleField<T>: Debug + Clone + Default {
+    type Type: Debug + Clone + Default;
+}
+
 #[derive(Debug, Clone, Default)]
-pub struct BakedStyle {
+pub struct Baked;
+#[derive(Debug, Clone, Default)]
+pub struct Mergeable;
+#[derive(Debug, Clone, Default)]
+pub struct Ref<'a>(PhantomData<&'a ()>);
+
+impl<T: Debug + Clone + Default> StyleField<T> for Baked {
+    type Type = T;
+}
+
+impl<T: Debug + Clone + Default> StyleField<T> for Mergeable {
+    type Type = Option<T>;
+}
+
+impl<'a, T: Debug + Clone + Default + 'a> StyleField<T> for Ref<'a> {
+    type Type = Option<&'a T>;
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Style<T = Mergeable>
+where
+    T: StyleField<Color>,
+    T: StyleField<TexturePosition>,
+    T: StyleField<Size>,
+    T: StyleField<Offset>,
+    T: StyleField<TextAlign>,
+{
     // visual styling
     /// Foreground colors
     ///
     /// Like text color or fill color
-    pub color: Color,
+    pub color: <T as StyleField<Color>>::Type,
     /// Texture position
     ///
     /// Used by fill
     ///
     /// TODO: Texture manager
-    pub texture: TexturePosition,
+    pub texture: <T as StyleField<TexturePosition>>::Type,
 
     // layout styling
     /// Size calculator of the widget
-    pub size: Size,
+    pub size: <T as StyleField<Size>>::Type,
     /// Offset calculator of the widget
-    pub offset: Offset,
+    pub offset: <T as StyleField<Offset>>::Type,
+    /// text alignment
+    pub text_align: <T as StyleField<TextAlign>>::Type,
 }
 
-/// Style with optional fields
-/// to allow merging
-///
-/// Common style settings for widgets
-#[derive(Debug, Clone, Default)]
-pub struct Style {
-    // visual styling
-    /// Foreground colors
-    ///
-    /// Like text color or fill color
-    pub color: Option<Color>,
-    /// Texture position
-    ///
-    /// Used by fill
-    ///
-    /// TODO: Texture manager
-    pub texture: Option<TexturePosition>,
-
-    // layout styling
-    /// Size calculator of the widget
-    pub size: Option<Size>,
-    /// Offset calculator of the widget
-    pub offset: Option<Offset>,
-    /*/// Allocated size with multiple
-    /// subwidgets is:
-    /// `stretch / stretch_sum * size`
-    ///
-    /// Offset is also affected
-    pub stretch: Option<f32>,*/
-}
-
-/// Ref to a mergeable style [`MStyle`]
-///
-/// Common style settings for widgets
-#[derive(Debug, Clone, Default)]
-pub struct StyleRef<'a> {
-    // visual styling
-    /// Foreground colors
-    ///
-    /// Like text color or fill color
-    pub color: Option<&'a Color>,
-    /// Texture position
-    ///
-    /// Used by fill
-    ///
-    /// TODO: Texture manager
-    pub texture: Option<&'a TexturePosition>,
-
-    // layout styling
-    /// Size calculator of the widget
-    pub size: Option<&'a Size>,
-    /// Offset calculator of the widget
-    pub offset: Option<&'a Offset>,
-}
+pub type BakedStyle = Style<Baked>;
+pub type StyleRef<'a> = Style<Ref<'a>>;
 
 #[derive(Debug, Default)]
 pub struct StyleSheet<'a> {
@@ -109,26 +89,28 @@ pub struct StyleSheet<'a> {
 //
 
 impl Style {
-    pub fn as_ref(&self) -> StyleRef {
-        StyleRef {
+    pub fn as_ref(&self) -> Style<Ref> {
+        Style {
             color: self.color.as_ref(),
             texture: self.texture.as_ref(),
             size: self.size.as_ref(),
             offset: self.offset.as_ref(),
+            text_align: self.text_align.as_ref(),
         }
     }
 
-    pub fn finalize(self) -> BakedStyle {
-        BakedStyle {
+    pub fn finalize(self) -> Style<Baked> {
+        Style {
             color: self.color.unwrap_or_default(),
             texture: self.texture.unwrap_or_default(),
             size: self.size.unwrap_or_default(),
             offset: self.offset.unwrap_or_default(),
+            text_align: self.text_align.unwrap_or_default(),
         }
     }
 }
 
-impl<'a> StyleRef<'a> {
+impl<'a> Style<Ref<'a>> {
     /// styles is a whitespace separated list of styles
     /// in which the latter ones are preferred
     ///
@@ -146,12 +128,13 @@ impl<'a> StyleRef<'a> {
             .fold(Self::default(), |collected, style| collected.merge(style))
     }
 
-    pub fn finalize(self) -> BakedStyle {
-        BakedStyle {
+    pub fn finalize(self) -> Style<Baked> {
+        Style {
             color: self.color.copied().unwrap_or_default(),
             texture: self.texture.copied().unwrap_or_default(),
             size: self.size.cloned().unwrap_or_default(),
             offset: self.offset.cloned().unwrap_or_default(),
+            text_align: self.text_align.copied().unwrap_or_default(),
         }
     }
 }
@@ -170,7 +153,7 @@ impl<'a> StyleSheet<'a> {
         default
     }
 
-    pub fn get_default(&self) -> StyleRef {
+    pub fn get_default(&self) -> Style<Ref> {
         self.default.as_ref()
     }
 
@@ -185,7 +168,7 @@ impl<'a> StyleSheet<'a> {
     /// get one style from this stylesheet
     ///
     /// mark it as used
-    pub fn get(&self, name: &str) -> Option<StyleRef> {
+    pub fn get(&self, name: &str) -> Option<Style<Ref>> {
         self.map.get(name).map(|(used, s)| {
             used.store(true, Ordering::SeqCst);
             self.get_default().merge(s.as_ref())
@@ -214,14 +197,14 @@ impl<'a> StyleSheet<'a> {
     }
 }
 
-impl From<Style> for BakedStyle {
+impl From<Style> for Style<Baked> {
     fn from(v: Style) -> Self {
         v.finalize()
     }
 }
 
-impl<'a> From<StyleRef<'a>> for BakedStyle {
-    fn from(v: StyleRef) -> Self {
+impl<'a> From<Style<Ref<'a>>> for Style<Baked> {
+    fn from(v: Style<Ref>) -> Self {
         v.finalize()
     }
 }

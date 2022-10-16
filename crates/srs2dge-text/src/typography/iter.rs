@@ -80,10 +80,12 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
+            // take chars from the current line segment
             if let Some(next) = self.current_line.next() {
                 return Some(next);
             }
 
+            // move to the next line
             self.config.y_origin -= self.new_line.max_ascender - self.new_line.min_descender;
             if self.new_line.empty {
                 return None;
@@ -108,7 +110,6 @@ struct NewLineResult {
     min_descender: f32,
 }
 
-/// returns bool telling if the iterator is empty
 fn skip_until_newline<I>(chars: &mut I, fonts: &Fonts) -> NewLineResult
 where
     I: Iterator<Item = FormatChar>,

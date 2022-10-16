@@ -1,3 +1,5 @@
+use crate::prelude::FormatChar;
+
 use self::fonts::Fonts;
 use fontsdf::Font;
 use srs2dge_core::{
@@ -146,6 +148,26 @@ impl Glyphs {
             scale,
             font,
         });
+    }
+
+    pub fn queue_all<I: IntoIterator<Item = FormatChar>>(&mut self, i: I) {
+        self.queue
+            .extend(i.into_iter().map(|FormatChar { character, format }| {
+                let scale = if let Some(scale) = self.sdf {
+                    scale
+                } else {
+                    format.px as _
+                };
+
+                Glyph {
+                    index: self
+                        .fonts
+                        .get_font(format.font)
+                        .lookup_glyph_index(character),
+                    scale,
+                    font: format.font,
+                }
+            }));
     }
 
     /// Generates and uploads all queued

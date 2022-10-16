@@ -1,4 +1,4 @@
-use crate::prelude::{BakedStyle, GuiEvent, GuiGraphics, StyleRef, StyleSheet, WidgetLayout};
+use crate::prelude::{Baked, GuiEvent, GuiGraphics, Ref, Style, StyleSheet, WidgetLayout};
 use srs2dge_core::target::Target;
 use std::{any::Any, borrow::Cow};
 
@@ -6,7 +6,7 @@ use std::{any::Any, borrow::Cow};
 
 #[derive(Debug, Clone, Default)]
 pub struct WidgetCore {
-    pub style: BakedStyle,
+    pub style: Style<Baked>,
     pub layout: WidgetLayout,
 }
 
@@ -69,11 +69,11 @@ pub trait Widget {
 
     fn as_mut_any(&mut self) -> &mut dyn Any;
 
-    fn style(&self) -> &BakedStyle {
+    fn style(&self) -> &Style<Baked> {
         &self.core().style
     }
 
-    fn style_mut(&mut self) -> &mut BakedStyle {
+    fn style_mut(&mut self) -> &mut Style<Baked> {
         &mut self.core_mut().style
     }
 
@@ -83,7 +83,7 @@ pub trait Widget {
 }
 
 pub trait WidgetBuilder: Sized {
-    fn build(style: StyleRef, stylesheet: &StyleSheet) -> Self;
+    fn build<'a>(style: Style<Ref<'a>>, stylesheet: &'a StyleSheet<'a>) -> Self;
 }
 
 #[allow(unused_variables)]
@@ -107,7 +107,7 @@ impl WidgetCore {
         Self::new()
     }
 
-    pub fn with_style(mut self, style: StyleRef) -> Self {
+    pub fn with_style(mut self, style: Style<Ref>) -> Self {
         self.style = style.into();
         self
     }

@@ -1,4 +1,4 @@
-use super::{Style, StyleRef};
+use super::{Mergeable, Ref, Style};
 
 //
 
@@ -10,24 +10,26 @@ pub trait MergeStyles: Sized {
 
 //
 
-impl MergeStyles for Style {
+impl MergeStyles for Style<Mergeable> {
     fn merge(self, other: Self) -> Self {
         Self {
             color: other.color.merge(self.color),
             texture: other.texture.merge(self.texture),
             size: other.size.merge(self.size),
             offset: other.offset.merge(self.offset),
+            text_align: other.text_align.merge(self.text_align),
         }
     }
 }
 
-impl<'a> MergeStyles for StyleRef<'a> {
+impl<'a> MergeStyles for Style<Ref<'a>> {
     fn merge(self, other: Self) -> Self {
         Self {
             color: other.color.merge(self.color),
             texture: other.texture.merge(self.texture),
             size: other.size.merge(self.size),
             offset: other.offset.merge(self.offset),
+            text_align: other.text_align.merge(self.text_align),
         }
     }
 }

@@ -19,10 +19,24 @@ struct App {
 struct Root {
     #[gui(style = "bordered fill_0")]
     left_panel: Fill,
-    #[gui(style = "bordered fill_1")]
-    right_panel: Fill,
+    // #[gui(style = "bordered fill_1")]
+    // right_panel: Fill,
+    text_box: TextBox,
 
     #[gui(core, style = "root")]
+    core: WidgetCore,
+}
+
+#[derive(Debug, Clone, Widget)]
+struct TextBox {
+    #[gui(style = "fill_1")]
+    bg_border: Fill,
+    #[gui(style = "bordered fill_2")]
+    bg: Fill,
+    #[gui(style = "text_box_text")]
+    text: Text<'static>,
+
+    #[gui(core, style = "text_box")]
     core: WidgetCore,
 }
 
@@ -51,7 +65,12 @@ impl App {
         let stylesheet = stylesheet::styles(tex0, tex1);
 
         // root widget (and all of its subwidgets)
-        let root: Root = WidgetBuilder::build(StyleRef::default(), &stylesheet);
+        let mut root: Root = WidgetBuilder::build(StyleRef::default(), &stylesheet);
+        root.text_box.text.text(
+            FormatString::builder()
+                .with_init(Format::new(Color::BLACK, 0, 28.0))
+                .with(format!("test text j|^ {}", env!("CARGO_PKG_NAME"))),
+        );
 
         // warn about unused style sheet entries
         for name in stylesheet.check_unused() {

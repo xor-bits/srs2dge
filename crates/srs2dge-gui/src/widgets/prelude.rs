@@ -1,1 +1,1 @@
-pub use super::fill::*;
+pub use super::{fill::*, text::*};
