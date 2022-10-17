@@ -21,14 +21,14 @@ jobs:
           override: true
           profile: minimal
       - uses: Swatinem/rust-cache@v1
+      #- uses: actions-rs/cargo@v1
+      #  with:
+      #    command: install
+      #    args: cargo-nextest
       - uses: actions-rs/cargo@v1
         with:
-          command: install
-          args: cargo-nextest
-      - uses: actions-rs/cargo@v1
-        with:
-          command: nextest
-          args: run --all
+          command: test
+      #    args: run --all
 
   clippy:
     runs-on: ubuntu-latest
