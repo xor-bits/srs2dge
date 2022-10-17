@@ -135,19 +135,17 @@ impl FieldParsed {
             (true, true, _, _) => {
                 return Err(Error::new(
                     span,
-                    format!(
-                        "Exactly one field marked with `#[gui(core)]` OR `#[gui(inherit)]` (not both) is allowed"
-                    ),
+                        "Exactly one field marked with `#[gui(core)]` OR `#[gui(inherit)]` (not both) is allowed".to_string()
                 ));
             }
             (true, false, true, _) | (false, true, true, _) => {
                 return Err(Error::new(
-                    span,format!("Fields marked with `#[gui(core)]` OR `#[gui(inherit)]` should not be skipped as a widget.\n`#[gui(skip)]` is only for non-widget and non-core fields")));
+                    span,"Fields marked with `#[gui(core)]` OR `#[gui(inherit)]` should not be skipped as a widget.\n`#[gui(skip)]` is only for non-widget and non-core fields".to_string()));
             }
             (false, false, true, Some(_)) => {
                 return Err(Error::new(
                     span,
-                    format!("Fields marked with `#[gui(skip)]` should not have a style."),
+                    "Fields marked with `#[gui(skip)]` should not have a style.".to_string(),
                 ))
             }
 

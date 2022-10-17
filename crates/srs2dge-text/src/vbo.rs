@@ -1,6 +1,6 @@
 use crate::{
     glyphs::{fonts::Fonts, Glyphs},
-    prelude::{FormatChar, FormatChars},
+    prelude::FormatChars,
     typography::{config::TextConfig, prelude::TextChars},
 };
 use srs2dge_core::{glam::Vec2, image::RgbaImage, prelude::QuadMesh, target::Target};
@@ -18,11 +18,6 @@ pub fn text<'i>(
 
     // setup glyphs
     glyphs.queue_all(chars.clone());
-    glyphs.flush(&target)?;
-
-    for FormatChar { character, format } in chars.clone() {
-        glyphs.queue(character, format.px as _, format.font);
-    }
     glyphs.flush(target)?;
 
     // gen quads

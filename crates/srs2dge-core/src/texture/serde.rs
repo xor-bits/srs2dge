@@ -58,11 +58,7 @@ impl SerializeableTexture {
     /// Upload this texture from RAM to VRAM
     /// (CPU to GPU) handled by [`Texture`].
     pub fn upload<const USAGE: u32>(&self, target: &Target) -> Texture<USAGE> {
-        Texture::new_rgba_with(
-            target,
-            &self.image.image,
-            self.label.as_ref().map(String::as_str),
-        )
+        Texture::new_rgba_with(target, &self.image.image, self.label.as_deref())
     }
 
     pub fn get_dim(&self) -> Rect {

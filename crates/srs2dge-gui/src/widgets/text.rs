@@ -49,7 +49,7 @@ impl Widget for Text<'static> {
         self.config.sdf = draw.graphics.glyphs.is_sdf();
 
         let glyph_quads = match srs2dge_text::vbo::text(
-            &draw.target,
+            draw.target,
             self.text.chars(),
             &mut draw.graphics.glyphs,
             self.config,

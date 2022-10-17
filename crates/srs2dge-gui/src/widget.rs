@@ -44,6 +44,11 @@ pub trait Widget {
         0
     }
 
+    /// The number of subwidgets is zero
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     /// Get subwidget with its index
     fn get(&self, index: usize) -> Option<&dyn Widget> {
         None

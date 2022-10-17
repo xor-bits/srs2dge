@@ -42,10 +42,7 @@ impl AutoLayout {
         let vs = Self::module(vs, vs_main, ShaderStages::VERTEX, &mut validator);
         let fs = Self::module(fs, fs_main, ShaderStages::FRAGMENT, &mut validator);
 
-        let entries: Vec<BindGroupLayoutEntry> = Self::merge(vs, fs)
-            .into_iter()
-            .map(|(_, entry)| entry)
-            .collect();
+        let entries: Vec<BindGroupLayoutEntry> = Self::merge(vs, fs).into_values().collect();
 
         let group = target
             .device

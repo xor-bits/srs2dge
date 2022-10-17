@@ -143,7 +143,7 @@ where
     /// build the texture atlas map and
     /// upload it to the GPU
     pub fn build(self, target: &Target) -> TextureAtlasMap<K> {
-        self.build_serializeable().upload(&target)
+        self.build_serializeable().upload(target)
     }
 }
 

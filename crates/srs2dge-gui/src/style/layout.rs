@@ -109,7 +109,7 @@ impl WidgetLayout {
         Self::calc(self, &mut style.size, &mut style.offset)
     }
 
-    pub fn split_vertical<'s>(self, stretch: &'s [f32]) -> impl Iterator<Item = Self> + 's {
+    pub fn split_vertical(self, stretch: &'_ [f32]) -> impl Iterator<Item = Self> + '_ {
         let stretch_sum_inv = 1.0 / stretch.iter().copied().sum::<f32>();
 
         let mut y = 0.0;
@@ -124,7 +124,7 @@ impl WidgetLayout {
         })
     }
 
-    pub fn split_horizontal<'s>(self, stretch: &'s [f32]) -> impl Iterator<Item = Self> + 's {
+    pub fn split_horizontal(self, stretch: &'_ [f32]) -> impl Iterator<Item = Self> + '_ {
         let stretch_sum_inv = 1.0 / stretch.iter().copied().sum::<f32>();
 
         let mut x = 0.0;

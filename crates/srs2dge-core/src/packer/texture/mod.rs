@@ -54,7 +54,7 @@ pub struct TextureAtlas {
 
 //
 
-impl<'a> Default for TextureAtlasBuilder {
+impl Default for TextureAtlasBuilder {
     fn default() -> Self {
         let mut packer = Packer::default();
         let padding = 2;
@@ -134,7 +134,7 @@ impl TextureAtlasBuilder {
         R: Borrow<RgbaImage>,
         I: IntoIterator<Item = (R, PositionedRect)>,
     {
-        self.build_serializeable(iter).upload(&target)
+        self.build_serializeable(iter).upload(target)
     }
 }
 

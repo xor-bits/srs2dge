@@ -7,7 +7,7 @@ use std::any::{type_name, Any};
 
 //
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Fill {
     core: WidgetCore,
 }
