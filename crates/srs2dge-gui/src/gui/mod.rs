@@ -103,7 +103,7 @@ impl Gui {
     pub fn state<T: Any + Default>(&mut self) -> &mut T {
         self.state
             .entry(TypeId::of::<T>())
-            .or_insert_with(|| Box::new(T::default()) as Box<dyn Any>)
+            .or_insert_with(|| Box::<T>::default() as Box<dyn Any>)
             .downcast_mut()
             .unwrap()
     }
