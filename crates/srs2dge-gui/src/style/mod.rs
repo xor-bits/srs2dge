@@ -125,7 +125,7 @@ impl<'a> Style<Ref<'a>> {
                 }
             })
             .filter_map(|(_, s)| s)
-            .fold(Self::default(), |collected, style| collected.merge(style))
+            .fold(styles.get_default(), |collected, style| collected.merge(style))
     }
 
     pub fn finalize(self) -> Style<Baked> {
