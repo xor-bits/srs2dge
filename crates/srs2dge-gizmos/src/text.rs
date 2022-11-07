@@ -55,8 +55,8 @@ impl<'s> GizmosText<'s> {
                         .0
                         .iter_lines()
                         .map(move |Line { from, to }| GizmosLine {
-                            from: from * sf + origin,
-                            to: to * sf + origin,
+                            from: Vec2::new(from.x, from.y) * sf + origin,
+                            to: Vec2::new(to.x, to.y) * sf + origin,
                             col,
                         });
 
