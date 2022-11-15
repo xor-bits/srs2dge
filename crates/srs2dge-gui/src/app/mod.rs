@@ -59,6 +59,8 @@ impl<Root: Widget, Fu: FnMut(&mut Root)> App<Root, Fu> {
     }
 
     async fn event(&mut self, event: Event<'_>, _: &EventLoopTarget, control: &mut ControlFlow) {
+        self.target.event(&event);
+
         let event = match event.to_static() {
             Some(some) => some,
             None => return,
@@ -87,11 +89,9 @@ impl<Root: Widget, Fu: FnMut(&mut Root)> App<Root, Fu> {
         let rp = frame.primary_render_pass().draw_gui(&gui);
         self.debug.run_debug_draw(rp);
 
-        self.target.finish_frame(frame);
-
         self.reporter.end(timer);
         if self.reporter.should_report() {
-            log::info!(
+            tracing::info!(
                 "{}",
                 Reporter::report_all("GUI testbed perf report", [("FPS", &mut self.reporter)])
             );

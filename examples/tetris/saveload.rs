@@ -1,5 +1,3 @@
-use srs2dge::log;
-
 #[cfg(not(target_arch = "wasm32"))]
 use std::{
     fs::File,
@@ -24,7 +22,7 @@ pub fn save_highscore(highscore: usize) {
         .map_err(|err| err.to_string())?;
         Ok(())
     })() {
-        log::warn!("Failed to write highscore file: {err}");
+        tracing::warn!("Failed to write highscore file: {err}");
     }
 }
 
@@ -39,7 +37,7 @@ pub fn save_highscore(highscore: usize) {
             .set("highscore", highscore.to_string().as_str())
             .map_err(|_| "Failed to insert highscore to local storage")
     })() {
-        log::warn!("Failed to write highscore file: {err}");
+        tracing::warn!("Failed to write highscore file: {err}");
     };
 }
 
@@ -54,7 +52,7 @@ pub fn load_highscore() -> usize {
     })() {
         Ok(s) => s,
         Err(err) => {
-            log::warn!("Failed to read highscore file: {err}");
+            tracing::warn!("Failed to read highscore file: {err}");
             0
         }
     }
@@ -76,7 +74,7 @@ pub fn load_highscore() -> usize {
     })() {
         Ok(s) => s,
         Err(err) => {
-            log::warn!("Failed to read highscore file: {err}");
+            tracing::warn!("Failed to read highscore file: {err}");
             0
         }
     }

@@ -50,8 +50,7 @@ struct FontIds {
 
 impl App {
     async fn init(target: &EventLoopTarget) -> Self {
-        let engine = Engine::new();
-        let target = engine.new_target_default(target).await.unwrap();
+        let target = Engine::new().new_target_default(target).await.unwrap();
 
         let reporter = Reporter::new();
 
@@ -431,13 +430,12 @@ impl App {
             .draw_indexed(0..indices, 0, 0..1);
 
         // end perf
-        self.target.finish_frame(frame);
         self.reporter.end(timer);
 
         // perf report
         if self.reporter.should_report() {
             let report = Reporter::report_all("3.0s", [("FRAME", &mut self.reporter)]);
-            log::debug!("\n{}", report,);
+            tracing::debug!("\n{}", report,);
         }
     }
 
@@ -445,6 +443,8 @@ impl App {
         *control = ControlFlow::Poll;
         self.ws.event(&event);
         self.is.event(&event);
+
+        self.target.event(&event);
 
         if self.ws.should_close {
             *control = ControlFlow::Exit;

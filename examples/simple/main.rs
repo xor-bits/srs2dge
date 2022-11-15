@@ -1,26 +1,24 @@
-use instant::Instant;
-
 use srs2dge::prelude::*;
 
 //
 
 struct App {
     target: Target,
-    timer: Instant,
 }
 
 //
 
 impl App {
     async fn init(target: &EventLoopTarget) -> Self {
-        let engine = Engine::new();
-        let target = engine.new_target_default(target).await.unwrap();
-        let timer = Instant::now();
+        let window = std::sync::Arc::new(WindowBuilder::new().build(target).unwrap());
+        let target = Engine::new().new_target(window).await;
 
-        Self { target, timer }
+        Self { target }
     }
 
     async fn event(&mut self, e: Event<'_>, _: &EventLoopTarget, c: &mut ControlFlow) {
+        self.target.event(&e);
+
         if let Event::WindowEvent {
             event: WindowEvent::CloseRequested,
             ..
@@ -31,7 +29,7 @@ impl App {
     }
 
     async fn draw(&mut self) {
-        let t = self.timer.elapsed().as_secs_f32();
+        let t = instant::now() as f32 / 1000.0;
         const PHASE_OFFS: f32 = 2.0 / 3.0 * std::f32::consts::PI;
         let phase_a = t;
         let phase_b = phase_a + PHASE_OFFS;
@@ -44,7 +42,6 @@ impl App {
         let mut frame = self.target.get_frame();
         frame.set_clear_color(c);
         frame.primary_render_pass();
-        self.target.finish_frame(frame);
     }
 }
 

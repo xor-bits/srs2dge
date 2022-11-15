@@ -44,8 +44,7 @@ struct TextBox {
 
 impl App {
     async fn init(target: &EventLoopTarget) -> Self {
-        let engine = Engine::new();
-        let target = engine.new_target_default(target).await.unwrap();
+        let target = Engine::new().new_target_default(target).await.unwrap();
 
         // gui base
         let gui = Gui::new(&target);
@@ -74,7 +73,7 @@ impl App {
 
         // warn about unused style sheet entries
         for name in stylesheet.check_unused() {
-            log::warn!("Unused style: '{name}'");
+            tracing::warn!("Unused style: '{name}'");
         }
 
         Self {
@@ -89,6 +88,8 @@ impl App {
     }
 
     async fn event(&mut self, event: Event<'_>, _: &EventLoopTarget, control: &mut ControlFlow) {
+        self.target.event(&event);
+
         let event = match event.to_static() {
             Some(some) => some,
             None => return,
@@ -111,8 +112,6 @@ impl App {
             .gui
             .draw_with(&mut self.root, &mut self.target, &mut frame, &self.texture);
         frame.primary_render_pass().draw_gui(&gui);
-
-        self.target.finish_frame(frame);
 
         self.reporter.end(timer);
         if self.reporter.should_report() {

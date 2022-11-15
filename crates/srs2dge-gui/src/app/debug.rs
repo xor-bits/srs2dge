@@ -69,7 +69,7 @@ impl<T: Widget, Fu: FnMut(&mut T)> App<T, Fu> {
         };
         match pressed {
             Some(VirtualKeyCode::F22 /* | VirtualKeyCode::F9 */) => {
-                log::debug!("F22 pressed, printing debug gui tree");
+                tracing::debug!("F22 pressed, printing debug gui tree");
 
                 impl<'a> DebugTree<'a> {
                     fn print_debug_tree(self, buf: &mut String) {
@@ -90,16 +90,16 @@ impl<T: Widget, Fu: FnMut(&mut T)> App<T, Fu> {
                     }
                 }
 
-                if log::log_enabled!(log::Level::Debug) {
+                if tracing::enabled!(tracing::Level::DEBUG) {
                     let mut buf = String::new();
                     DebugTree::new(&self.root, 0).print_debug_tree(&mut buf);
-                    log::debug!("Done:\n{buf}",);
+                    tracing::debug!("Done:\n{buf}",);
                 }
             }
             #[cfg(feature = "gizmos")]
             Some(VirtualKeyCode::F21 /* | VirtualKeyCode::F8 */) => {
                 self.debug.gizmo = !self.debug.gizmo;
-                log::debug!(
+                tracing::debug!(
                     "F21 pressed, gui debug gizmo toggled {}",
                     if self.debug.gizmo { "on" } else { "off" }
                 );

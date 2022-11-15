@@ -1,90 +1,34 @@
-use std::sync::Arc;
-use wgpu::{util::StagingBelt, Device};
-
-#[cfg(not(target_arch = "wasm32"))]
-use {
-    std::{
-        sync::mpsc::{channel, Sender, TryRecvError},
-        thread::JoinHandle,
-    },
-    wgpu::Maintain,
-};
+use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
+use wgpu::util::StagingBelt;
 
 //
 
-pub struct Belt {
-    belt: Option<StagingBelt>,
-
-    #[cfg(not(target_arch = "wasm32"))]
-    _poll: PollThread,
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-struct PollThread {
-    poll_thread: Option<JoinHandle<()>>,
-    poll_stop: Sender<()>,
+pub struct BeltPool {
+    belts: Receiver<StagingBelt>,
+    returns: SyncSender<StagingBelt>,
 }
 
 //
 
-impl Belt {
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn new(device: Arc<Device>) -> Self {
-        let belt = Some(StagingBelt::new(128));
-        let _poll = PollThread::new(device);
+impl BeltPool {
+    pub fn new() -> Self {
+        let (returns, belts) = sync_channel(8);
 
-        Self { belt, _poll }
+        Self { belts, returns }
     }
 
-    #[cfg(target_arch = "wasm32")]
-    pub fn new(_: Arc<Device>) -> Self {
-        let belt = Some(StagingBelt::new(128));
+    pub fn recv(&self) -> StagingBelt {
+        if let Ok(belt) = self.belts.try_recv() {
+            return belt;
+        };
 
-        Self { belt }
+        tracing::info!("Creating a new StagingBelt");
+
+        StagingBelt::new(128)
     }
 
-    pub fn get(&mut self) -> StagingBelt {
-        self.belt
-            .take()
-            .expect("Cannot start a second frame when the first hasn't been finished yet")
-    }
-
-    pub fn set(&mut self, mut belt: StagingBelt) {
+    pub fn send(&self, mut belt: StagingBelt) {
         belt.recall();
-        self.belt = Some(belt);
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-impl PollThread {
-    pub fn new(device: Arc<Device>) -> Self {
-        let (poll_stop, poll_listen) = channel();
-        let poll_thread = Some(std::thread::spawn(move || loop {
-            match poll_listen.try_recv() {
-                Ok(()) | Err(TryRecvError::Disconnected) => break,
-                Err(TryRecvError::Empty) => {}
-            }
-
-            device.poll(Maintain::Wait);
-            #[cfg(target_arch = "wasm32")]
-            thread::yield_now();
-        }));
-
-        Self {
-            poll_stop,
-            poll_thread,
-        }
-    }
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-impl Drop for PollThread {
-    fn drop(&mut self) {
-        self.poll_stop.send(()).unwrap();
-        self.poll_thread
-            .take()
-            .expect("Engine dropped twice")
-            .join()
-            .unwrap();
+        self.returns.send(belt).unwrap();
     }
 }

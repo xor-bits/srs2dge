@@ -56,7 +56,7 @@ impl Widget for Text<'static> {
         ) {
             Ok(glyph_quads) => glyph_quads,
             Err(err) => {
-                log::warn!("Text widget draw error: {err}");
+                tracing::warn!("Text widget draw error: {err}");
                 return;
             }
         };

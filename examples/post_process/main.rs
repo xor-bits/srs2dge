@@ -32,8 +32,7 @@ struct App {
 
 impl App {
     async fn init(target: &EventLoopTarget) -> Self {
-        let engine = Engine::new();
-        let target = engine.new_target_default(target).await.unwrap();
+        let target = Engine::new().new_target_default(target).await.unwrap();
 
         let ws = WindowState::new(&target.get_window().unwrap());
         let secondary_target = RenderTargetTexture::new_format(
@@ -110,18 +109,22 @@ impl App {
     }
 
     async fn event(&mut self, event: Event<'_>, _: &EventLoopTarget, control: &mut ControlFlow) {
-        let old = self.ws.size;
         self.ws.event(&event);
-        let changed = self.ws.size != old;
+
+        self.target.event(&event);
 
         if self.ws.should_close {
             *control = ControlFlow::Exit;
         }
 
-        if changed {
+        if let Event::WindowEvent {
+            event: WindowEvent::Resized(s),
+            ..
+        } = event
+        {
             self.secondary_target = RenderTargetTexture::new_format(
                 &self.target,
-                self.ws.size.into(),
+                s.into(),
                 self.target.get_format(),
                 None,
             );
@@ -164,8 +167,6 @@ impl App {
             )
             .bind_shader(&self.custom_shader)
             .draw_indexed(4..9, 0, 0..1);
-
-        self.target.finish_frame(frame);
     }
 }
 

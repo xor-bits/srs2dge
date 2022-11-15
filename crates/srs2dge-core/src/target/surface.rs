@@ -63,7 +63,7 @@ impl ISurface {
             format,
             present_mode: present_mode_from_env().unwrap_or(PresentMode::AutoVsync),
 
-            width: 0, // properly configured in just a bit
+            width: 0, // properly configured in Surface::configure
             height: 0,
         };
         surface.configure();
@@ -101,6 +101,7 @@ impl Surface {
     pub fn configure(&mut self) {
         let window = self.surface.window.as_ref();
         let size = window.inner_size();
+        tracing::debug!("window size: {size:?}");
         let (width, height) = (size.width, size.height);
         let format = self.format;
 
@@ -123,6 +124,7 @@ impl Surface {
         let window = self.surface.window.clone();
         let instance = self.surface.instance.clone();
         self.surface = ISurface::new(window, instance);
+        self.configure();
     }
 
     pub fn acquire(&mut self) -> SurfaceTexture {
@@ -135,7 +137,7 @@ impl Surface {
                         self.configure();
                         continue;
                     }
-                    // log::debug!("Success");
+                    tracing::debug!("Success");
                     return texture;
                 }
 
@@ -144,18 +146,18 @@ impl Surface {
 
                 // retry
                 Err(SurfaceError::Timeout) => {
-                    log::debug!("Timeout");
+                    tracing::debug!("Timeout");
                 }
 
                 // recreate the surface
                 Err(SurfaceError::Lost) => {
-                    log::debug!("Lost");
+                    tracing::debug!("Lost");
                     self.recreate();
                 }
 
                 // recreate the swapchain
                 Err(SurfaceError::Outdated) => {
-                    log::debug!("Outdated");
+                    tracing::debug!("Outdated");
                     self.configure();
                 }
             }

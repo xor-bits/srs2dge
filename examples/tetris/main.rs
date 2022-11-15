@@ -41,8 +41,7 @@ struct App {
 
 impl App {
     async fn init(target: &EventLoopTarget) -> Self {
-        let engine = Engine::new();
-        let target = engine
+        let target = Engine::new()
             .new_target(Arc::new(
                 WindowBuilder::new()
                     .with_visible(false)
@@ -108,6 +107,8 @@ impl App {
         self.ws.event(&event);
         self.ks.event(&event);
         self.gs.event(&event);
+
+        self.target.event(&event);
 
         if self.ws.should_close {
             *control = ControlFlow::Exit;
@@ -294,8 +295,6 @@ impl App {
             )
             .bind_shader(&self.text_shader)
             .draw_indexed(0..self.ibos.capacity() as _, 0, 0..1);
-
-        self.target.finish_frame(frame);
     }
 }
 

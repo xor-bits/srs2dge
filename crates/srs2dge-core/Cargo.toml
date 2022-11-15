@@ -19,7 +19,7 @@ spirv = ["wgpu/spirv", "naga/spv-in"]
 [dependencies]
 # logging
 colorful = "0.2"
-log = "0.4"
+tracing.workspace = true
 # graphics
 glam = { version = "0.21", features = ["serde", "bytemuck"] }
 main_game_loop = { git = "https://github.com/Overpeek/main_game_loop", rev = "a1b43876d1ad7ec84227f98c35a4f9ca408b4966" }
@@ -38,16 +38,18 @@ image = "0.24"
 rapid-qoi = "0.6"
 # data
 bytemuck = { version = "1.12", features = ["derive"] }
-rand = "0.8"
+rand.workspace = true
 serde = { version = "1.0", features = ["derive"] }
 # opt
 integer-sqrt = "0.1"
+
+cfg-if = "1.0"
 
 # init logging
 [target.'cfg(target_os = "android")'.dependencies]
 android_logger = "0.11"
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-env_logger = "0.9"
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 # fut
 tokio = { version = "1.21", features = ["rt-multi-thread", "sync"] }
 [target.'cfg(target_arch = "wasm32")'.dependencies]

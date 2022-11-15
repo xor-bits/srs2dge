@@ -121,11 +121,13 @@ impl<'a> Style<Ref<'a>> {
             .map(|style| (style, styles.get(style)))
             .inspect(|(style, s)| {
                 if s.is_none() {
-                    log::warn!("Style '{style}' not found");
+                    tracing::warn!("Style '{style}' not found");
                 }
             })
             .filter_map(|(_, s)| s)
-            .fold(styles.get_default(), |collected, style| collected.merge(style))
+            .fold(styles.get_default(), |collected, style| {
+                collected.merge(style)
+            })
     }
 
     pub fn finalize(self) -> Style<Baked> {

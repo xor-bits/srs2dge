@@ -3,6 +3,7 @@ use crate::{
     shader::Shader,
 };
 use std::{marker::PhantomData, ops::Range};
+use tracing::span::EnteredSpan;
 use wgpu::{BindGroup, TextureFormat};
 
 //
@@ -10,6 +11,9 @@ use wgpu::{BindGroup, TextureFormat};
 pub struct RenderPass<'e, Sv = (), Bv = (), Si = (), Bi = (), const PIPELINE_BOUND: bool = false> {
     pub(crate) inner: wgpu::RenderPass<'e>,
     pub(crate) format: TextureFormat,
+
+    // tracing
+    span: EnteredSpan,
 
     _p: PhantomData<(Sv, Bv, Si, Bi)>,
 }
@@ -74,10 +78,15 @@ impl<'e, Sv, Bv, Si, Bi, const PIPELINE_BOUND: bool>
         self.pass()
     }
 
-    pub(crate) fn new(inner: wgpu::RenderPass<'e>, format: TextureFormat) -> Self {
+    pub(crate) fn new(
+        inner: wgpu::RenderPass<'e>,
+        format: TextureFormat,
+        span: EnteredSpan,
+    ) -> Self {
         Self {
             inner,
             format,
+            span,
             _p: PhantomData::default(),
         }
     }
@@ -86,6 +95,7 @@ impl<'e, Sv, Bv, Si, Bi, const PIPELINE_BOUND: bool>
         RenderPass {
             inner: self.inner,
             format: self.format,
+            span: self.span,
             _p: PhantomData::default(),
         }
     }

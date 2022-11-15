@@ -2,12 +2,9 @@ use legion::{
     systems::{Builder, ParallelRunnable},
     Resources, Schedule,
 };
-use srs2dge_core::{
-    log,
-    main_game_loop::{
-        report::Reporter,
-        update::{UpdateLoop, UpdateRate},
-    },
+use srs2dge_core::main_game_loop::{
+    report::Reporter,
+    update::{UpdateLoop, UpdateRate},
 };
 use std::{any::type_name, collections::BTreeMap};
 
@@ -97,7 +94,7 @@ impl Systems {
         // schedule normal systems
         for system in self.systems.iter_mut() {
             system.call(&mut builder);
-            log::trace!("update system {} scheduled", system.name());
+            tracing::trace!("update system {} scheduled", system.name());
         }
         builder.flush();
 
@@ -105,7 +102,7 @@ impl Systems {
         for parallel_systems in self.internal_systems.values_mut() {
             for system in parallel_systems {
                 system.call(&mut builder);
-                log::trace!("internal update system {} scheduled", system.name());
+                tracing::trace!("internal update system {} scheduled", system.name());
             }
             builder.flush();
         }
@@ -151,7 +148,7 @@ impl Systems {
         // schedule normal systems
         for system in self.systems.iter_mut() {
             system.call(&mut builder);
-            log::trace!("frame system {} scheduled", system.name());
+            tracing::trace!("frame system {} scheduled", system.name());
         }
         builder.flush();
 
@@ -159,7 +156,7 @@ impl Systems {
         for parallel_systems in self.internal_systems.values_mut() {
             for system in parallel_systems {
                 system.call(&mut builder);
-                log::trace!("internal frame system {} scheduled", system.name());
+                tracing::trace!("internal frame system {} scheduled", system.name());
             }
             builder.flush();
         }

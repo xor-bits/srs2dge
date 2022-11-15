@@ -1,16 +1,24 @@
 use self::{
-    belt::Belt,
+    belt::BeltPool,
     catcher::Catcher,
+    poll::PollThread,
     surface::{ISurface, Surface},
 };
 use crate::{label, prelude::Frame, DeviceStorage};
 use colorful::Colorful;
-use std::sync::Arc;
+use main_game_loop::event::Event;
+use std::{
+    future::Future,
+    sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
+};
 use wgpu::{
     util::power_preference_from_env, Adapter, Device, DeviceDescriptor, Features, Instance, Limits,
     PowerPreference, Queue, RequestAdapterOptionsBase, TextureFormat,
 };
-use winit::window::Window;
+use winit::{event::WindowEvent, window::Window};
 
 //
 
@@ -21,24 +29,30 @@ pub mod surface;
 
 mod belt;
 mod catcher;
+mod poll;
 
 //
 
+/// This handles the gpu logical device instance
 pub struct Target {
     pub(crate) device: Arc<Device>,
     pub(crate) queue: Arc<Queue>,
 
     pub(crate) surface: Option<Surface>,
-    pub(crate) belt: Belt,
+    pub(crate) belts: Arc<BeltPool>,
     catcher: Catcher,
 
-    active: bool,
-    init: bool,
+    // tracing
+    frame_id: AtomicUsize,
+
+    // thread to poll the device
+    _poll: PollThread,
 }
 
 //
 
 impl Target {
+    /// Create a new render target that is bound to a window
     pub async fn new(
         instance: Arc<Instance>,
         window: Arc<Window>,
@@ -54,47 +68,153 @@ impl Target {
         // complete the surface (ready for rendering)
         let surface = Some(surface.complete(&adapter, device.clone()));
 
-        // create a belt for fast data uploading
-        let belt = Belt::new(device.clone());
-
-        // create a catcher to catch non fatal errors
-        // for example: shader compilation errors
-        let catcher = Catcher::new(&device);
-
-        Self {
-            device,
-            queue,
-
-            surface,
-            belt,
-            catcher,
-
-            active: false,
-            init: true,
-        }
+        Self::new_finish(device, queue, surface)
     }
 
+    /// Create a new render target that doesn't require a window
     pub async fn new_headless(instance: Arc<Instance>, device_storage: DeviceStorage) -> Self {
         let (_, device, queue) = Self::new_with_opt(instance, None, device_storage).await;
 
-        // create a belt for fast data uploading
-        let belt = Belt::new(device.clone());
+        Self::new_finish(device, queue, None)
+    }
 
-        // create a catcher to catch non fatal errors
-        // for example: shader compilation errors
-        let catcher = Catcher::new(&device);
+    /// check if objects created with `self` target
+    /// can be used with the `other` target
+    ///
+    /// this just checks if both [`Target`]s share their
+    /// logical devices
+    pub fn compatible_with(&self, other: &Target) -> bool {
+        Arc::ptr_eq(&self.device, &other.device) && Arc::ptr_eq(&self.queue, &other.queue)
+    }
 
-        Self {
-            device,
-            queue,
+    /// reconfigures the swapchain if the window is
+    /// resized
+    ///
+    /// calling this in the event function is not
+    /// often needed, but it is recommended
+    ///
+    /// wayland requires calling this (idk why)
+    ///
+    /// [`Self::resized`] is an alternative to this
+    pub fn event(&mut self, event: &Event) {
+        let Some(window) = self.get_window() else {
+            return;
+        };
 
-            surface: None,
-            belt,
-            catcher,
-
-            active: false,
-            init: true,
+        if let Event::WindowEvent {
+            window_id,
+            event: WindowEvent::Resized(_),
+        } = event
+        {
+            if *window_id == window.id() {
+                self.resized();
+            }
         }
+    }
+
+    /// reconfigures the swapchain if the window is
+    /// resized
+    ///
+    /// calling this in the event function is not
+    /// often needed, but it is recommended
+    ///
+    /// wayland requires calling this (idk why)
+    ///
+    /// [`Self::event`] is an alternative to this
+    pub fn resized(&mut self) {
+        let Some(surface) = &mut self.surface else {
+            return
+        };
+
+        surface.configure();
+    }
+
+    /// start rendering a new frame
+    ///
+    /// the first frame sets the window visible
+    ///
+    /// # Panics
+    ///
+    /// This function panics if used in headless mode. FIXME:
+    #[must_use]
+    pub fn get_frame(&mut self) -> Frame {
+        let frame_id = self.frame_id.fetch_add(1, Ordering::Relaxed);
+
+        // first frame sets the window visible
+        if frame_id == 0 {
+            if let Some(window) = self.get_window() {
+                window.set_visible(true);
+            }
+        }
+
+        Frame::new(
+            &self.device,
+            self.queue.clone(),
+            self.surface.as_mut().expect("TODO: Draw in headless mode"),
+            self.belts.clone(),
+            frame_id,
+        )
+    }
+
+    /// make the first frame NOT automatically set the window visible
+    pub fn no_auto_visible(&self) {
+        self.frame_id.fetch_add(1, Ordering::SeqCst);
+    }
+
+    /// finish the frame
+    #[deprecated]
+    pub fn finish_frame(&mut self, _: Frame) {}
+
+    /// set vertical sync preference
+    ///
+    /// does nothing with headless targets
+    pub fn set_vsync(&mut self, on: bool) {
+        if let Some(s) = self.surface.as_mut() {
+            s.set_vsync(on);
+        }
+    }
+
+    /// get the current vertical sync preference
+    ///
+    /// not possible with headless targets
+    pub fn get_vsync(&self) -> Option<bool> {
+        self.surface.as_ref().map(|s| s.get_vsync())
+    }
+
+    /// get the window bound to this render target
+    ///
+    /// not possible with headless targets
+    pub fn get_window(&self) -> Option<Arc<Window>> {
+        self.surface.as_ref().map(|surface| surface.get_window())
+    }
+
+    /// get the texture format this target prefers
+    ///
+    /// [`TextureFormat::Rgba8Unorm`] is returned with headless targets
+    pub fn get_format(&self) -> TextureFormat {
+        self.surface
+            .as_ref()
+            .map(|surface| surface.format())
+            .unwrap_or(TextureFormat::Rgba8Unorm)
+    }
+
+    /// get the logical device
+    pub fn get_device(&self) -> Arc<Device> {
+        self.device.clone()
+    }
+
+    /// run something while listening for wgpu errors
+    pub fn catch_error<T, F: FnOnce(&Self) -> T>(&self, f: F) -> Result<T, String> {
+        Catcher::catch_error(self, f)
+    }
+
+    /// run something and await on it while listening for wgpu errors
+    pub async fn catch_error_async<T, Fut, F>(&self, f: F) -> Result<T, String>
+    where
+        F: FnOnce(&Self) -> Fut,
+        Fut: Future<Output = T>,
+    {
+        Catcher::catch_error_async(self, f).await
     }
 
     async fn new_with_opt(
@@ -125,64 +245,6 @@ impl Target {
 
             (adapter, device, queue)
         }
-    }
-
-    /// check if objects created with `self` target
-    /// can be used with the `other` target
-    pub fn compatible_with(&self, other: &Target) -> bool {
-        Arc::ptr_eq(&self.device, &other.device) && Arc::ptr_eq(&self.queue, &other.queue)
-    }
-
-    #[must_use]
-    pub fn get_frame(&mut self) -> Frame {
-        if self.active {
-            panic!("Earlier frame was not finished before starting a new one");
-        }
-
-        if self.init {
-            self.init = false;
-            self.get_window().unwrap().set_visible(true);
-        }
-
-        Frame::new(
-            &self.device,
-            self.queue.clone(),
-            self.surface.as_mut().expect("TODO: Draw in headless mode"),
-            self.belt.get(),
-        )
-    }
-
-    pub fn finish_frame(&mut self, frame: Frame) {
-        self.belt.set(frame.finish())
-    }
-
-    pub fn set_vsync(&mut self, on: bool) {
-        if let Some(s) = self.surface.as_mut() {
-            s.set_vsync(on);
-        }
-    }
-
-    pub fn get_vsync(&self) -> Option<bool> {
-        self.surface.as_ref().map(|s| s.get_vsync())
-    }
-
-    pub fn get_window(&self) -> Option<Arc<Window>> {
-        self.surface.as_ref().map(|surface| surface.get_window())
-    }
-
-    pub fn get_format(&self) -> TextureFormat {
-        self.surface
-            .as_ref()
-            .map(|surface| surface.format())
-            .unwrap_or(TextureFormat::Rgba8Unorm)
-    }
-
-    pub fn get_device(&self) -> Arc<Device> {
-        self.device.clone()
-    }
-
-    pub fn catch_error<T, F: FnOnce(&Self) -> T>(&self, f: F) -> Result<T, String> {
-        Catcher::catch_error(self, f)
     }
 
     fn try_borrow_device(
@@ -222,14 +284,14 @@ impl Target {
     }
 
     fn debug_report(adapter: &Adapter) {
-        if log::log_enabled!(log::Level::Debug) {
+        if tracing::enabled!(tracing::Level::DEBUG) {
             let gpu_info = adapter.get_info();
             let api = format!("{:?}", gpu_info.backend).red();
             let name = gpu_info.name.blue();
             let ty = format!("{:?}", gpu_info.device_type).green();
 
-            log::debug!("GPU API: {api}");
-            log::debug!("GPU: {name} ({ty})");
+            tracing::debug!("GPU API: {api}");
+            tracing::debug!("GPU: {name} ({ty})");
         }
     }
 
@@ -249,5 +311,30 @@ impl Target {
             .await
             .unwrap();
         (Arc::new(device), Arc::new(queue))
+    }
+
+    fn new_finish(device: Arc<Device>, queue: Arc<Queue>, surface: Option<Surface>) -> Self {
+        // create a belt for fast data uploading
+        let belts = Arc::new(BeltPool::new());
+
+        // create a catcher to catch non fatal errors
+        // for example: shader compilation errors
+        let catcher = Catcher::new(&device);
+
+        // create a poll thread to allow wgpu wait operations to work
+        let _poll = PollThread::new(device.clone());
+
+        Self {
+            device,
+            queue,
+
+            surface,
+            belts,
+            catcher,
+
+            frame_id: AtomicUsize::new(0),
+
+            _poll,
+        }
     }
 }

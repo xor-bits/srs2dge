@@ -22,15 +22,17 @@ impl App {
         let timer = Instant::now();
 
         if targets[0].compatible_with(&targets[1]) {
-            log::info!("Targets are compatible");
+            tracing::info!("Targets are compatible");
         } else {
-            log::info!("Targets are NOT compatible");
+            tracing::info!("Targets are NOT compatible");
         }
 
         Self { targets, timer }
     }
 
     async fn event(&mut self, e: Event<'_>, _: &EventLoopTarget, c: &mut ControlFlow) {
+        self.targets.iter_mut().for_each(|t| t.event(&e));
+
         if let Event::WindowEvent {
             event: WindowEvent::CloseRequested,
             ..
@@ -55,7 +57,6 @@ impl App {
             let mut frame = target.get_frame();
             frame.set_clear_color(c / (i + 1) as f32);
             frame.primary_render_pass();
-            target.finish_frame(frame);
         }
     }
 }

@@ -14,8 +14,7 @@ struct App {
 
 impl App {
     async fn init(target: &EventLoopTarget) -> Self {
-        let engine = Engine::new();
-        let target = engine.new_target_default(target).await.unwrap();
+        let target = Engine::new().new_target_default(target).await.unwrap();
         let ws = WindowState::new(&target.get_window().unwrap());
         let timer = Instant::now();
         let mut debug = Gizmos::new(&target);
@@ -31,6 +30,8 @@ impl App {
 
     async fn event(&mut self, event: Event<'_>, _: &EventLoopTarget, control: &mut ControlFlow) {
         self.ws.event(&event);
+
+        self.target.event(&event);
 
         if let Event::WindowEvent {
             event: WindowEvent::CloseRequested,
@@ -103,7 +104,6 @@ impl App {
         let mut frame = self.target.get_frame();
         self.debug.prepare(&mut self.target, &mut frame, &self.ws);
         self.debug.draw(frame.primary_render_pass());
-        self.target.finish_frame(frame);
     }
 }
 

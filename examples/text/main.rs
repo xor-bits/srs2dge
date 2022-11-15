@@ -62,11 +62,10 @@ impl App {
         };
         let fonts = Fonts::new_bytes(res::font::ROBOTO).unwrap();
         let bb = TextChars::new(text.chars(), &fonts, config).bounding_box();
-        log::debug!("{bb:?}");
+        tracing::debug!("{bb:?}");
 
         // engine
-        let engine = Engine::new();
-        let target = engine
+        let target = Engine::new()
             .new_target(Arc::new(
                 WindowBuilder::new()
                     .with_visible(false)
@@ -112,6 +111,8 @@ impl App {
     async fn event(&mut self, event: Event<'_>, _: &EventLoopTarget, control: &mut ControlFlow) {
         self.ws.event(&event);
 
+        self.target.event(&event);
+
         if self.ws.should_close {
             *control = ControlFlow::Exit;
         }
@@ -140,8 +141,6 @@ impl App {
             .bind_group(&self.shader.bind_group((&self.ubo, &self.glyphs)))
             .bind_shader(&self.shader)
             .draw_indexed(0..self.ibo.capacity() as _, 0, 0..1);
-
-        self.target.finish_frame(frame);
     }
 }
 

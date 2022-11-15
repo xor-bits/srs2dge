@@ -85,7 +85,7 @@ pub fn present_mode_from_str(string: &str) -> Option<PresentMode> {
         "fifo" | "f" => Some(PresentMode::Fifo),
         "immediate" | "nosync" | "im" | "i" => Some(PresentMode::Immediate),
         b => {
-            log::warn!("unknown present mode string '{}'", b);
+            tracing::warn!("unknown present mode string '{}'", b);
             None
         }
     }

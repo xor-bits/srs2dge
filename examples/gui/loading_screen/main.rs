@@ -124,7 +124,7 @@ fn gui_main(target: &Target, _: &mut Gui) -> (TextureAtlasMap<u8>, Root) {
     let root: Root = WidgetBuilder::build(StyleRef::from_styles("root", &styles), &styles);
 
     for unused in styles.check_unused() {
-        log::warn!("Unused style '{unused}'")
+        tracing::warn!("Unused style '{unused}'")
     }
 
     (texture, root)

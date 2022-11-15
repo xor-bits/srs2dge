@@ -29,7 +29,7 @@ impl Fill {
 
 impl Widget for Fill {
     fn draw(&mut self, draw: &mut GuiDraw) {
-        // log::debug!("fill {layout:?}");
+        // tracing::debug!("fill {layout:?}");
 
         draw.graphics
             .texture_batcher

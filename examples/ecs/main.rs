@@ -41,8 +41,7 @@ fn random_movement(body: &mut RigidBody2D) {
 
 impl App {
     async fn init(target: &EventLoopTarget) -> Self {
-        let engine = Engine::new();
-        let target = engine.new_target_default(target).await.unwrap();
+        let target = Engine::new().new_target_default(target).await.unwrap();
 
         let ws = WindowState::new(&target.get_window().unwrap());
 
@@ -94,6 +93,8 @@ impl App {
     async fn event(&mut self, event: Event<'_>, _: &EventLoopTarget, control: &mut ControlFlow) {
         self.ws.event(&event);
 
+        self.target.event(&event);
+
         if self.ws.should_close {
             *control = ControlFlow::Exit;
         }
@@ -103,7 +104,7 @@ impl App {
         self.world.run();
 
         if self.frame_report.should_report() {
-            log::info!(
+            tracing::info!(
                 "{}",
                 Reporter::report_all(
                     "ECS Perf report",
@@ -141,7 +142,6 @@ impl App {
             .bind_shader(&self.shader)
             .draw_indexed(0..i, 0, 0..1);
 
-        self.target.finish_frame(frame);
         self.frame_report.end(timer);
     }
 }
