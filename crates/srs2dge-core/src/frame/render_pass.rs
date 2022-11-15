@@ -102,12 +102,20 @@ impl<'e, Sv, Bv, Si, Bi, const PIPELINE_BOUND: bool>
 }
 
 // implement for all renderpasses where buffers match shaders and shader is bound
-impl<'e, V, I> RenderPass<'e, V, V, I, I, true> {
+
+impl<'e, V, I1, I2> RenderPass<'e, V, V, I1, I2, true> {
     pub fn draw(mut self, vertices: Range<u32>, instances: Range<u32>) -> Self {
         self.inner.draw(vertices, instances);
         self
     }
 
+    // TODO:
+    /*pub fn draw_indirect(&mut self, vertices: Range<u32>, instances: Range<u32>) {
+        self.inner.draw_indirect(vertices, instances)
+    }*/
+}
+
+impl<'e, V, I> RenderPass<'e, V, V, I, I, true> {
     pub fn draw_indexed(
         mut self,
         indices: Range<u32>,
@@ -119,11 +127,7 @@ impl<'e, V, I> RenderPass<'e, V, V, I, I, true> {
     }
 
     // TODO:
-    /* pub fn draw_indirect(&mut self, vertices: Range<u32>, instances: Range<u32>) {
-        self.inner.draw_indirect(vertices, instances)
-    }
-
-    pub fn draw_indirect_indexed(&mut self, vertices: Range<u32>, instances: Range<u32>) {
+    /*pub fn draw_indirect_indexed(&mut self, vertices: Range<u32>, instances: Range<u32>) {
         self.inner.draw(vertices, instances)
-    } */
+    }*/
 }
