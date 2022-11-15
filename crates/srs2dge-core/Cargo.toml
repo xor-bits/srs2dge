@@ -21,8 +21,9 @@ spirv = ["wgpu/spirv", "naga/spv-in"]
 colorful = "0.2"
 tracing.workspace = true
 # graphics
-glam = { version = "0.21", features = ["serde", "bytemuck"] }
-main_game_loop = { git = "https://github.com/Overpeek/main_game_loop", rev = "a1b43876d1ad7ec84227f98c35a4f9ca408b4966" }
+glam = { version = "0.22", features = ["serde", "bytemuck"] }
+# main_game_loop = { git = "https://github.com/Overpeek/main_game_loop", rev = "941aa1faa79914bcdd2bd30cf2e8b219378edf0c" }
+main_game_loop = "0.6.0"
 naga = { version = "0.10", features = ["wgsl-in", "validate"] }
 wgpu = { version = "0.14", features = ["webgl"] }
 # naga = { git = "https://github.com/gfx-rs/naga", rev = "1aa91549", features = [
