@@ -1,5 +1,6 @@
 use crate::{label, target::Target};
 use std::borrow::Cow;
+use tracing::{debug, trace};
 use wgpu::ShaderModuleDescriptor;
 
 //
@@ -73,6 +74,14 @@ impl<'a> ShaderModule<'a> {
             ShaderSource::Wgsl(source) => ShaderSource::Wgsl(source.clone()),
             _ => todo!(),
         };
+
+        let module = naga::front::wgsl::parse_str(match &source {
+            ShaderSource::Wgsl(source) => source.as_ref(),
+            _ => todo!(),
+        })
+        .unwrap();
+
+        debug!("Module parsed to {module:?}");
 
         Ok(Self {
             source,

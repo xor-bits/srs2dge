@@ -1,8 +1,7 @@
+use crate::color::Color;
 use bytemuck::{Pod, Zeroable};
 use glam::Vec2;
 use wgpu::{VertexAttribute, VertexBufferLayout, VertexFormat, VertexStepMode};
-
-use crate::color::Color;
 
 //
 
