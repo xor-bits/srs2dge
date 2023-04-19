@@ -52,7 +52,7 @@ android_logger = "0.11"
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 # fut
-tokio = { version = "1.21", features = ["rt-multi-thread", "sync"] }
+tokio = { version = "1.24", features = ["rt-multi-thread", "sync"] }
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 # init logging
 console_log = { version = "0.2", features = ["color"] }
